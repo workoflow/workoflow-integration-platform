@@ -121,6 +121,19 @@ echo ""
 echo "Installing PHP dependencies..."
 docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --no-dev --optimize-autoloader
 
+# Install npm dependencies and build assets
+echo ""
+echo "Installing npm dependencies..."
+docker-compose -f $COMPOSE_FILE exec -T frankenphp npm install
+
+echo ""
+echo "Building frontend assets..."
+if [ "$ENVIRONMENT" == "prod" ]; then
+    docker-compose -f $COMPOSE_FILE exec -T frankenphp npm run build
+else
+    docker-compose -f $COMPOSE_FILE exec -T frankenphp npm run dev
+fi
+
 # Run database migrations
 echo ""
 echo "Running database migrations..."
