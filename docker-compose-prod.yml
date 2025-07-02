@@ -10,6 +10,8 @@ services:
       - "443:443"
     volumes:
       - ./var:/app/var
+      - ./.env:/app/.env:ro
+      - ./config/jwt:/app/config/jwt:ro
       - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
