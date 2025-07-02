@@ -59,6 +59,9 @@ services:
     volumes:
       - minio_data:/data
     command: server /data
+    ports:
+      - "9002:9000"
+      - "9003:9001"
     networks:
       - workoflow
     healthcheck:
