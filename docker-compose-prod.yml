@@ -6,7 +6,7 @@ services:
       - .env
     command: frankenphp run --config /etc/caddy/Caddyfile
     ports:
-      - "80:80"
+      - "3979:80"
       - "443:443"
     volumes:
       - ./var:/app/var
