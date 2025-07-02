@@ -136,10 +136,12 @@ echo ""
 echo "Waiting for services to be ready..."
 sleep 10
 
-# Install dependencies
-echo ""
-echo "Installing PHP dependencies..."
-docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --no-dev --optimize-autoloader
+# Install dependencies (dev only - prod installs during Docker build)
+if [ "$ENVIRONMENT" != "prod" ]; then
+    echo ""
+    echo "Installing PHP dependencies..."
+    docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --no-dev --optimize-autoloader
+fi
 
 # Install npm dependencies and build assets (dev only - prod builds during Docker image creation)
 if [ "$ENVIRONMENT" != "prod" ]; then
