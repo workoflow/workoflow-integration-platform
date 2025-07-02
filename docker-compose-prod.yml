@@ -9,7 +9,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./public:/app/public:ro
       - ./var:/app/var
       - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

@@ -1,13 +1,13 @@
 # Workoflow Integration Platform
 
 ## Übersicht
-Die Workoflow Integration Platform ist eine production-ready Symfony 7.2 Anwendung, die es Benutzern ermöglicht, verschiedene Integrationen (Jira, Confluence) zu verwalten und über einen MCP (Model Context Protocol) Server für AI Agenten bereitzustellen.
+Die Workoflow Integration Platform ist eine production-ready Symfony 7.2 Anwendung, die es Benutzern ermöglicht, verschiedene Integrationen (Jira, Confluence) zu verwalten und über eine REST API für AI Agenten bereitzustellen.
 
 ### Hauptfunktionen
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management
 - Integration Management (Jira, Confluence)
-- MCP Server für AI Agent Zugriff
+- REST API für AI Agent Zugriff
 - File Management mit MinIO S3
 - Audit Logging
 - Mehrsprachigkeit (DE/EN)
@@ -74,13 +74,13 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 
 ## API Referenz
 
-### MCP Server Endpoint
+### REST API Endpoints
 ```
-GET /api/mcp/{org-uuid}/sse?id={workflow-user-id}
+GET /api/integrations/{org-uuid}?workflow_user_id={workflow-user-id}
 Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==
 ```
 
-Der MCP Server implementiert das Anthropic Model Context Protocol und stellt dynamisch Tools basierend auf den aktivierten User-Integrationen bereit.
+Die REST API stellt dynamisch Tools basierend auf den aktivierten User-Integrationen bereit.
 
 ### Verfügbare Tools
 
@@ -104,7 +104,7 @@ Der MCP Server implementiert das Anthropic Model Context Protocol und stellt dyn
 - 1:N Beziehung zu Integrations
 
 ### Organisation
-- UUID für MCP Server URL
+- UUID für REST API URL
 - 1:N Beziehung zu Users
 - Audit Logging auf Org-Ebene
 
@@ -123,14 +123,34 @@ Der MCP Server implementiert das Anthropic Model Context Protocol und stellt dyn
 
 ### Authentifizierung
 - Google OAuth2 für User Login
-- Basic Auth für MCP Server
+- Basic Auth für REST API
 - JWT Tokens für API
 - X-Test-Auth-Email GET Parameter für Tests
 
 ### Verschlüsselung
-- Credentials mit Sodium verschlüsselt
-- 32-Zeichen Encryption Key
-- JWT mit RSA 4096-bit Keys
+
+Die Platform nutzt zwei separate Verschlüsselungsmechanismen:
+
+#### 1. JWT Token Verschlüsselung (API Authentication)
+- **Zweck**: Generierung und Validierung von Access Tokens für API-Zugriffe
+- **Dateien**: 
+  - `config/jwt/private.pem` - RSA Private Key (4096-bit) zum Signieren von JWT Tokens
+  - `config/jwt/public.pem` - RSA Public Key zur Verifizierung von JWT Tokens
+- **Verschlüsselung**: RSA 4096-bit mit AES256 Passwort-Schutz
+- **Konfiguration**: Lexik JWT Authentication Bundle
+- **Token-Lebensdauer**: 3600 Sekunden (1 Stunde)
+
+#### 2. Integration Credentials Verschlüsselung (User Secrets)
+- **Zweck**: Sichere Speicherung von User-Integration Credentials (Jira/Confluence API Keys)
+- **Verschlüsselung**: Sodium (libsodium) - moderne, sichere Verschlüsselung
+- **Key**: 32-Zeichen ENCRYPTION_KEY aus .env
+- **Service**: `App\Service\EncryptionService`
+- **Speicherung**: Verschlüsselte Credentials im `encryptedCredentials` Feld der Integration Entity
+- **Workflow**:
+  1. User gibt API Credentials ein
+  2. EncryptionService verschlüsselt mit Sodium und ENCRYPTION_KEY
+  3. Verschlüsselter Blob wird in Datenbank gespeichert
+  4. Bei API-Zugriff werden Credentials entschlüsselt
 
 ### Audit Logging
 - Alle kritischen Aktionen geloggt
@@ -149,7 +169,7 @@ puppeteer.test1@example.com (Admin)
 puppeteer.test2@example.com (Member)
 ```
 
-### MCP Server Tests
+### REST API Tests
 - Puppeteer für UI Tests
 - MariaDB für Datenbank-Tests
 - Integration Tests für APIs
@@ -169,7 +189,7 @@ Alle kritischen Konfigurationen über .env:
 
 ### Monitoring
 - Audit Logs in `/var/log/audit.log`
-- MCP Access Logs
+- API Access Logs
 - Error Tracking via Monolog
 
 ## Wartung
@@ -201,6 +221,6 @@ docker-compose exec frankenphp npm run build
 - OAuth2 Google Login
 - Organisation Management
 - Jira/Confluence Integrations
-- MCP Server Implementation
+- REST API Implementation
 - File Management
 - Multi-Language Support (DE/EN)

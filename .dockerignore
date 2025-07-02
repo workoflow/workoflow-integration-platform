@@ -1,0 +1,41 @@
+# Version control
+.git
+.gitignore
+
+# Docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# IDE
+.idea
+.vscode
+
+# Environment files  
+.env
+.env.*
+
+# Dependencies (will be installed during build)
+vendor/
+node_modules/
+
+# Build artifacts (will be created during build)
+public/build/
+
+# Cache and logs
+var/
+logs/
+
+# Tests
+tests/
+phpunit.xml*
+
+# Documentation
+*.md
+docs/
+
+# Temporary files
+*.log
+*.cache
+.DS_Store
+Thumbs.db
