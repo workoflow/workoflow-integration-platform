@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/patrickjaja/development/workoflow-promopage-v2/logs/.23abf661e3b894dff0c8ec845d47024a61f69e3a-audit.json",
+    "files": [
+        {
+            "date": 1751463829995,
+            "name": "/home/patrickjaja/development/workoflow-promopage-v2/logs/mcp-puppeteer-2025-07-02.log",
+            "hash": "42f476e5fa5e4f3aea116435ea09310b8d181f4776636d4f99968479d6b0bc41"
+        },
+        {
+            "date": 1751494105743,
+            "name": "/home/patrickjaja/development/workoflow-promopage-v2/logs/mcp-puppeteer-2025-07-03.log",
+            "hash": "297d75b14e2bf9741a23e257d108871fc2370eb5d2bb580461000d49dc2c2be7"
+        }
+    ],
+    "hashType": "sha256"
+}

@@ -1,0 +1,23 @@
+framework:
+    secret: '%env(APP_SECRET)%'
+    http_method_override: false
+    handle_all_throwables: true
+
+    session:
+        handler_id: 'redis://redis:6379'
+        cookie_secure: auto
+        cookie_samesite: lax
+        cookie_httponly: true
+        storage_factory_id: session.storage.factory.native
+
+    php_errors:
+        log: true
+
+    default_locale: '%locale%'
+    enabled_locales: ['de', 'en']
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

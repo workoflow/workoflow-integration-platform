@@ -1,0 +1,26 @@
+<!-- Global Header -->
+<header class="global-header">
+    <div class="header-content">
+        <a href="{{ app.user ? path('app_home') : '/' }}" class="header-brand">
+            <div class="header-logo">
+                <div class="header-logo-circle"></div>
+                <img src="{{ asset('images/valantic-logo-white.png') }}" alt="Valantic Logo" class="header-logo-icon">
+            </div>
+            <span class="header-title">Workoflow Integration Platform</span>
+        </a>
+        <nav class="header-nav">
+            {% if app.user %}
+                <a href="{{ path('app_home') }}" class="header-link">Dashboard</a>
+                <a href="{{ path('app_integrations') }}" class="header-link">Integrations</a>
+                <a href="{{ path('app_files') }}" class="header-link">Files</a>
+                <a href="{{ path('app_profile') }}" class="header-link">Profile</a>
+                {% if app.user.isAdmin() %}
+                    <a href="{{ path('app_organisation_members') }}" class="header-link">Members</a>
+                {% endif %}
+                <a href="{{ path('app_logout') }}" class="header-link">Logout</a>
+            {% else %}
+                <a href="{{ path('app_login') }}" class="header-link">Login</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>

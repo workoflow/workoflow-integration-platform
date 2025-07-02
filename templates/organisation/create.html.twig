@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'organisation.create.title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="organisation-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="organisation-container">
+        <div class="organisation-card">
+            <div class="organisation-header">
+                <h2>{{ 'organisation.create.title'|trans }}</h2>
+                <p>{{ 'organisation.create.description'|trans }}</p>
+            </div>
+
+            <form method="post" class="organisation-form">
+                <div class="form-group">
+                    <label for="name" class="form-label">{{ 'organisation.name'|trans }}</label>
+                    <input type="text" 
+                           class="form-input" 
+                           id="name" 
+                           name="name" 
+                           required 
+                           autofocus
+                           placeholder="{{ 'organisation.create.placeholder'|trans }}">
+                    <div class="form-help">{{ 'organisation.create.help'|trans }}</div>
+                </div>
+
+                <button type="submit" class="submit-button">
+                    {{ 'organisation.create.submit'|trans }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

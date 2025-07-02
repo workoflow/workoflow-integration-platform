@@ -1,0 +1,198 @@
+nav:
+  dashboard: Dashboard
+  integrations: Integrationen
+  files: Dateien
+  organisation: Organisation
+  profile: Profil
+  logout: Abmelden
+
+home:
+  title: Willkommen bei Workoflow
+  hero:
+    title: Workoflow Integration Platform
+    subtitle: Verbinden Sie Ihre Tools mit KI-Agenten
+    description: Integrieren Sie nahtlos Jira, Confluence und andere Dienste mit KI-Agenten über das Model Context Protocol (MCP).
+    cta: Jetzt starten
+  features:
+    title: Leistungsstarke Integrationen
+    subtitle: Verbinden Sie Ihre bevorzugten Tools und lassen Sie KI-Agenten damit arbeiten
+    jira:
+      title: Jira Integration
+      description: Durchsuchen Sie Issues, verwalten Sie Sprints und verfolgen Sie Projektfortschritte durch KI-Agenten.
+    confluence:
+      title: Confluence Integration
+      description: Greifen Sie auf Dokumentation zu, durchsuchen Sie Seiten und verwalten Sie Wissensdatenbanken mit KI-Unterstützung.
+    mcp:
+      title: MCP Protocol
+      description: Branchenstandard-Protokoll für KI-Agenten-Kommunikation und Tool-Integration.
+  how_it_works:
+    title: So funktioniert's
+    step1:
+      title: Anmelden
+      description: Mit Ihrem Google-Konto einloggen
+    step2:
+      title: Tools verbinden
+      description: Fügen Sie Ihre Jira und Confluence Zugangsdaten hinzu
+    step3:
+      title: Zugriff konfigurieren
+      description: Legen Sie fest, welche Tools KI-Agenten nutzen können
+    step4:
+      title: Loslegen
+      description: KI-Agenten können jetzt mit Ihren Tools arbeiten
+  cta:
+    title: Bereit loszulegen?
+    subtitle: Treten Sie Workoflow bei und stärken Sie Ihre KI-Agenten noch heute
+    button: Jetzt starten
+  footer:
+    copyright: © %year% Workoflow. Alle Rechte vorbehalten.
+
+auth:
+  login:
+    title: Anmelden
+    subtitle: Integration Platform für AI Agenten
+    google: Mit Google anmelden
+    privacy: Mit der Anmeldung akzeptieren Sie unsere Datenschutzbestimmungen.
+
+dashboard:
+  title: Dashboard
+  welcome: Willkommen, %name%!
+  organisation: Ihre Organisation
+  integration_api_url: Integration API URL
+  integrations_count: Integrationen
+  active_integrations: Aktive Integrationen
+  your_role: Ihre Rolle
+  manage_integrations: Integrationen verwalten
+  recent_integrations: Neueste Integrationen
+  never: Nie
+
+organisation:
+  create:
+    title: Organisation erstellen
+    description: Bitte geben Sie einen Namen für Ihre Organisation ein, um fortzufahren.
+    placeholder: z.B. Meine Firma GmbH
+    help: Sie können den Namen später in den Einstellungen ändern.
+    submit: Organisation erstellen
+  created:
+    success: Organisation erfolgreich erstellt!
+  name: Organisationsname
+  settings: Organisationseinstellungen
+  members: Mitglieder
+  updated:
+    success: Organisation erfolgreich aktualisiert!
+  member:
+    role_updated: Rolle erfolgreich aktualisiert!
+    cannot_change_own_role: Sie können Ihre eigene Rolle nicht ändern.
+  invite:
+    invalid_email: Ungültige E-Mail-Adresse.
+    user_has_organisation: Dieser Benutzer gehört bereits einer Organisation an.
+    user_added: Benutzer erfolgreich hinzugefügt!
+    user_not_found: Benutzer muss sich zuerst bei Workoflow registrieren.
+  uuid: Organisations-UUID
+  uuid_help: Diese UUID wird für die API-Endpunkte verwendet
+  integration_api_help: Verwenden Sie diese API-URL, um AI-Agenten (z.B. n8n) mit Ihren Integrationen zu verbinden
+  save: Speichern
+  invite_member: Mitglied einladen
+  invite_help: Der Benutzer muss sich zuerst bei Workoflow registrieren
+  send_invite: Einladung senden
+  make_admin: Zum Admin machen
+  make_member: Zum Mitglied machen
+
+status:
+  active: Aktiv
+  inactive: Inaktiv
+
+integration:
+  name: Name
+  type: Typ
+  status: Status
+  last_accessed: Letzter Zugriff
+  title: Integrationen
+  add_new: Neue Integration hinzufügen
+  no_integrations: Sie haben noch keine Integrationen konfiguriert.
+  workflow_id: Workoflow ID
+  functions: Funktionen
+  active_of: aktiv von
+  test_connection: Verbindung testen
+  delete_confirm: Sind Sie sicher, dass Sie diese Integration löschen möchten?
+  test_success: Verbindung erfolgreich!
+  test_failed: Verbindung fehlgeschlagen
+  test_error: Ein Fehler ist aufgetreten
+  basic_info: Grundinformationen
+  select_type: Integrationstyp auswählen
+  name_placeholder: z.B. Mein Jira Workspace
+  workflow_id_placeholder: z.B. user123
+  workflow_id_help: Ermitteln Sie Ihre ID über den Workoflow Prompt "Wie ist meine ID?"
+  credentials: Anmeldedaten
+  available_functions: Verfügbare Funktionen
+  save: Integration speichern
+  created:
+    success: Integration erfolgreich erstellt!
+  updated:
+    success: Integration erfolgreich aktualisiert!
+  deleted:
+    success: Integration erfolgreich gelöscht!
+  jira:
+    url: Jira URL
+    username: Benutzername (E-Mail)
+    api_token: API Token
+    api_token_help: Erstellen Sie ein API Token unter Atlassian Account Settings
+  confluence:
+    url: Confluence URL
+    username: Benutzername (E-Mail)
+    api_token: API Token
+    api_token_help: Erstellen Sie ein API Token unter Atlassian Account Settings
+  edit: Integration bearbeiten
+  active: Aktiv
+  credentials_not_editable: Anmeldedaten können aus Sicherheitsgründen nicht bearbeitet werden.
+
+action:
+  edit: Bearbeiten
+  delete: Löschen
+  cancel: Abbrechen
+  actions: Aktionen
+  copy: Kopieren
+  copied: Kopiert!
+  download: Herunterladen
+
+file:
+  title: Dateiverwaltung
+  upload: Hochladen
+  upload_files: Dateien hochladen
+  no_files: Keine Dateien vorhanden.
+  name: Dateiname
+  size: Größe
+  uploaded_by: Hochgeladen von
+  uploaded_at: Hochgeladen am
+  drag_drop: Dateien hier ablegen oder
+  select_files: Dateien auswählen
+  allowed_types: Erlaubte Dateitypen
+  max_size: Maximale Dateigröße
+  delete_confirm: Sind Sie sicher, dass Sie diese Datei löschen möchten?
+  upload_error: Fehler beim Hochladen
+  deleted:
+    success: Datei erfolgreich gelöscht!
+    error: Fehler beim Löschen der Datei.
+  download:
+    error: Fehler beim Herunterladen der Datei.
+
+
+user:
+  name: Name
+  email: E-Mail
+  role: Rolle
+  joined_at: Beigetreten am
+  organisation: Organisation
+
+
+profile:
+  title: Mein Profil
+  personal_info: Persönliche Informationen
+  danger_zone: Gefahrenzone
+  delete_account: Account löschen
+  delete_account_warning: Das Löschen Ihres Accounts kann nicht rückgängig gemacht werden.
+  delete_account_confirm: Sind Sie sicher, dass Sie Ihren Account löschen möchten?
+  delete_account_consequences: Diese Aktion wird:
+  delete_consequence_1: Alle Ihre Integrationen löschen
+  delete_consequence_2: Ihren Zugang zur Organisation entfernen
+  delete_consequence_3: Alle Ihre Daten unwiderruflich löschen
+  confirm_delete: Ja, Account löschen

@@ -1,0 +1,198 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'file.title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="dashboard-container">
+        <div class="page-header">
+            <h1 class="dashboard-title">{{ 'file.title'|trans }}</h1>
+            <button type="button" class="btn btn-primary" onclick="showUploadModal()">
+                {{ 'file.upload'|trans }}
+            </button>
+        </div>
+
+        {% if files|length == 0 %}
+            <div class="empty-state">
+                <p>{{ 'file.no_files'|trans }}</p>
+            </div>
+        {% else %}
+            <div class="files-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{{ 'file.name'|trans }}</th>
+                            <th>{{ 'file.size'|trans }}</th>
+                            <th>{{ 'file.uploaded_by'|trans }}</th>
+                            <th>{{ 'file.uploaded_at'|trans }}</th>
+                            <th>{{ 'action.actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in files %}
+                            <tr>
+                                <td class="file-name">
+                                    {{ file.original_name }}
+                                </td>
+                                <td>{{ (file.size / 1024 / 1024)|number_format(2) }} MB</td>
+                                <td>{{ file.uploaded_by ? 'User #' ~ file.uploaded_by : '-' }}</td>
+                                <td>{{ file.last_modified|date('d.m.Y H:i') }}</td>
+                                <td class="file-actions">
+                                    <a href="{{ path('app_file_download', {key: file.key}) }}" 
+                                       class="btn btn-small">
+                                        {{ 'action.download'|trans }}
+                                    </a>
+                                    <form method="post" 
+                                          action="{{ path('app_file_delete', {key: file.key}) }}" 
+                                          class="inline-form"
+                                          onsubmit="return confirm('{{ 'file.delete_confirm'|trans }}');">
+                                        <button type="submit" class="btn btn-small btn-danger">
+                                            {{ 'action.delete'|trans }}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">{{ 'file.upload_files'|trans }}</h3>
+            <button type="button" class="modal-close" onclick="hideUploadModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-content">
+                    <p>{{ 'file.drag_drop'|trans }}</p>
+                    <input type="file" id="fileInput" multiple class="hidden">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                        {{ 'file.select_files'|trans }}
+                    </button>
+                </div>
+            </div>
+            <div id="fileList" class="file-list"></div>
+            <div class="file-info">
+                <p>{{ 'file.allowed_types'|trans }}: PDF, DOCX, XLSX, CSV, TXT, JSON, JPG, PNG</p>
+                <p>{{ 'file.max_size'|trans }}: 100 MB</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="hideUploadModal()">{{ 'action.cancel'|trans }}</button>
+            <button type="button" class="btn btn-primary" id="uploadBtn" disabled>
+                <span class="spinner hidden" id="uploadSpinner"></span>
+                {{ 'file.upload'|trans }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let filesToUpload = [];
+
+function showUploadModal() {
+    document.getElementById('uploadModal').classList.add('show');
+}
+
+function hideUploadModal() {
+    document.getElementById('uploadModal').classList.remove('show');
+    filesToUpload = [];
+    updateFileList();
+}
+
+// Close modal when clicking outside
+document.getElementById('uploadModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        hideUploadModal();
+    }
+});
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const uploadBtn = document.getElementById('uploadBtn');
+
+// Drag and drop
+dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+});
+
+dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+});
+
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    handleFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+    filesToUpload = Array.from(files);
+    updateFileList();
+}
+
+function updateFileList() {
+    fileList.innerHTML = '';
+    filesToUpload.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+            <span class="file-name">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+            <button type="button" class="remove-file" onclick="removeFile(${index})">×</button>
+        `;
+        fileList.appendChild(item);
+    });
+    
+    uploadBtn.disabled = filesToUpload.length === 0;
+}
+
+function removeFile(index) {
+    filesToUpload.splice(index, 1);
+    updateFileList();
+}
+
+uploadBtn.addEventListener('click', async () => {
+    const formData = new FormData();
+    filesToUpload.forEach(file => {
+        formData.append('files[]', file);
+    });
+    
+    uploadBtn.disabled = true;
+    document.getElementById('uploadSpinner').classList.remove('hidden');
+    
+    try {
+        const response = await fetch('{{ path('app_file_upload') }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('{{ 'file.upload_error'|trans }}');
+        }
+    } catch (error) {
+        alert('{{ 'file.upload_error'|trans }}');
+    } finally {
+        uploadBtn.disabled = false;
+        document.getElementById('uploadSpinner').classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

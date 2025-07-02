@@ -1,0 +1,111 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'integration.edit'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="integrations-edit-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="integrations-container">
+        <h1 class="page-title">{{ 'integration.edit'|trans }}: {{ integration.name }}</h1>
+
+        <form method="post" class="integration-form">
+            <div class="form-section">
+                <h2 class="section-title">{{ 'integration.basic_info'|trans }}</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ 'integration.type'|trans }}</label>
+                    <input type="text" class="form-control" value="{{ integration.type|upper }}" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="name" class="form-label">{{ 'integration.name'|trans }}</label>
+                    <input type="text" class="form-control" id="name" name="name" 
+                           value="{{ integration.name }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="workflow_user_id" class="form-label">{{ 'integration.workflow_id'|trans }}</label>
+                    <input type="text" class="form-control" id="workflow_user_id" name="workflow_user_id" 
+                           value="{{ integration.workflowUserId }}" required>
+                    <div class="form-help">{{ 'integration.workflow_id_help'|trans }}</div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="active" name="active" 
+                               {% if integration.active %}checked{% endif %}>
+                        <label for="active">
+                            {{ 'integration.active'|trans }}
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title">{{ 'integration.available_functions'|trans }}</h2>
+                
+                {% for function in integration.functions %}
+                    <div class="function-checkbox">
+                        <input type="checkbox" 
+                               id="function_{{ function.functionName }}" 
+                               name="function_{{ function.functionName }}"
+                               {% if function.active %}checked{% endif %}>
+                        <label for="function_{{ function.functionName }}">
+                            <strong>{{ function.functionName }}</strong>
+                            <span class="function-description">{{ function.description }}</span>
+                        </label>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-section">
+                <h2 class="section-title">{{ 'integration.credentials'|trans }}</h2>
+                
+                {% if integration.type == 'jira' %}
+                    <div class="form-group">
+                        <label for="jira_url" class="form-label">{{ 'integration.jira.url'|trans }}</label>
+                        <input type="url" class="form-control" id="jira_url" name="jira_url" 
+                               placeholder="https://your-domain.atlassian.net" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="jira_username" class="form-label">{{ 'integration.jira.username'|trans }}</label>
+                        <input type="email" class="form-control" id="jira_username" name="jira_username" 
+                               placeholder="your-email@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="jira_api_token" class="form-label">{{ 'integration.jira.api_token'|trans }}</label>
+                        <input type="password" class="form-control" id="jira_api_token" name="jira_api_token" required>
+                        <div class="form-help">{{ 'integration.jira.api_token_help'|trans }}</div>
+                    </div>
+                {% elseif integration.type == 'confluence' %}
+                    <div class="form-group">
+                        <label for="confluence_url" class="form-label">{{ 'integration.confluence.url'|trans }}</label>
+                        <input type="url" class="form-control" id="confluence_url" name="confluence_url" 
+                               placeholder="https://your-domain.atlassian.net/wiki" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confluence_username" class="form-label">{{ 'integration.confluence.username'|trans }}</label>
+                        <input type="email" class="form-control" id="confluence_username" name="confluence_username" 
+                               placeholder="your-email@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confluence_api_token" class="form-label">{{ 'integration.confluence.api_token'|trans }}</label>
+                        <input type="password" class="form-control" id="confluence_api_token" name="confluence_api_token" required>
+                        <div class="form-help">{{ 'integration.confluence.api_token_help'|trans }}</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                    {{ 'action.cancel'|trans }}
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    {{ 'integration.save'|trans }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

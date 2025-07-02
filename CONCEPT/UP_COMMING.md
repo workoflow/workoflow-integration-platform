@@ -1,0 +1,5 @@
+- Ermögliche es eigene MCP Tools zusätzlich hinzuzufügen
+    - Wir benötigen ein Tool "share_file" um Dateien hochzuladen und freizugeben
+        - Es wird eine binary mit entsprechendem contenttype als POST Request übergeben, als Response wird ein 5 Minuten gültiger öffentlicher Link generiert (DOMAIN/UUID/FILENAME)
+        - Die Datei wird in das hinterlegte MINIO Bucket hochgeladen (Env var MCP_TOOL_SHARE_FILE_BUCKET)
+    - Es gibt eine Lifecycle Policies für das Bucket MCP_TOOL_SHARE_FILE_BUCKET das automatisch die Dateien löscht

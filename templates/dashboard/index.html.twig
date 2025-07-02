@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'dashboard.title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">{{ 'dashboard.welcome'|trans({'%name%': user.name}) }}</h1>
+        
+        {% if organisation %}
+            <div class="organisation-info">
+                <h5>{{ 'dashboard.organisation'|trans }}</h5>
+                <p class="org-name">{{ organisation.name }}</p>
+                <p class="org-api-url">
+                    <span class="label">{{ 'dashboard.integration_api_url'|trans }}:</span>
+                    <code>{{ organisation.integrationApiUrl }}</code>
+                </p>
+            </div>
+        {% endif %}
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h2 class="stat-number">{{ integrations|length }}</h2>
+                <p class="stat-label">{{ 'dashboard.integrations_count'|trans }}</p>
+                <a href="{{ path('app_integrations') }}" class="btn btn-primary">
+                    {{ 'dashboard.manage_integrations'|trans }}
+                </a>
+            </div>
+            
+            <div class="stat-card">
+                <h2 class="stat-number">{{ integrations|filter(i => i.active)|length }}</h2>
+                <p class="stat-label">{{ 'dashboard.active_integrations'|trans }}</p>
+            </div>
+
+            <div class="stat-card">
+                <h2 class="stat-number">{{ user.isAdmin() ? 'Admin' : 'Member' }}</h2>
+                <p class="stat-label">{{ 'dashboard.your_role'|trans }}</p>
+            </div>
+        </div>
+
+        {% if integrations|length > 0 %}
+            <div class="integrations-section">
+                <h3>{{ 'dashboard.recent_integrations'|trans }}</h3>
+                <div class="integrations-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>{{ 'integration.name'|trans }}</th>
+                                <th>{{ 'integration.type'|trans }}</th>
+                                <th>{{ 'integration.status'|trans }}</th>
+                                <th>{{ 'integration.last_accessed'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for integration in integrations|slice(0, 5) %}
+                                <tr>
+                                    <td>{{ integration.name }}</td>
+                                    <td>
+                                        <span class="badge badge-type">{{ integration.type|upper }}</span>
+                                    </td>
+                                    <td>
+                                        {% if integration.active %}
+                                            <span class="badge badge-active">{{ 'status.active'|trans }}</span>
+                                        {% else %}
+                                            <span class="badge badge-inactive">{{ 'status.inactive'|trans }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {{ integration.lastAccessedAt ? integration.lastAccessedAt|date('d.m.Y H:i') : 'dashboard.never'|trans }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

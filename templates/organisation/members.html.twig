@@ -1,0 +1,109 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'organisation.members'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="dashboard-container">
+        <div class="page-header">
+            <h1 class="dashboard-title">{{ 'organisation.members'|trans }}</h1>
+            {% if app.user.isAdmin() %}
+                <button type="button" class="btn btn-primary" onclick="showInviteModal()">
+                    {{ 'organisation.invite_member'|trans }}
+                </button>
+            {% endif %}
+        </div>
+
+        <div class="members-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>{{ 'user.name'|trans }}</th>
+                        <th>{{ 'user.email'|trans }}</th>
+                        <th>{{ 'user.role'|trans }}</th>
+                        <th>{{ 'user.joined_at'|trans }}</th>
+                        {% if app.user.isAdmin() %}
+                            <th>{{ 'action.actions'|trans }}</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                        <tr>
+                            <td>{{ member.name }}</td>
+                            <td>{{ member.email }}</td>
+                            <td>
+                                <span class="badge badge-{{ member.isAdmin() ? 'admin' : 'member' }}">
+                                    {{ member.isAdmin() ? 'Admin' : 'Member' }}
+                                </span>
+                            </td>
+                            <td>{{ member.createdAt|date('d.m.Y') }}</td>
+                            {% if app.user.isAdmin() and member.id != app.user.id %}
+                                <td>
+                                    <form method="post" action="{{ path('app_organisation_member_role', {id: member.id}) }}" class="inline-form">
+                                        <input type="hidden" name="role" value="{{ member.isAdmin() ? 'member' : 'admin' }}">
+                                        <button type="submit" class="btn btn-small">
+                                            {{ member.isAdmin() ? 'organisation.make_member'|trans : 'organisation.make_admin'|trans }}
+                                        </button>
+                                    </form>
+                                </td>
+                            {% elseif app.user.isAdmin() %}
+                                <td>-</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if app.user.isAdmin() %}
+<!-- Invite Modal -->
+<div class="modal" id="inviteModal">
+    <div class="modal-content">
+        <form method="post" action="{{ path('app_organisation_invite') }}">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ 'organisation.invite_member'|trans }}</h3>
+                <button type="button" class="modal-close" onclick="hideInviteModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="email" class="form-label">{{ 'user.email'|trans }}</label>
+                    <input type="email" 
+                           class="form-control" 
+                           id="email" 
+                           name="email" 
+                           required
+                           placeholder="user@example.com">
+                    <div class="form-help">{{ 'organisation.invite_help'|trans }}</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideInviteModal()">{{ 'action.cancel'|trans }}</button>
+                <button type="submit" class="btn btn-primary">{{ 'organisation.send_invite'|trans }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showInviteModal() {
+    document.getElementById('inviteModal').classList.add('show');
+}
+
+function hideInviteModal() {
+    document.getElementById('inviteModal').classList.remove('show');
+}
+
+// Close modal when clicking outside
+document.getElementById('inviteModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        hideInviteModal();
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

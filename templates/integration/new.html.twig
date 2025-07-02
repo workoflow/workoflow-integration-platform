@@ -1,0 +1,153 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'integration.add_new'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">{{ 'integration.add_new'|trans }}</h1>
+
+        <div class="integration-form-container">
+            <form method="post" id="integrationForm" class="integration-form">
+                <div class="form-section">
+                    <h2 class="section-title">{{ 'integration.basic_info'|trans }}</h2>
+                    
+                    <div class="form-group">
+                        <label for="type" class="form-label">{{ 'integration.type'|trans }}</label>
+                        <select class="form-control" id="type" name="type" required>
+                            <option value="">{{ 'integration.select_type'|trans }}</option>
+                            {% for key, label in types %}
+                                <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name" class="form-label">{{ 'integration.name'|trans }}</label>
+                        <input type="text" class="form-control" id="name" name="name" required 
+                               placeholder="{{ 'integration.name_placeholder'|trans }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="workflow_user_id" class="form-label">{{ 'integration.workflow_id'|trans }}</label>
+                        <input type="text" class="form-control" id="workflow_user_id" name="workflow_user_id" required 
+                               placeholder="{{ 'integration.workflow_id_placeholder'|trans }}">
+                        <div class="form-help">{{ 'integration.workflow_id_help'|trans }}</div>
+                    </div>
+                </div>
+
+                <div class="form-section" id="credentialsCard" style="display: none;">
+                    <h2 class="section-title">{{ 'integration.credentials'|trans }}</h2>
+                    
+                    <div id="jiraCredentials" style="display: none;">
+                        <div class="form-group">
+                            <label for="jira_url" class="form-label">{{ 'integration.jira.url'|trans }}</label>
+                            <input type="url" class="form-control" id="jira_url" name="jira_url" 
+                                   placeholder="https://your-domain.atlassian.net">
+                        </div>
+                        <div class="form-group">
+                            <label for="jira_username" class="form-label">{{ 'integration.jira.username'|trans }}</label>
+                            <input type="email" class="form-control" id="jira_username" name="jira_username" 
+                                   placeholder="your-email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="jira_api_token" class="form-label">{{ 'integration.jira.api_token'|trans }}</label>
+                            <input type="password" class="form-control" id="jira_api_token" name="jira_api_token">
+                            <div class="form-help">{{ 'integration.jira.api_token_help'|trans }}</div>
+                        </div>
+                    </div>
+
+                    <div id="confluenceCredentials" style="display: none;">
+                        <div class="form-group">
+                            <label for="confluence_url" class="form-label">{{ 'integration.confluence.url'|trans }}</label>
+                            <input type="url" class="form-control" id="confluence_url" name="confluence_url" 
+                                   placeholder="https://your-domain.atlassian.net/wiki">
+                        </div>
+                        <div class="form-group">
+                            <label for="confluence_username" class="form-label">{{ 'integration.confluence.username'|trans }}</label>
+                            <input type="email" class="form-control" id="confluence_username" name="confluence_username" 
+                                   placeholder="your-email@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="confluence_api_token" class="form-label">{{ 'integration.confluence.api_token'|trans }}</label>
+                            <input type="password" class="form-control" id="confluence_api_token" name="confluence_api_token">
+                            <div class="form-help">{{ 'integration.confluence.api_token_help'|trans }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section" id="functionsCard" style="display: none;">
+                    <h2 class="section-title">{{ 'integration.available_functions'|trans }}</h2>
+                    
+                    <div id="jiraFunctions" style="display: none;">
+                        {% for function, description in jira_functions %}
+                            <div class="function-checkbox">
+                                <input type="checkbox" id="function_{{ function }}" 
+                                       name="function_{{ function }}" checked>
+                                <label for="function_{{ function }}">
+                                    <strong>{{ function }}</strong>
+                                    <span class="function-description">{{ description }}</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="confluenceFunctions" style="display: none;">
+                        {% for function, description in confluence_functions %}
+                            <div class="function-checkbox">
+                                <input type="checkbox" id="function_{{ function }}" 
+                                       name="function_{{ function }}" checked>
+                                <label for="function_{{ function }}">
+                                    <strong>{{ function }}</strong>
+                                    <span class="function-description">{{ description }}</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                        {{ 'action.cancel'|trans }}
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'integration.save'|trans }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('type').addEventListener('change', function() {
+    const type = this.value;
+    const credentialsCard = document.getElementById('credentialsCard');
+    const functionsCard = document.getElementById('functionsCard');
+    
+    // Hide all sections first
+    document.getElementById('jiraCredentials').style.display = 'none';
+    document.getElementById('confluenceCredentials').style.display = 'none';
+    document.getElementById('jiraFunctions').style.display = 'none';
+    document.getElementById('confluenceFunctions').style.display = 'none';
+    
+    if (type) {
+        credentialsCard.style.display = 'block';
+        functionsCard.style.display = 'block';
+        
+        if (type === 'jira') {
+            document.getElementById('jiraCredentials').style.display = 'block';
+            document.getElementById('jiraFunctions').style.display = 'block';
+        } else if (type === 'confluence') {
+            document.getElementById('confluenceCredentials').style.display = 'block';
+            document.getElementById('confluenceFunctions').style.display = 'block';
+        }
+    } else {
+        credentialsCard.style.display = 'none';
+        functionsCard.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

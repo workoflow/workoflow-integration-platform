@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'organisation.settings'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="organisation-settings-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="organisation-container">
+        <h1 class="page-title">{{ 'organisation.settings'|trans }}</h1>
+
+        <div class="settings-section">
+            <form method="post" class="settings-form">
+                <div class="form-group">
+                    <label for="name" class="form-label">{{ 'organisation.name'|trans }}</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="name" 
+                           name="name" 
+                           value="{{ organisation.name }}"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">{{ 'organisation.uuid'|trans }}</label>
+                    <div class="input-with-copy">
+                        <input type="text" 
+                               class="form-control" 
+                               value="{{ organisation.uuid }}" 
+                               readonly>
+                        <button class="copy-button" 
+                                type="button" 
+                                onclick="copyToClipboard('{{ organisation.uuid }}', this)">
+                            {{ 'action.copy'|trans }}
+                        </button>
+                    </div>
+                    <div class="form-help">{{ 'organisation.uuid_help'|trans }}</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">{{ 'dashboard.integration_api_url'|trans }}</label>
+                    <div class="input-with-copy">
+                        <input type="text" 
+                               class="form-control" 
+                               value="{{ organisation.integrationApiUrl }}" 
+                               readonly>
+                        <button class="copy-button" 
+                                type="button" 
+                                onclick="copyToClipboard('{{ app.request.schemeAndHttpHost }}{{ organisation.integrationApiUrl }}', this)">
+                            {{ 'action.copy'|trans }}
+                        </button>
+                    </div>
+                    <div class="form-help">{{ 'organisation.integration_api_help'|trans }}</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'organisation.save'|trans }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard(text, button) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = '{{ 'action.copied'|trans }}';
+        button.classList.add('copied');
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

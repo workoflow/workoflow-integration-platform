@@ -1,0 +1,38 @@
+parameters:
+    locale: '%env(APP_LOCALE)%'
+    app.supported_locales: '%env(csv:APP_LOCALES)%'
+    app.url: '%env(APP_URL)%'
+    app.mcp_auth_user: '%env(MCP_AUTH_USER)%'
+    app.mcp_auth_password: '%env(MCP_AUTH_PASSWORD)%'
+    app.encryption_key: '%env(ENCRYPTION_KEY)%'
+    minio.endpoint: '%env(MINIO_ENDPOINT)%'
+    minio.root_user: '%env(MINIO_ROOT_USER)%'
+    minio.root_password: '%env(MINIO_ROOT_PASSWORD)%'
+    minio.bucket: '%env(MINIO_BUCKET)%'
+    minio.region: '%env(MINIO_REGION)%'
+    minio.use_path_style: '%env(bool:MINIO_USE_PATH_STYLE)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    App\Controller\:
+        resource: '../src/Controller/'
+        tags: ['controller.service_arguments']
+    
+    App\Controller\IntegrationApiController:
+        arguments:
+            $mcpAuthUser: '%app.mcp_auth_user%'
+            $mcpAuthPassword: '%app.mcp_auth_password%'
+    
+    App\Security\TestAuthenticator:
+        arguments:
+            $environment: '%kernel.environment%'

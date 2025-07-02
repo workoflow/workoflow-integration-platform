@@ -1,0 +1,102 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'profile.title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page">
+    {% include '_partials/header.html.twig' %}
+    
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">{{ 'profile.title'|trans }}</h1>
+
+        <div class="profile-section">
+            <h2 class="section-title">{{ 'profile.personal_info'|trans }}</h2>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.name'|trans }}</span>
+                    <span class="info-value">{{ user.name }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.email'|trans }}</span>
+                    <span class="info-value">{{ user.email }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.role'|trans }}</span>
+                    <span class="info-value">
+                        <span class="badge badge-{{ user.isAdmin() ? 'admin' : 'member' }}">
+                            {{ user.isAdmin() ? 'Admin' : 'Member' }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.organisation'|trans }}</span>
+                    <span class="info-value">{{ user.organisation ? user.organisation.name : '-' }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.joined_at'|trans }}</span>
+                    <span class="info-value">{{ user.createdAt|date('d.m.Y H:i') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="danger-zone">
+            <h2 class="section-title danger-title">{{ 'profile.danger_zone'|trans }}</h2>
+            <p class="danger-warning">{{ 'profile.delete_account_warning'|trans }}</p>
+            
+            <button type="button" class="btn btn-danger" onclick="showDeleteModal()">
+                {{ 'profile.delete_account'|trans }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <form method="post" action="{{ path('app_profile_delete') }}">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ 'profile.delete_account'|trans }}</h3>
+                <button type="button" class="modal-close" onclick="hideDeleteModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    {{ 'profile.delete_account_confirm'|trans }}
+                </div>
+                <p>{{ 'profile.delete_account_consequences'|trans }}</p>
+                <ul class="consequences-list">
+                    <li>{{ 'profile.delete_consequence_1'|trans }}</li>
+                    <li>{{ 'profile.delete_consequence_2'|trans }}</li>
+                    <li>{{ 'profile.delete_consequence_3'|trans }}</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('delete-account') }}">
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">{{ 'action.cancel'|trans }}</button>
+                <button type="submit" class="btn btn-danger">{{ 'profile.confirm_delete'|trans }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showDeleteModal() {
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+}
+
+// Close modal when clicking outside
+document.getElementById('deleteModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        hideDeleteModal();
+    }
+});
+</script>
+{% endblock %}
