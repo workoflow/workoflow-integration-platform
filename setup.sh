@@ -96,8 +96,28 @@ echo ""
 echo "Generating JWT keys..."
 mkdir -p config/jwt
 if [ ! -f config/jwt/private.pem ]; then
-    openssl genpkey -out config/jwt/private.pem -aes256 -algorithm rsa -pkeyopt rsa_keygen_bits:4096 -pass pass:$(grep JWT_PASSPHRASE .env | cut -d '=' -f2)
-    openssl pkey -in config/jwt/private.pem -out config/jwt/public.pem -pubout -passin pass:$(grep JWT_PASSPHRASE .env | cut -d '=' -f2)
+    # Extract JWT passphrase with proper trimming
+    JWT_PASS=$(grep "^JWT_PASSPHRASE=" .env | cut -d '=' -f2- | tr -d ' ' | tr -d '"' | tr -d "'")
+    
+    if [ -z "$JWT_PASS" ]; then
+        echo "ERROR: JWT_PASSPHRASE not found in .env file"
+        exit 1
+    fi
+    
+    echo "Generating private key..."
+    openssl genpkey -out config/jwt/private.pem -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -aes256 -pass "pass:${JWT_PASS}" 2>&1
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to generate private key"
+        exit 1
+    fi
+    
+    echo "Generating public key..."
+    openssl pkey -in config/jwt/private.pem -out config/jwt/public.pem -pubout -passin "pass:${JWT_PASS}" 2>&1
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to generate public key"
+        exit 1
+    fi
+    
     chmod 644 config/jwt/public.pem
     chmod 600 config/jwt/private.pem
     echo "JWT keys generated successfully"
