@@ -60,7 +60,7 @@ services:
       - minio_data:/data
     command: server /data
     ports:
-      - "35805:35805"
+      - "32865:32865"
     networks:
       - workoflow
     healthcheck:
