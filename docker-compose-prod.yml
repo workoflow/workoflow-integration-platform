@@ -23,7 +23,6 @@ services:
     depends_on:
       - mariadb
       - redis
-      - minio
     networks:
       - workoflow
     extra_hosts:
@@ -78,8 +77,6 @@ volumes:
   caddy_data:
     external: true
   caddy_config:
-    external: true
-  minio_data:
     external: true
 
 networks:
