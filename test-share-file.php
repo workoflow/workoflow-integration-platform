@@ -2,13 +2,13 @@
 
 // Test the share_file tool
 
-$orgUuid = '278d2322-fb7e-489e-95f6-8249c2e44481';
-$workflowUserId = 'patrick_test_id';
+$orgUuid = '0cd3a714-adc1-4540-bd08-7316a80b34f3';
+$workflowUserId = '45908692-019e-4436-810c-b417f58f5f4f';
 $authUser = 'workoflow';
 $authPassword = 'workoflow';
 
 // Read the actual PDF file
-$pdfPath = __DIR__ . '/aigentics-invoice-june-2025.pdf';
+$pdfPath = __DIR__ . '/dummy.pdf';
 if (!file_exists($pdfPath)) {
     die("Error: PDF file not found at {$pdfPath}\n");
 }
@@ -29,7 +29,8 @@ $data = [
     'tool_id' => 'share_file',
     'parameters' => [
         'binaryData' => $testContent,
-        'contentType' => 'application/pdf'
+        'contentType' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+//        'contentType' => 'application/pdf'
     ]
 ];
 
