@@ -82,7 +82,13 @@ class SharedFileController extends AbstractController
             $response->headers->set('Cache-Control', 'public, max-age=3600');
             
             // Add Content-Disposition for better download experience
+            // The key format is: orgUuid/fileId.extension
             $filename = basename($key);
+            // If filename doesn't have an extension, add one based on content type
+            if (!preg_match('/\.[a-zA-Z0-9]+$/', $filename)) {
+                $extension = $this->getExtensionFromContentType($contentType);
+                $filename = $fileId . '.' . $extension;
+            }
             $response->headers->set('Content-Disposition', sprintf('inline; filename="%s"', $filename));
 
             $this->logger->info('Shared file accessed', [
@@ -102,5 +108,30 @@ class SharedFileController extends AbstractController
 
             return new Response('File not found', 404);
         }
+    }
+    
+    private function getExtensionFromContentType(string $contentType): string
+    {
+        $extensions = [
+            'application/pdf' => 'pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+            'application/vnd.ms-excel' => 'xls',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+            'application/vnd.ms-powerpoint' => 'ppt',
+            'text/csv' => 'csv',
+            'text/plain' => 'txt',
+            'application/json' => 'json',
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/bmp' => 'bmp',
+            'application/zip' => 'zip',
+            'application/x-rar-compressed' => 'rar',
+            'application/x-7z-compressed' => '7z'
+        ];
+        
+        return $extensions[$contentType] ?? 'bin';
     }
 }

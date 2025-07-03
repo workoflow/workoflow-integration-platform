@@ -62,7 +62,7 @@ class ShareFileService
                             'Effect' => 'Allow',
                             'Principal' => ['AWS' => ['*']],
                             'Action' => ['s3:GetObject'],
-                            'Resource' => ["arn:aws:s3:::${this->publicBucket}/*"]
+                            'Resource' => ["arn:aws:s3:::" . $this->publicBucket . "/*"]
                         ]
                     ]
                 ]);
@@ -161,6 +161,8 @@ class ShareFileService
             'application/msword' => 'doc',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
             'application/vnd.ms-excel' => 'xls',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+            'application/vnd.ms-powerpoint' => 'ppt',
             'text/csv' => 'csv',
             'text/plain' => 'txt',
             'application/json' => 'json',

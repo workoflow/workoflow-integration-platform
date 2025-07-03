@@ -37,7 +37,7 @@ yarn-error.log
 .DS_Store
 Thumbs.db
 ###< OS ###
-
+logs/
 ###> docker ###
 /.env.local
 ###< docker ###
