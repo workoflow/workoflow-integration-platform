@@ -136,6 +136,11 @@ echo ""
 echo "Waiting for services to be ready..."
 sleep 10
 
+# Clear cache first to ensure new configurations are loaded
+echo ""
+echo "Clearing cache to load new configurations..."
+docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console cache:clear --env=$ENVIRONMENT || true
+
 # Install dependencies (dev only - prod installs during Docker build)
 if [ "$ENVIRONMENT" != "prod" ]; then
     echo ""
