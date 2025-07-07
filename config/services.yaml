@@ -9,6 +9,7 @@ parameters:
     minio.root_user: '%env(MINIO_ROOT_USER)%'
     minio.root_password: '%env(MINIO_ROOT_PASSWORD)%'
     minio.bucket: '%env(MINIO_BUCKET)%'
+    minio.public_bucket: '%env(MINIO_PUBLIC_BUCKET)%'
     minio.region: '%env(MINIO_REGION)%'
     minio.use_path_style: '%env(bool:MINIO_USE_PATH_STYLE)%'
 

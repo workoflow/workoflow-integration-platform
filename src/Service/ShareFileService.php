@@ -12,7 +12,7 @@ class ShareFileService
 {
     private S3Client $s3Client;
     private string $bucket;
-    private string $publicBucket = 'workoflow-shared';
+    private string $publicBucket;
     private string $publicEndpoint;
     private string $appUrl;
 
@@ -32,6 +32,7 @@ class ShareFileService
         ]);
         
         $this->bucket = $params->get('minio.bucket');
+        $this->publicBucket = $params->get('minio.public_bucket');
         
         // Extract the public endpoint without internal docker hostname
         $endpoint = $params->get('minio.endpoint');
