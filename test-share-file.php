@@ -29,8 +29,8 @@ $data = [
     'tool_id' => 'share_file',
     'parameters' => [
         'binaryData' => $testContent,
-        'contentType' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-//        'contentType' => 'application/pdf'
+//        'contentType' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        'contentType' => 'application/pdf'
     ]
 ];
 

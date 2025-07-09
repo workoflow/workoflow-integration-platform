@@ -26,7 +26,7 @@ WORKDIR /app
 COPY composer.json composer.lock symfony.lock ./
 
 # Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-scripts
+RUN composer install --optimize-autoloader --no-scripts
 
 # Copy package files for npm
 COPY package.json package-lock.json webpack.config.js ./
@@ -48,6 +48,11 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    git \
+    zip \
+    unzip \
+    nodejs \
+    npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

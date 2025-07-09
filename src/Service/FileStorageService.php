@@ -132,7 +132,9 @@ class FileStorageService
                 'error' => $e->getMessage(),
                 'org_uuid' => $orgUuid
             ]);
-            return [];
+            
+            // Re-throw the exception to let the controller handle it
+            throw new \RuntimeException('Unable to connect to file storage service: ' . $e->getMessage(), 0, $e);
         }
     }
 
@@ -169,6 +171,23 @@ class FileStorageService
                 'key' => $key
             ]);
             throw new \RuntimeException('Failed to generate download URL');
+        }
+    }
+
+    public function isConnected(): bool
+    {
+        try {
+            // Try to check if the bucket exists as a connectivity test
+            $this->s3Client->headBucket([
+                'Bucket' => $this->bucket,
+            ]);
+            return true;
+        } catch (S3Exception $e) {
+            $this->logger->error('MinIO connection check failed', [
+                'error' => $e->getMessage(),
+                'bucket' => $this->bucket
+            ]);
+            return false;
         }
     }
 }

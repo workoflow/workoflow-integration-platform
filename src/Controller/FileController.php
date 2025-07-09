@@ -31,11 +31,36 @@ class FileController extends AbstractController
             return $this->redirectToRoute('app_organisation_create');
         }
 
-        $files = $this->fileStorageService->listFiles($organisation->getUuid());
+        $files = [];
+        $connectionError = null;
+        $isConnected = false;
+
+        try {
+            // Check connection first
+            $isConnected = $this->fileStorageService->isConnected();
+
+            if ($isConnected) {
+                echo $organisation->getUuid();
+                $files = $this->fileStorageService->listFiles($organisation->getUuid());
+                print_r($files);
+                die("TEST");
+            } else {
+                $connectionError = 'Unable to connect to file storage service. Please check if MinIO is running and accessible.';
+            }
+        } catch (\Exception $e) {
+            $connectionError = 'Error accessing file storage: ' . $e->getMessage();
+            $this->addFlash('error', $connectionError);
+            
+            // Log the error for debugging
+            error_log('FileController: Connection error - ' . $e->getMessage());
+            error_log('FileController: isConnected = ' . ($isConnected ? 'true' : 'false'));
+        }
 
         return $this->render('file/index.html.twig', [
             'files' => $files,
             'organisation' => $organisation,
+            'connectionError' => $connectionError,
+            'isConnected' => $isConnected,
         ]);
     }
 

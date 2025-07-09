@@ -145,7 +145,7 @@ docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console cache:clear -
 if [ "$ENVIRONMENT" != "prod" ]; then
     echo ""
     echo "Installing PHP dependencies..."
-    docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --no-dev --optimize-autoloader
+    docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --optimize-autoloader
 fi
 
 # Install npm dependencies and build assets (dev only - prod builds during Docker image creation)

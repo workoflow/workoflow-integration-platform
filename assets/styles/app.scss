@@ -380,10 +380,25 @@ body {
   }
 }
 
+// Video Section
+.video-section {
+  padding: var(--space-3xl) 0;
+  background: var(--bg-secondary);
+  
+  .video-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-color);
+  }
+}
+
 // Features Grid
 .features-section {
   padding: var(--space-3xl) 0;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   
   .features-grid {
     display: grid;
