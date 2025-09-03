@@ -172,7 +172,6 @@ puppeteer.test2@example.com (Member)
 ### REST API Tests
 - Puppeteer für UI Tests
 - MariaDB für Datenbank-Tests
-- Integration Tests für APIs
 
 ## Deployment
 

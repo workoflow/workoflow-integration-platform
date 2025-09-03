@@ -3,7 +3,7 @@
 {% block title %}{{ 'file.title'|trans }} - Workoflow{% endblock %}
 
 {% block body %}
-<div class="dashboard-page">
+<div class="dashboard-page files-page">
     {% include '_partials/header.html.twig' %}
     
     <div class="dashboard-container">
@@ -46,7 +46,7 @@
                                 <td>{{ file.last_modified|date('d.m.Y H:i') }}</td>
                                 <td class="file-actions">
                                     <a href="{{ path('app_file_download', {key: file.key}) }}" 
-                                       class="btn btn-small">
+                                       class="btn btn-small btn-primary">
                                         {{ 'action.download'|trans }}
                                     </a>
                                     <form method="post" 
@@ -174,23 +174,31 @@ uploadBtn.addEventListener('click', async () => {
     const formData = new FormData();
     filesToUpload.forEach(file => {
         formData.append('files[]', file);
+        console.log('Adding file to upload:', file.name, file.size);
     });
     
     uploadBtn.disabled = true;
     document.getElementById('uploadSpinner').classList.remove('hidden');
     
     try {
+        console.log('Uploading', filesToUpload.length, 'file(s)...');
         const response = await fetch('{{ path('app_file_upload') }}', {
             method: 'POST',
             body: formData
         });
         
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
         
         if (data.success) {
             location.reload();
         } else {
-            alert('{{ 'file.upload_error'|trans }}');
+            // Show more detailed error message
+            const errorMsg = data.error || data.errors ? 
+                (data.error || data.errors.map(e => `${e.file}: ${e.error}`).join('\n')) : 
+                '{{ 'file.upload_error'|trans }}';
+            alert(errorMsg);
         }
     } catch (error) {
         alert('{{ 'file.upload_error'|trans }}');

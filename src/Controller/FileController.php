@@ -40,10 +40,7 @@ class FileController extends AbstractController
             $isConnected = $this->fileStorageService->isConnected();
 
             if ($isConnected) {
-                echo $organisation->getUuid();
                 $files = $this->fileStorageService->listFiles($organisation->getUuid());
-                print_r($files);
-                die("TEST");
             } else {
                 $connectionError = 'Unable to connect to file storage service. Please check if MinIO is running and accessible.';
             }
@@ -74,10 +71,30 @@ class FileController extends AbstractController
             return new JsonResponse(['error' => 'No organisation'], 400);
         }
 
-        $uploadedFiles = $request->files->all();
+        // Handle files sent as 'files[]' from the frontend
+        $uploadedFiles = $request->files->get('files', []);
+        
+        // If no files under 'files' key, check all files
+        if (empty($uploadedFiles)) {
+            $uploadedFiles = $request->files->all();
+        }
+        
+        // Ensure we have files to process
+        if (empty($uploadedFiles)) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'No files received in the request'
+            ], 400);
+        }
+        
         $results = [];
         $errors = [];
 
+        // Handle both array of files and single file
+        if (!is_array($uploadedFiles)) {
+            $uploadedFiles = [$uploadedFiles];
+        }
+        
         foreach ($uploadedFiles as $uploadedFile) {
             if ($uploadedFile instanceof UploadedFile) {
                 try {
@@ -120,7 +137,7 @@ class FileController extends AbstractController
         ]);
     }
 
-    #[Route('/{key}/delete', name: 'app_file_delete', methods: ['POST'])]
+    #[Route('/{key}/delete', name: 'app_file_delete', methods: ['POST'], requirements: ['key' => '.+'])]
     public function delete(string $key): Response
     {
         $user = $this->getUser();
@@ -146,7 +163,7 @@ class FileController extends AbstractController
         return $this->redirectToRoute('app_files');
     }
 
-    #[Route('/{key}/download', name: 'app_file_download')]
+    #[Route('/{key}/download', name: 'app_file_download', requirements: ['key' => '.+'])]
     public function download(string $key): Response
     {
         $user = $this->getUser();

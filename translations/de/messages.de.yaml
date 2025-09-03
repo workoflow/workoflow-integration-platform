@@ -155,20 +155,22 @@ action:
   download: Herunterladen
 
 file:
-  title: Dateiverwaltung
+  title: Dateien
   upload: Hochladen
   upload_files: Dateien hochladen
-  no_files: Keine Dateien vorhanden.
+  no_files: Noch keine Dateien hochgeladen.
   name: Dateiname
   size: Größe
   uploaded_by: Hochgeladen von
-  uploaded_at: Hochgeladen am
-  drag_drop: Dateien hier ablegen oder
+  uploaded_at: Hochladedatum
+  drag_drop: Dateien hier ablegen oder klicken zum Auswählen
   select_files: Dateien auswählen
   allowed_types: Erlaubte Dateitypen
   max_size: Maximale Dateigröße
   delete_confirm: Sind Sie sicher, dass Sie diese Datei löschen möchten?
-  upload_error: Fehler beim Hochladen
+  upload_error: Fehler beim Hochladen der Dateien
+  upload_disabled_no_connection: Hochladen deaktiviert - Keine Verbindung zum Dateispeicher
+  connection_error_hint: Bitte stellen Sie sicher, dass MinIO läuft und über den konfigurierten Endpunkt erreichbar ist.
   deleted:
     success: Datei erfolgreich gelöscht!
     error: Fehler beim Löschen der Datei.

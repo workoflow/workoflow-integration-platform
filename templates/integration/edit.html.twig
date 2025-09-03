@@ -3,13 +3,14 @@
 {% block title %}{{ 'integration.edit'|trans }} - Workoflow{% endblock %}
 
 {% block body %}
-<div class="integrations-edit-page">
+<div class="dashboard-page">
     {% include '_partials/header.html.twig' %}
     
-    <div class="integrations-container">
-        <h1 class="page-title">{{ 'integration.edit'|trans }}: {{ integration.name }}</h1>
+    <div class="dashboard-container">
+        <h1 class="dashboard-title">{{ 'integration.edit'|trans }}: {{ integration.name }}</h1>
 
-        <form method="post" class="integration-form">
+        <div class="integration-form-container">
+            <form method="post" class="integration-form">
             <div class="form-section">
                 <h2 class="section-title">{{ 'integration.basic_info'|trans }}</h2>
                 
@@ -106,6 +107,7 @@
                 </button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 {% endblock %}

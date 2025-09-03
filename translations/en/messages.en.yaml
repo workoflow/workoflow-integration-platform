@@ -155,20 +155,22 @@ action:
   download: Download
 
 file:
-  title: File Management
+  title: Files
   upload: Upload
   upload_files: Upload Files
-  no_files: No files available.
-  name: Filename
+  no_files: No files uploaded yet.
+  name: File Name
   size: Size
-  uploaded_by: Uploaded by
-  uploaded_at: Uploaded at
-  drag_drop: Drop files here or
+  uploaded_by: Uploaded By
+  uploaded_at: Upload Date
+  drag_drop: Drag files here or click to select
   select_files: Select Files
   allowed_types: Allowed file types
   max_size: Maximum file size
   delete_confirm: Are you sure you want to delete this file?
-  upload_error: Upload error
+  upload_error: Failed to upload files
+  upload_disabled_no_connection: Upload disabled - No connection to file storage
+  connection_error_hint: Please ensure MinIO is running and accessible at the configured endpoint.
   deleted:
     success: File deleted successfully!
     error: Error deleting file.
