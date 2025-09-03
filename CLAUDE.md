@@ -1,31 +1,42 @@
 # Workoflow Integration Platform
 
-## Übersicht
-Die Workoflow Integration Platform ist eine production-ready Symfony 7.2 Anwendung, die es Benutzern ermöglicht, verschiedene Integrationen (Jira, Confluence) zu verwalten und über eine REST API für AI Agenten bereitzustellen.
+## Overview
+The Workoflow Integration Platform is a production-ready Symfony 7.2 application that enables users to manage various integrations (Jira, Confluence) and provide them via REST API for AI agents.
 
-### Hauptfunktionen
+### Development Rules
+1. **CHANGELOG.md Updates**:
+    - Update CHANGELOG.md with user-facing changes only (features, fixes, improvements)
+    - Write for end-users and basic technical users, NOT developers
+    - DO NOT mention: function calls, function names, file paths, code implementation details
+    - DO mention: what changed from user perspective, UI improvements, workflow changes, bug fixes
+    - Group changes by date, use sections: Added, Changed, Fixed, Removed
+    - Write concise bullet points focusing on the "what" and "why", not the "how"
+    - Example: ✅ "Removed address confirmation step for faster returns"
+    - Example: ❌ "Modified processReturn function to skip confirmAddress parameter"
+
+### Main Features
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management
 - Integration Management (Jira, Confluence)
-- REST API für AI Agent Zugriff
-- File Management mit MinIO S3
+- REST API for AI Agent access
+- File Management with MinIO S3
 - Audit Logging
-- Mehrsprachigkeit (DE/EN)
+- Multi-language support (DE/EN)
 
-## Architektur
+## Architecture
 
 ### Tech Stack
 - **Backend**: PHP 8.4, Symfony 7.2, FrankenPHP
 - **Database**: MariaDB 11.2
 - **Cache**: Redis 7
-- **Storage**: MinIO (S3-kompatibel)
+- **Storage**: MinIO (S3-compatible)
 - **Mail**: MailHog (Development)
 - **Container**: Docker & Docker Compose
 
-### Verzeichnisstruktur
+### Directory Structure
 ```
 workoflow-promopage-v2/
-├── config/           # Symfony Konfiguration
+├── config/           # Symfony Configuration
 ├── migrations/       # Doctrine Migrations
 ├── public/          # Web Root
 ├── src/
@@ -43,36 +54,36 @@ workoflow-promopage-v2/
 
 ## Setup
 
-### Entwicklungsumgebung
+### Development Environment
 ```bash
-# 1. Repository klonen
+# 1. Clone repository
 git clone <repository-url>
 cd workoflow-promopage-v2
 
-# 2. Setup ausführen
+# 2. Run setup
 ./setup.sh dev
 
-# 3. Google OAuth konfigurieren in .env
+# 3. Configure Google OAuth in .env
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_client_secret
 ```
 
-### Produktionsumgebung
+### Production Environment
 ```bash
-# 1. Als non-root User mit Docker-Zugriff
+# 1. As non-root user with Docker access
 ./setup.sh prod
 
-# 2. SSL-Zertifikate konfigurieren
-# 3. Domain in .env anpassen
-# 4. Google OAuth Redirect URI aktualisieren
+# 2. Configure SSL certificates
+# 3. Adjust domain in .env
+# 4. Update Google OAuth Redirect URI
 ```
 
-### Zugriff
+### Access
 - **Application**: http://localhost:3979
 - **MinIO Console**: http://localhost:9001 (admin/workoflow123)
 - **MailHog**: http://localhost:8025
 
-## API Referenz
+## API Reference
 
 ### REST API Endpoints
 ```
@@ -80,133 +91,133 @@ GET /api/integrations/{org-uuid}?workflow_user_id={workflow-user-id}
 Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==
 ```
 
-Die REST API stellt dynamisch Tools basierend auf den aktivierten User-Integrationen bereit.
+The REST API dynamically provides tools based on activated user integrations.
 
-### Verfügbare Tools
+### Available Tools
 
 #### Jira Tools
-- `jira_search_{integration_id}` - JQL Suche
-- `jira_get_issue_{integration_id}` - Issue Details abrufen
+- `jira_search_{integration_id}` - JQL Search
+- `jira_get_issue_{integration_id}` - Get Issue Details
 - `jira_get_sprints_from_board_{integration_id}` - Board Sprints
 - `jira_get_sprint_issues_{integration_id}` - Sprint Issues
 
 #### Confluence Tools
-- `confluence_search_{integration_id}` - CQL Suche
-- `confluence_get_page_{integration_id}` - Seite abrufen
-- `confluence_get_comments_{integration_id}` - Kommentare abrufen
+- `confluence_search_{integration_id}` - CQL Search
+- `confluence_get_page_{integration_id}` - Get Page
+- `confluence_get_comments_{integration_id}` - Get Comments
 
-## Entities & Datenmodell
+## Entities & Data Model
 
 ### User
-- Authentifizierung via Google OAuth2
-- Rollen: ROLE_ADMIN, ROLE_MEMBER
-- 1:1 Beziehung zu Organisation
-- 1:N Beziehung zu Integrations
+- Authentication via Google OAuth2
+- Roles: ROLE_ADMIN, ROLE_MEMBER
+- 1:1 Relationship to Organisation
+- 1:N Relationship to Integrations
 
 ### Organisation
-- UUID für REST API URL
-- 1:N Beziehung zu Users
-- Audit Logging auf Org-Ebene
+- UUID for REST API URL
+- 1:N Relationship to Users
+- Audit Logging at Org level
 
 ### Integration
-- Typen: jira, confluence
-- Verschlüsselte Credentials (Sodium)
-- Workflow User ID für Filterung
-- 1:N Beziehung zu IntegrationFunctions
+- Types: jira, confluence
+- Encrypted Credentials (Sodium)
+- Workflow User ID for filtering
+- 1:N Relationship to IntegrationFunctions
 
 ### IntegrationFunction
-- Definiert verfügbare API-Funktionen
-- Kann aktiviert/deaktiviert werden
-- Enthält Tool-Beschreibungen für AI
+- Defines available API functions
+- Can be activated/deactivated
+- Contains tool descriptions for AI
 
-## Sicherheit
+## Security
 
-### Authentifizierung
-- Google OAuth2 für User Login
-- Basic Auth für REST API
-- JWT Tokens für API
-- X-Test-Auth-Email GET Parameter für Tests
+### Authentication
+- Google OAuth2 for User Login
+- Basic Auth for REST API
+- JWT Tokens for API
+- X-Test-Auth-Email GET Parameter for Tests
 
-### Verschlüsselung
+### Encryption
 
-Die Platform nutzt zwei separate Verschlüsselungsmechanismen:
+The platform uses two separate encryption mechanisms:
 
-#### 1. JWT Token Verschlüsselung (API Authentication)
-- **Zweck**: Generierung und Validierung von Access Tokens für API-Zugriffe
-- **Dateien**: 
-  - `config/jwt/private.pem` - RSA Private Key (4096-bit) zum Signieren von JWT Tokens
-  - `config/jwt/public.pem` - RSA Public Key zur Verifizierung von JWT Tokens
-- **Verschlüsselung**: RSA 4096-bit mit AES256 Passwort-Schutz
-- **Konfiguration**: Lexik JWT Authentication Bundle
-- **Token-Lebensdauer**: 3600 Sekunden (1 Stunde)
+#### 1. JWT Token Encryption (API Authentication)
+- **Purpose**: Generation and validation of access tokens for API access
+- **Files**: 
+  - `config/jwt/private.pem` - RSA Private Key (4096-bit) for signing JWT tokens
+  - `config/jwt/public.pem` - RSA Public Key for verifying JWT tokens
+- **Encryption**: RSA 4096-bit with AES256 password protection
+- **Configuration**: Lexik JWT Authentication Bundle
+- **Token Lifetime**: 3600 seconds (1 hour)
 
-#### 2. Integration Credentials Verschlüsselung (User Secrets)
-- **Zweck**: Sichere Speicherung von User-Integration Credentials (Jira/Confluence API Keys)
-- **Verschlüsselung**: Sodium (libsodium) - moderne, sichere Verschlüsselung
-- **Key**: 32-Zeichen ENCRYPTION_KEY aus .env
+#### 2. Integration Credentials Encryption (User Secrets)
+- **Purpose**: Secure storage of user-integration credentials (Jira/Confluence API Keys)
+- **Encryption**: Sodium (libsodium) - modern, secure encryption
+- **Key**: 32-character ENCRYPTION_KEY from .env
 - **Service**: `App\Service\EncryptionService`
-- **Speicherung**: Verschlüsselte Credentials im `encryptedCredentials` Feld der Integration Entity
+- **Storage**: Encrypted credentials in the `encryptedCredentials` field of the Integration Entity
 - **Workflow**:
-  1. User gibt API Credentials ein
-  2. EncryptionService verschlüsselt mit Sodium und ENCRYPTION_KEY
-  3. Verschlüsselter Blob wird in Datenbank gespeichert
-  4. Bei API-Zugriff werden Credentials entschlüsselt
+  1. User enters API credentials
+  2. EncryptionService encrypts with Sodium and ENCRYPTION_KEY
+  3. Encrypted blob is stored in database
+  4. Credentials are decrypted on API access
 
 ### Audit Logging
-- Alle kritischen Aktionen geloggt
-- IP-Adresse und User Agent
-- Monolog mit verschiedenen Channels
+- All critical actions logged
+- IP address and User Agent
+- Monolog with different channels
 
 ## Testing
 
 ### Test User Setup
 ```php
-// GET Parameter für Test-Authentifizierung
+// GET Parameter for test authentication
 ?X-Test-Auth-Email=test@example.com
 
-// Vorkonfigurierte Test-User
+// Preconfigured test users
 puppeteer.test1@example.com (Admin)
 puppeteer.test2@example.com (Member)
 ```
 
 ### REST API Tests
-- Puppeteer für UI Tests
-- MariaDB für Datenbank-Tests
+- Puppeteer for UI tests
+- MariaDB for database tests
 
 ## Deployment
 
 ### Environment Variables
-Alle kritischen Konfigurationen über .env:
+All critical configurations via .env:
 - Database Credentials
 - OAuth2 Settings
 - S3/MinIO Config
 - Encryption Keys
 
 ### Migration Strategy
-- Development: Single Migration überschreibbar
-- Production: Neue Migration Files
+- Development: Single migration overwritable
+- Production: New migration files
 
 ### Monitoring
 - Audit Logs in `/var/log/audit.log`
 - API Access Logs
 - Error Tracking via Monolog
 
-## Wartung
+## Maintenance
 
 ### Backup
-- MariaDB Datenbank
+- MariaDB Database
 - MinIO S3 Bucket
 - Environment Files
 
 ### Updates
 ```bash
-# Dependencies aktualisieren
+# Update dependencies
 docker-compose exec frankenphp composer update
 
-# Migrations ausführen
+# Run migrations
 docker-compose exec frankenphp php bin/console doctrine:migrations:migrate
 
-# Cache leeren
+# Clear cache
 docker-compose exec frankenphp php bin/console cache:clear
 
 # rebuild assets

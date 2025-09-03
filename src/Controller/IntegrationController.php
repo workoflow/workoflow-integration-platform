@@ -157,8 +157,23 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_integrations');
         }
 
+        // Decrypt credentials for display
+        $decryptedCredentials = [];
+        if ($integration->getEncryptedCredentials()) {
+            try {
+                $decryptedCredentials = json_decode(
+                    $encryptionService->decrypt($integration->getEncryptedCredentials()),
+                    true
+                );
+            } catch (\Exception $e) {
+                // If decryption fails, log error but continue with empty credentials
+                $this->addFlash('warning', 'Could not decrypt credentials. Please re-enter them.');
+            }
+        }
+
         return $this->render('integration/edit.html.twig', [
             'integration' => $integration,
+            'credentials' => $decryptedCredentials,
         ]);
     }
 
