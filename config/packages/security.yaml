@@ -29,6 +29,7 @@ security:
             custom_authenticators:
                 - App\Security\GoogleAuthenticator
                 - App\Security\TestAuthenticator
+                - App\Security\MagicLinkAuthenticator
             access_denied_handler: App\Security\AccessDeniedHandler
     
     access_control:

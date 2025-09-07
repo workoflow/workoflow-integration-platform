@@ -46,6 +46,7 @@ class IntegrationController extends AbstractController
             
             $integration = new Integration();
             $integration->setUser($this->getUser());
+            $integration->setOrganisation($this->getUser()->getOrganisation());
             $integration->setType($type);
             $integration->setName($name);
             $integration->setWorkflowUserId($workflowUserId);

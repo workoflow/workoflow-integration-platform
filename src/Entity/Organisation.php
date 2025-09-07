@@ -36,10 +36,14 @@ class Organisation
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'organisation')]
     private Collection $auditLogs;
 
+    #[ORM\OneToMany(targetEntity: Integration::class, mappedBy: 'organisation')]
+    private Collection $integrations;
+
     public function __construct()
     {
         $this->users = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
+        $this->integrations = new ArrayCollection();
         $this->uuid = Uuid::v4()->toRfc4122();
     }
 
@@ -132,6 +136,30 @@ class Organisation
     public function getAuditLogs(): Collection
     {
         return $this->auditLogs;
+    }
+
+    public function getIntegrations(): Collection
+    {
+        return $this->integrations;
+    }
+
+    public function addIntegration(Integration $integration): static
+    {
+        if (!$this->integrations->contains($integration)) {
+            $this->integrations->add($integration);
+            $integration->setOrganisation($this);
+        }
+        return $this;
+    }
+
+    public function removeIntegration(Integration $integration): static
+    {
+        if ($this->integrations->removeElement($integration)) {
+            if ($integration->getOrganisation() === $this) {
+                $integration->setOrganisation(null);
+            }
+        }
+        return $this;
     }
 
     public function getIntegrationApiUrl(): string

@@ -5,11 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-09-03
+## [Unreleased] - 2025-09-07
 
 ### Added
-- Display saved integration credentials in edit form for easier updates
+- Magic link authentication for automatic user login from external applications
+- Display saved integration credentials in edit form for easier updates  
 - Documentation translated to English for international users
+- Automatic user creation and organization assignment via secure links
+- Support for Microsoft Teams bot integration through signed URLs
 
 ### Fixed
 - File viewing and uploading functionality restored

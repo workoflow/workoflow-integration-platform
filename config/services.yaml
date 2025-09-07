@@ -37,3 +37,17 @@ services:
     App\Security\TestAuthenticator:
         arguments:
             $environment: '%kernel.environment%'
+    
+    App\Service\MagicLinkService:
+        arguments:
+            $magicLinkSecret: '%env(MAGIC_LINK_SECRET)%'
+    
+    App\Security\MagicLinkAuthenticator:
+        arguments:
+            $userRepository: '@App\Repository\UserRepository'
+            $organisationRepository: '@App\Repository\OrganisationRepository'
+            $entityManager: '@doctrine.orm.entity_manager'
+            $magicLinkService: '@App\Service\MagicLinkService'
+            $auditLogService: '@App\Service\AuditLogService'
+            $router: '@router'
+            $logger: '@logger'
