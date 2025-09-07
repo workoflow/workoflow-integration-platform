@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation translated to English for international users
 - Automatic user creation and organization assignment via secure links
 - Support for Microsoft Teams bot integration through signed URLs
+- Support for multiple organizations per user with many-to-many relationship
+- Name-based authentication without requiring email addresses
 
 ### Fixed
 - File viewing and uploading functionality restored

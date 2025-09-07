@@ -45,8 +45,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $tokenExpiresAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'users')]
-    private ?Organisation $organisation = null;
+    #[ORM\ManyToMany(targetEntity: Organisation::class, inversedBy: 'users')]
+    #[ORM\JoinTable(name: 'user_organisation')]
+    private Collection $organisations;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
@@ -64,6 +65,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->integrations = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
+        $this->organisations = new ArrayCollection();
         $this->roles = [self::ROLE_USER];
     }
 
@@ -174,14 +176,45 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->tokenExpiresAt < new \DateTime();
     }
 
-    public function getOrganisation(): ?Organisation
+    /**
+     * @return Collection<int, Organisation>
+     */
+    public function getOrganisations(): Collection
     {
-        return $this->organisation;
+        return $this->organisations;
     }
 
+    public function addOrganisation(Organisation $organisation): static
+    {
+        if (!$this->organisations->contains($organisation)) {
+            $this->organisations->add($organisation);
+        }
+        return $this;
+    }
+
+    public function removeOrganisation(Organisation $organisation): static
+    {
+        $this->organisations->removeElement($organisation);
+        return $this;
+    }
+
+    /**
+     * Get primary organisation (first one) for backward compatibility
+     */
+    public function getOrganisation(): ?Organisation
+    {
+        return $this->organisations->first() ?: null;
+    }
+
+    /**
+     * Set organisation (replaces all with this one) for backward compatibility
+     */
     public function setOrganisation(?Organisation $organisation): static
     {
-        $this->organisation = $organisation;
+        $this->organisations->clear();
+        if ($organisation) {
+            $this->organisations->add($organisation);
+        }
         return $this;
     }
 

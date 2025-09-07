@@ -21,10 +21,10 @@ class MagicLinkService
         $this->logger = $logger;
     }
 
-    public function generateToken(string $email, string $orgUuid): string
+    public function generateToken(string $name, string $orgUuid): string
     {
         $payload = [
-            'email' => $email,
+            'name' => $name,
             'org_uuid' => $orgUuid,
             'iat' => time(),
             'exp' => time() + $this->ttl,
@@ -32,7 +32,7 @@ class MagicLinkService
         ];
 
         $this->logger->info('Generating magic link token', [
-            'email' => $email,
+            'name' => $name,
             'org_uuid' => $orgUuid
         ]);
 
@@ -54,13 +54,13 @@ class MagicLinkService
             }
 
             // Verify required fields
-            if (!isset($payload['email']) || !isset($payload['org_uuid'])) {
+            if (!isset($payload['name']) || !isset($payload['org_uuid'])) {
                 $this->logger->warning('Missing required fields in token', ['payload' => $payload]);
                 return null;
             }
 
             $this->logger->info('Successfully validated magic link token', [
-                'email' => $payload['email'],
+                'name' => $payload['name'],
                 'org_uuid' => $payload['org_uuid']
             ]);
 
@@ -73,9 +73,9 @@ class MagicLinkService
         }
     }
 
-    public function generateMagicLink(string $email, string $orgUuid, string $baseUrl): string
+    public function generateMagicLink(string $name, string $orgUuid, string $baseUrl): string
     {
-        $token = $this->generateToken($email, $orgUuid);
+        $token = $this->generateToken($name, $orgUuid);
         return $baseUrl . '/auth/magic-link?token=' . $token;
     }
 }

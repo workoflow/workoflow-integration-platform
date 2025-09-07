@@ -53,37 +53,49 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
             throw new CustomUserMessageAuthenticationException('Invalid or expired magic link');
         }
 
-        $email = $payload['email'];
+        $name = $payload['name'];
         $orgUuid = $payload['org_uuid'];
+
+        // Generate a generic email from the name (without org UUID)
+        $sanitizedName = strtolower(str_replace(' ', '.', $name));
+        $generatedEmail = $sanitizedName . '@local.local';
 
         // Find or create organisation
         $organisation = $this->organisationRepository->findOneBy(['uuid' => $orgUuid]);
         
         if (!$organisation) {
-            $this->logger->error('Organisation not found for magic link', [
+            // Create new organisation if it doesn't exist
+            $organisation = new Organisation();
+            $organisation->setUuid($orgUuid);
+            $organisation->setName('Organisation ' . substr($orgUuid, 0, 8)); // Default name
+            
+            $this->entityManager->persist($organisation);
+            $this->entityManager->flush();
+            
+            $this->logger->info('Created new organisation via magic link', [
                 'org_uuid' => $orgUuid,
-                'email' => $email
+                'name' => $organisation->getName()
             ]);
-            throw new CustomUserMessageAuthenticationException('Organisation not found');
         }
 
         return new SelfValidatingPassport(
-            new UserBadge($email, function ($userIdentifier) use ($organisation, $request) {
+            new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $request) {
                 $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
                 
                 if (!$user) {
                     // Create new user
                     $user = new User();
-                    $user->setEmail($userIdentifier);
-                    $user->setName($this->extractNameFromEmail($userIdentifier));
+                    $user->setEmail($userIdentifier);  // Generated email
+                    $user->setName($name);  // Actual name from token
                     $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
-                    $user->setOrganisation($organisation);
+                    $user->addOrganisation($organisation);
                     
                     $this->entityManager->persist($user);
                     $this->entityManager->flush();
                     
                     $this->logger->info('Created new user via magic link', [
                         'email' => $userIdentifier,
+                        'name' => $name,
                         'organisation' => $organisation->getName()
                     ]);
 
@@ -93,15 +105,15 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
                         $user,
                         [
                             'email' => $userIdentifier,
+                            'name' => $name,
                             'organisation_id' => $organisation->getId(),
                             'organisation_name' => $organisation->getName()
                         ]
                     );
                 } else {
-                    // Update existing user's organisation if needed
-                    if (!$user->getOrganisation() || $user->getOrganisation()->getId() !== $organisation->getId()) {
-                        $oldOrgName = $user->getOrganisation() ? $user->getOrganisation()->getName() : 'none';
-                        $user->setOrganisation($organisation);
+                    // Add organisation if not already associated
+                    if (!$user->getOrganisations()->contains($organisation)) {
+                        $user->addOrganisation($organisation);
                         
                         // Ensure user has member role if not admin
                         if (!$user->isAdmin()) {
@@ -110,23 +122,27 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
                         
                         $this->entityManager->flush();
                         
-                        $this->logger->info('Updated user organisation via magic link', [
+                        $this->logger->info('Added user to organisation via magic link', [
                             'email' => $userIdentifier,
-                            'old_organisation' => $oldOrgName,
-                            'new_organisation' => $organisation->getName()
+                            'name' => $user->getName(),
+                            'organisation' => $organisation->getName()
                         ]);
 
-                        // Log organisation change
+                        // Log organisation addition
                         $this->auditLogService->log(
-                            'user.organisation_changed_via_magic_link',
+                            'user.organisation_added_via_magic_link',
                             $user,
                             [
-                                'old_organisation' => $oldOrgName,
-                                'new_organisation_id' => $organisation->getId(),
-                                'new_organisation_name' => $organisation->getName()
+                                'organisation_id' => $organisation->getId(),
+                                'organisation_name' => $organisation->getName()
                             ]
                         );
                     }
+                }
+
+                // Store current organisation in session for context
+                if ($request->hasSession()) {
+                    $request->getSession()->set('current_organisation_id', $organisation->getId());
                 }
 
                 // Log successful authentication

@@ -30,7 +30,7 @@ class Organisation
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
-    #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'organisation')]
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'organisations')]
     private Collection $users;
 
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'organisation')]
