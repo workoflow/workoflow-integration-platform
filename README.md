@@ -8,3 +8,7 @@ Plan:
  - oauth2 login urls
  - rights & roles
  - multi org compatibility
+
+# deploy
+ - git pull
+ - ./setup.sh prod
