@@ -19,7 +19,8 @@ services:
     environment:
       # Pass all environment variables directly
       - SERVER_NAME=:80
-      - FRANKENPHP_CONFIG=worker ./public/index.php
+      # Temporarily disable worker mode to debug
+      # - FRANKENPHP_CONFIG=worker ./public/index.php
       - APP_ENV=prod
       - APP_DEBUG=0
       - APP_SECRET=${APP_SECRET}
