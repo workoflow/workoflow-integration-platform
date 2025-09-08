@@ -215,7 +215,7 @@ class IntegrationApiController extends AbstractController
 
         // Verify integration belongs to a user in this organisation and has the correct workflow ID
         $integrationUser = $integration->getUser();
-        if (!$integrationUser || $integrationUser->getOrganisation()->getId() !== $organisation->getId()) {
+        if (!$integrationUser || $integration->getOrganisation()->getId() !== $organisation->getId()) {
             return new JsonResponse(['error' => 'Integration not found in this organisation'], 403);
         }
         

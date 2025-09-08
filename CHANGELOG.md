@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Organization filtering for integrations list and dashboard views
 
 ### Fixed
+- API integration validation now correctly checks the integration's assigned organization
 - Integrations now properly filtered by selected organization
 - Dashboard now only shows integrations for the current organization
 - Resolved deprecation warnings for improved compatibility with future versions
