@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Enhanced SharePoint search to include SharePoint pages and site pages
 - New dedicated SharePoint pages search function for targeted page searches
+- Automatic synchronization of integration functions when editing existing integrations
 - Inline organization name editing for administrators directly on dashboard
 - Organization filtering for integrations list and dashboard views
 

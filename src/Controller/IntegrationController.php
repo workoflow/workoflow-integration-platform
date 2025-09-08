@@ -186,6 +186,9 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_integrations');
         }
 
+        // Sync any new functions that were added to the system but don't exist for this integration yet
+        $this->syncMissingFunctions($integration, $em);
+        
         // Decrypt credentials for display
         $decryptedCredentials = [];
         if ($integration->getEncryptedCredentials()) {
@@ -331,5 +334,67 @@ class IntegrationController extends AbstractController
         
         $session->remove('sharepoint_integration_id');
         return $this->redirectToRoute('app_integrations');
+    }
+    
+    /**
+     * Sync functions for an integration
+     * This ensures that functions match what's defined in the code:
+     * - Adds any new functions as inactive
+     * - Removes functions that no longer exist in the code
+     */
+    private function syncMissingFunctions(Integration $integration, EntityManagerInterface $em): void
+    {
+        // Get all available functions for this integration type
+        $availableFunctions = [];
+        if ($integration->getType() === Integration::TYPE_JIRA) {
+            $availableFunctions = IntegrationFunction::getJiraFunctions();
+        } elseif ($integration->getType() === Integration::TYPE_CONFLUENCE) {
+            $availableFunctions = IntegrationFunction::getConfluenceFunctions();
+        } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
+            $availableFunctions = IntegrationFunction::getSharePointFunctions();
+        }
+        
+        $hasChanges = false;
+        
+        // Build a map of existing functions for easier lookup
+        $existingFunctions = [];
+        foreach ($integration->getFunctions() as $function) {
+            $existingFunctions[$function->getFunctionName()] = $function;
+        }
+        
+        // Add any missing functions as inactive
+        foreach ($availableFunctions as $functionName => $description) {
+            if (!isset($existingFunctions[$functionName])) {
+                $newFunction = new IntegrationFunction();
+                $newFunction->setIntegration($integration);
+                $newFunction->setFunctionName($functionName);
+                $newFunction->setDescription($description);
+                $newFunction->setActive(false); // New functions are inactive by default
+                
+                $integration->addFunction($newFunction);
+                $em->persist($newFunction);
+                $hasChanges = true;
+            } else {
+                // Update description if it changed
+                if ($existingFunctions[$functionName]->getDescription() !== $description) {
+                    $existingFunctions[$functionName]->setDescription($description);
+                    $hasChanges = true;
+                }
+            }
+        }
+        
+        // Remove functions that no longer exist in the code
+        foreach ($existingFunctions as $functionName => $function) {
+            if (!array_key_exists($functionName, $availableFunctions)) {
+                $integration->removeFunction($function);
+                $em->remove($function);
+                $hasChanges = true;
+            }
+        }
+        
+        // Flush changes if any modifications were made
+        if ($hasChanges) {
+            $em->flush();
+        }
     }
 }
