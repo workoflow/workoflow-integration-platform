@@ -24,7 +24,8 @@ class OrganisationController extends AbstractController
         AuditLogService $auditLogService
     ): Response {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
@@ -55,10 +56,11 @@ class OrganisationController extends AbstractController
     }
 
     #[Route('/members', name: 'app_organisation_members')]
-    public function members(UserRepository $userRepository): Response
+    public function members(Request $request, UserRepository $userRepository): Response
     {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
@@ -81,7 +83,8 @@ class OrganisationController extends AbstractController
         AuditLogService $auditLogService
     ): Response {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         if ($member->getOrganisation() !== $organisation) {
             throw $this->createAccessDeniedException();
@@ -111,6 +114,52 @@ class OrganisationController extends AbstractController
         return $this->redirectToRoute('app_organisation_members');
     }
 
+    #[Route('/switch/{id}', name: 'app_organisation_switch')]
+    public function switch(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        AuditLogService $auditLogService
+    ): Response {
+        $user = $this->getUser();
+        
+        // Check if user has access to this organisation
+        $hasAccess = false;
+        $targetOrganisation = null;
+        foreach ($user->getOrganisations() as $org) {
+            if ($org->getId() === $id) {
+                $hasAccess = true;
+                $targetOrganisation = $org;
+                break;
+            }
+        }
+        
+        if (!$hasAccess || !$targetOrganisation) {
+            $this->addFlash('error', 'You do not have access to this organisation');
+            return $this->redirectToRoute('app_dashboard');
+        }
+        
+        // Store the selected organisation ID in session
+        $session = $request->getSession();
+        $session->set('current_organisation_id', $id);
+        
+        $auditLogService->log(
+            'organisation.switched',
+            $user,
+            ['organisation_id' => $id, 'organisation_name' => $targetOrganisation->getName()]
+        );
+        
+        $this->addFlash('success', 'Switched to organisation: ' . $targetOrganisation->getName());
+        
+        // Redirect to the referer or dashboard
+        $referer = $request->headers->get('referer');
+        if ($referer) {
+            return $this->redirect($referer);
+        }
+        
+        return $this->redirectToRoute('app_dashboard');
+    }
+
     #[Route('/invite', name: 'app_organisation_invite', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
     public function invite(
@@ -120,7 +169,8 @@ class OrganisationController extends AbstractController
         AuditLogService $auditLogService
     ): Response {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         $email = $request->request->get('email');
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

@@ -199,10 +199,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
+     * Get current organisation from session or fallback to first one
+     */
+    public function getCurrentOrganisation(?int $sessionOrganisationId = null): ?Organisation
+    {
+        // If a session organisation ID is provided, try to find it in user's organisations
+        if ($sessionOrganisationId !== null) {
+            foreach ($this->organisations as $org) {
+                if ($org->getId() === $sessionOrganisationId) {
+                    return $org;
+                }
+            }
+        }
+        
+        // Fallback to first organisation
+        return $this->organisations->first() ?: null;
+    }
+
+    /**
      * Get primary organisation (first one) for backward compatibility
      */
     public function getOrganisation(): ?Organisation
     {
+        // This method is kept for backward compatibility
+        // In controllers, we'll use getCurrentOrganisation() instead
         return $this->organisations->first() ?: null;
     }
 

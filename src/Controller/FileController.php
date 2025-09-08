@@ -22,10 +22,11 @@ class FileController extends AbstractController
     ) {}
 
     #[Route('/', name: 'app_files')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
@@ -65,7 +66,8 @@ class FileController extends AbstractController
     public function upload(Request $request): JsonResponse
     {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         if (!$organisation) {
             return new JsonResponse(['error' => 'No organisation'], 400);
@@ -138,10 +140,11 @@ class FileController extends AbstractController
     }
 
     #[Route('/{key}/delete', name: 'app_file_delete', methods: ['POST'], requirements: ['key' => '.+'])]
-    public function delete(string $key): Response
+    public function delete(Request $request, string $key): Response
     {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         // Verify file belongs to user's organisation
         if (!str_starts_with($key, $organisation->getUuid() . '/')) {
@@ -164,10 +167,11 @@ class FileController extends AbstractController
     }
 
     #[Route('/{key}/download', name: 'app_file_download', requirements: ['key' => '.+'])]
-    public function download(string $key): Response
+    public function download(Request $request, string $key): Response
     {
         $user = $this->getUser();
-        $organisation = $user->getOrganisation();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
         // Verify file belongs to user's organisation
         if (!str_starts_with($key, $organisation->getUuid() . '/')) {

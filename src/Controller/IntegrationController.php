@@ -44,9 +44,18 @@ class IntegrationController extends AbstractController
             $name = $request->request->get('name');
             $workflowUserId = $request->request->get('workflow_user_id');
             
+            $user = $this->getUser();
+            $sessionOrgId = $request->getSession()->get('current_organisation_id');
+            $organisation = $user->getCurrentOrganisation($sessionOrgId);
+            
+            if (!$organisation) {
+                $this->addFlash('error', 'No organisation selected');
+                return $this->redirectToRoute('app_integrations');
+            }
+            
             $integration = new Integration();
-            $integration->setUser($this->getUser());
-            $integration->setOrganisation($this->getUser()->getOrganisation());
+            $integration->setUser($user);
+            $integration->setOrganisation($organisation);
             $integration->setType($type);
             $integration->setName($name);
             $integration->setWorkflowUserId($workflowUserId);

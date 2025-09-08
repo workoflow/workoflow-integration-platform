@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Microsoft Teams bot integration through signed URLs
 - Support for multiple organizations per user with many-to-many relationship
 - Name-based authentication without requiring email addresses
+- Organization switcher dropdown in header for users with multiple organizations
+- Session-based organization selection that persists across page navigation
 
 ### Fixed
 - File viewing and uploading functionality restored

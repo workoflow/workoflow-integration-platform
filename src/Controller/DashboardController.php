@@ -17,19 +17,29 @@ class DashboardController extends AbstractController
 {
     #[Route('/dashboard', name: 'app_dashboard')]
     #[IsGranted('ROLE_USER')]
-    public function index(IntegrationRepository $integrationRepository): Response
+    public function index(Request $request, IntegrationRepository $integrationRepository): Response
     {
         $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
         
-        if (!$user->getOrganisation()) {
-            return $this->redirectToRoute('app_organisation_create');
+        if (!$organisation) {
+            // If user has no organisations at all, redirect to create
+            if ($user->getOrganisations()->isEmpty()) {
+                return $this->redirectToRoute('app_organisation_create');
+            }
+            // If user has organisations but none selected, select the first one
+            $organisation = $user->getOrganisations()->first();
+            if ($organisation) {
+                $request->getSession()->set('current_organisation_id', $organisation->getId());
+            }
         }
 
         $integrations = $integrationRepository->findByUser($user);
 
         return $this->render('dashboard/index.html.twig', [
             'user' => $user,
-            'organisation' => $user->getOrganisation(),
+            'organisation' => $organisation,
             'integrations' => $integrations,
         ]);
     }
@@ -42,7 +52,8 @@ class DashboardController extends AbstractController
     ): Response {
         $user = $this->getUser();
         
-        if ($user->getOrganisation()) {
+        // Check if user already has any organisations
+        if (!$user->getOrganisations()->isEmpty()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
@@ -53,8 +64,11 @@ class DashboardController extends AbstractController
                 $organisation = new Organisation();
                 $organisation->setName($name);
                 
-                $user->setOrganisation($organisation);
+                $user->addOrganisation($organisation);
                 $user->setRoles([User::ROLE_USER, User::ROLE_ADMIN]);
+                
+                // Set this as the current organisation in session
+                $request->getSession()->set('current_organisation_id', $organisation->getId());
                 
                 $em->persist($organisation);
                 $em->flush();

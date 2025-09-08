@@ -10,6 +10,34 @@
         </a>
         <nav class="header-nav">
             {% if app.user %}
+                {% set currentOrgId = app.session.get('current_organisation_id') %}
+                {% set currentOrg = app.user.getCurrentOrganisation(currentOrgId) %}
+                {% set userOrganisations = app.user.organisations %}
+                
+                {% if userOrganisations|length > 1 %}
+                    <div class="organisation-switcher">
+                        <button class="organisation-switcher-button" onclick="toggleOrgDropdown(event)">
+                            <span class="org-name">{{ currentOrg ? currentOrg.name : 'Select Organisation' }}</span>
+                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                <path d="M6 9L1 4h10L6 9z"/>
+                            </svg>
+                        </button>
+                        <div class="organisation-dropdown" id="orgDropdown" style="display: none;">
+                            {% for org in userOrganisations %}
+                                <a href="{{ path('app_organisation_switch', {'id': org.id}) }}" 
+                                   class="org-item {% if currentOrg and org.id == currentOrg.id %}active{% endif %}">
+                                    {{ org.name }}
+                                    {% if currentOrg and org.id == currentOrg.id %}
+                                        <span class="current-indicator">✓</span>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% elseif currentOrg %}
+                    <span class="single-org-display">{{ currentOrg.name }}</span>
+                {% endif %}
+                
                 <a href="{{ path('app_home') }}" class="header-link">Dashboard</a>
                 <a href="{{ path('app_integrations') }}" class="header-link">Integrations</a>
                 <a href="{{ path('app_files') }}" class="header-link">Files</a>
@@ -24,3 +52,20 @@
         </nav>
     </div>
 </header>
+
+<script>
+function toggleOrgDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('orgDropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('orgDropdown');
+    const switcher = document.querySelector('.organisation-switcher');
+    if (dropdown && !switcher?.contains(event.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+</script>
