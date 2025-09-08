@@ -8,6 +8,9 @@ services:
       - "3979:80"
       - "443:443"
     volumes:
+      # Mount the .env file and JWT keys from host
+      - ./.env:/app/.env:ro
+      - ./config/jwt:/app/config/jwt:ro
       # Only external volumes for persistent data
       - app_var:/app/var
       - app_uploads:/app/public/uploads
