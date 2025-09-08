@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - File viewing and uploading functionality restored
 - Integration credentials now visible when editing for verification
+- Missing translations for SharePoint OAuth authentication interface
 
 ### Changed
 - API token fields changed from password to text input for better usability

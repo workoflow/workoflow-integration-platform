@@ -141,6 +141,16 @@ integration:
     username: Username (Email)
     api_token: API Token
     api_token_help: Create an API token at Atlassian Account Settings
+  sharepoint:
+    oauth_info: SharePoint OAuth2 Authentication
+    oauth_description: SharePoint integration uses OAuth2 authentication. After saving this integration, you will be able to connect your SharePoint account.
+    oauth_help: No manual credentials required. Authentication will be handled via Microsoft login.
+    connected: SharePoint account is connected and authenticated.
+    not_connected: SharePoint account is not connected yet.
+    connect: Connect SharePoint Account
+    reconnect: Reconnect SharePoint Account
+    token_expires: Token expires
+  connect_sharepoint: Connect to SharePoint
   edit: Edit Integration
   active: Active
   credentials_not_editable: Credentials cannot be edited for security reasons.
