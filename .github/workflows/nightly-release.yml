@@ -1,0 +1,177 @@
+name: Nightly Release
+
+on:
+  schedule:
+    # Runs every night at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Need write permission to create releases
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git diff
+
+      - name: Get current date
+        id: date
+        run: |
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Check for today's changes
+        id: check_changes
+        run: |
+          # Check if there were any commits today
+          COMMITS_TODAY=$(git log --since="${{ steps.date.outputs.TODAY }} 00:00:00" --until="${{ steps.date.outputs.TODAY }} 23:59:59" --oneline)
+          
+          if [ -z "$COMMITS_TODAY" ]; then
+            echo "No commits found for today (${{ steps.date.outputs.TODAY }})"
+            echo "HAS_CHANGES=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found commits for today:"
+            echo "$COMMITS_TODAY"
+            echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract changelog for today
+        id: changelog
+        if: steps.check_changes.outputs.HAS_CHANGES == 'true'
+        run: |
+          # Create a script to parse the changelog
+          cat << 'EOF' > parse_changelog.py
+          import sys
+          import re
+          from datetime import datetime
+          
+          def parse_changelog(file_path, target_date):
+              with open(file_path, 'r') as f:
+                  content = f.read()
+          
+              # Find the section for the target date
+              # Pattern matches ## YYYY-MM-DD or ## YYYY-MM-DD (with variations)
+              date_pattern = rf'^## {re.escape(target_date)}\b'
+              next_date_pattern = r'^## \d{4}-\d{2}-\d{2}'
+          
+              lines = content.split('\n')
+              start_idx = None
+              end_idx = None
+          
+              for i, line in enumerate(lines):
+                  if re.match(date_pattern, line.strip()):
+                      start_idx = i + 1  # Start from the line after the date
+                  elif start_idx is not None and re.match(next_date_pattern, line.strip()):
+                      end_idx = i
+                      break
+          
+              if start_idx is None:
+                  return None
+          
+              if end_idx is None:
+                  end_idx = len(lines)
+          
+              # Extract the content for this date
+              changelog_lines = lines[start_idx:end_idx]
+          
+              # Remove empty lines from the beginning and end
+              while changelog_lines and not changelog_lines[0].strip():
+                  changelog_lines.pop(0)
+              while changelog_lines and not changelog_lines[-1].strip():
+                  changelog_lines.pop()
+          
+              if not changelog_lines:
+                  return None
+          
+              return '\n'.join(changelog_lines)
+          
+          if __name__ == '__main__':
+              target_date = sys.argv[1]
+              changelog = parse_changelog('CHANGELOG.md', target_date)
+          
+              if changelog:
+                  print(changelog)
+                  sys.exit(0)
+              else:
+                  print(f"No changelog entry found for {target_date}")
+                  sys.exit(1)
+          EOF
+          
+          # Run the parser
+          if python3 parse_changelog.py "${{ steps.date.outputs.TODAY }}"; then
+            # Save the changelog content to a file for the release body
+            python3 parse_changelog.py "${{ steps.date.outputs.TODAY }}" > release_notes.md
+            echo "CHANGELOG_FOUND=true" >> $GITHUB_OUTPUT
+          
+            # Also save a truncated version for the output (GitHub has limits)
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            head -n 50 release_notes.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "No changelog entry found for today"
+            echo "CHANGELOG_FOUND=false" >> $GITHUB_OUTPUT
+          
+            # Create a simple release note with commit messages
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            echo "## Automated Release - ${{ steps.date.outputs.TODAY }}" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "### Commits:" >> $GITHUB_OUTPUT
+            git log --since="${{ steps.date.outputs.TODAY }} 00:00:00" --until="${{ steps.date.outputs.TODAY }} 23:59:59" --pretty=format:"- %s (%an)" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if release already exists
+        id: check_release
+        if: steps.check_changes.outputs.HAS_CHANGES == 'true'
+        run: |
+          if gh release view "${{ steps.date.outputs.TAG_NAME }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.date.outputs.TAG_NAME }} already exists"
+            echo "RELEASE_EXISTS=true" >> $GITHUB_OUTPUT
+          else
+            echo "Release ${{ steps.date.outputs.TAG_NAME }} does not exist"
+            echo "RELEASE_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create Release
+        if: |
+          steps.check_changes.outputs.HAS_CHANGES == 'true' && 
+          steps.check_release.outputs.RELEASE_EXISTS == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.date.outputs.TAG_NAME }}
+          release_name: Release ${{ steps.date.outputs.TAG_NAME }}
+          body: ${{ steps.changelog.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Release Summary for ${{ steps.date.outputs.TODAY }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_changes.outputs.HAS_CHANGES }}" == "true" ]; then
+            echo "✅ Changes detected for today" >> $GITHUB_STEP_SUMMARY
+          
+            if [ "${{ steps.check_release.outputs.RELEASE_EXISTS }}" == "true" ]; then
+              echo "⚠️ Release already exists - skipped creation" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Release created: ${{ steps.date.outputs.TAG_NAME }}" >> $GITHUB_STEP_SUMMARY
+            fi
+          
+            if [ "${{ steps.changelog.outputs.CHANGELOG_FOUND }}" == "true" ]; then
+              echo "✅ Changelog entry found and included" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ No changelog entry for today - used commit messages" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ No changes for today - no release created" >> $GITHUB_STEP_SUMMARY
+          fi

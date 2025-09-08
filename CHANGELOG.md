@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Name-based authentication without requiring email addresses
 - Organization switcher dropdown in header for users with multiple organizations
 - Session-based organization selection that persists across page navigation
+- Automated nightly releases with GitHub Actions workflow
 
 ### Fixed
 - File viewing and uploading functionality restored
