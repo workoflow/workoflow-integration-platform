@@ -98,7 +98,8 @@ class IntegrationFunction
     public static function getSharePointFunctions(): array
     {
         return [
-            'sharepoint_search_documents' => 'Full-text search across SharePoint documents, sites and lists. Use this when searching for files, documents or content.',
+            'sharepoint_search_documents' => 'Full-text search across SharePoint documents, sites, pages and lists. Use this when searching for any content including SharePoint pages.',
+            'sharepoint_search_pages' => 'Search specifically for SharePoint pages across all accessible sites. Use this when looking for SharePoint pages and site pages.',
             'sharepoint_read_page' => 'Read SharePoint page content including web parts and text. Use this to view SharePoint pages.',
             'sharepoint_list_files' => 'List files in SharePoint document libraries. Use this to browse files and folders.',
             'sharepoint_download_file' => 'Download file content from SharePoint including PDFs and Office documents. Use this to retrieve file contents.',

@@ -394,6 +394,21 @@ class IntegrationApiController extends AbstractController
                     'description' => 'Maximum number of results'
                 ]
             ],
+            'sharepoint_search_pages' => [
+                [
+                    'name' => 'query',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Search query string for SharePoint pages'
+                ],
+                [
+                    'name' => 'limit',
+                    'type' => 'integer',
+                    'required' => false,
+                    'default' => 25,
+                    'description' => 'Maximum number of pages to return'
+                ]
+            ],
             'sharepoint_read_page' => [
                 [
                     'name' => 'siteId',
@@ -537,6 +552,9 @@ class IntegrationApiController extends AbstractController
                 
             case 'sharepoint_search_documents':
                 return $this->sharePointService->searchDocuments($credentials, $parameters['query'], $parameters['limit'] ?? 25);
+                
+            case 'sharepoint_search_pages':
+                return $this->sharePointService->searchPages($credentials, $parameters['query'], $parameters['limit'] ?? 25);
                 
             case 'sharepoint_read_page':
                 return $this->sharePointService->readPage($credentials, $parameters['siteId'], $parameters['pageId']);

@@ -5,8 +5,14 @@ All notable changes to this project will be documented in this file.
 ## 2025-09-09
 
 ### Added
+- Enhanced SharePoint search to include SharePoint pages and site pages
+- New dedicated SharePoint pages search function for targeted page searches
 - Inline organization name editing for administrators directly on dashboard
 - Organization filtering for integrations list and dashboard views
+
+### Improved
+- SharePoint document search now searches within site-specific content
+- Search results now include page metadata and site information
 
 ### Fixed
 - API integration validation now correctly checks the integration's assigned organization
