@@ -2,10 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased] - 2025-09-08
+## 2025-09-08
 
 ### Removed
 - Email functionality and mail server requirements - application no longer sends emails
@@ -39,12 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - API token fields changed from password to text input for better usability
 
-## [1.0.2] - 2025-07-09
+## 2025-07-09
 
 ### Added
 - Getting started guide for new users
 
-## [1.0.1] - 2025-07-07
+## 2025-07-07
 
 ### Added
 - Static assets for improved user interface
@@ -53,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - MinIO bucket configuration now uses environment variables for flexibility
 
-## [1.0.0] - 2025-07-03
+## 2025-07-03
 
 ### Added
 - Initial release of Workoflow Integration Platform
