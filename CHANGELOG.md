@@ -5,9 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-09-07
+## [Unreleased] - 2025-09-08
+
+### Removed
+- Email functionality and mail server requirements - application no longer sends emails
+- MailHog development mail catcher service
 
 ### Added
+- SharePoint integration with OAuth2 authentication
+- Document search and file management for SharePoint libraries
+- SharePoint page reading and list item access
+- Automatic token refresh for SharePoint connections
 - Magic link authentication for automatic user login from external applications
 - Display saved integration credentials in edit form for easier updates  
 - Documentation translated to English for international users

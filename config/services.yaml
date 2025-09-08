@@ -12,6 +12,9 @@ parameters:
     minio.public_bucket: '%env(MINIO_PUBLIC_BUCKET)%'
     minio.region: '%env(MINIO_REGION)%'
     minio.use_path_style: '%env(bool:MINIO_USE_PATH_STYLE)%'
+    azure_client_id: '%env(AZURE_CLIENT_ID)%'
+    azure_client_secret: '%env(AZURE_CLIENT_SECRET)%'
+    azure_tenant_id: '%env(AZURE_TENANT_ID)%'
 
 services:
     _defaults:

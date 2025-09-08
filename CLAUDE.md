@@ -30,7 +30,6 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
 - **Database**: MariaDB 11.2
 - **Cache**: Redis 7
 - **Storage**: MinIO (S3-compatible)
-- **Mail**: MailHog (Development)
 - **Container**: Docker & Docker Compose
 
 ### Directory Structure
@@ -81,7 +80,6 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 ### Access
 - **Application**: http://localhost:3979
 - **MinIO Console**: http://localhost:9001 (admin/workoflow123)
-- **MailHog**: http://localhost:8025
 
 ## API Reference
 

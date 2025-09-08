@@ -191,7 +191,6 @@ echo "- HTTPS: https://localhost"
 echo ""
 echo "Other services:"
 echo "- MinIO Console: http://localhost:9001"
-echo "- MailHog: http://localhost:8025"
 echo ""
 if [ "$ENVIRONMENT" == "dev" ]; then
     echo "Development credentials:"

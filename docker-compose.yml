@@ -49,15 +49,6 @@ services:
     networks:
       - workoflow
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    restart: unless-stopped
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    networks:
-      - workoflow
-
 #  minio:
 #    image: minio/minio:latest
 #    restart: unless-stopped

@@ -76,6 +76,14 @@
                             <div class="form-help">{{ 'integration.confluence.api_token_help'|trans }}</div>
                         </div>
                     </div>
+
+                    <div id="sharepointCredentials" style="display: none;">
+                        <div class="alert alert-info">
+                            <h4>{{ 'integration.sharepoint.oauth_info'|trans|default('SharePoint OAuth2 Authentication') }}</h4>
+                            <p>{{ 'integration.sharepoint.oauth_description'|trans|default('SharePoint integration uses OAuth2 authentication. After saving this integration, you will be able to connect your SharePoint account.') }}</p>
+                        </div>
+                        <div class="form-help">{{ 'integration.sharepoint.oauth_help'|trans|default('No manual credentials required. Authentication will be handled via Microsoft login.') }}</div>
+                    </div>
                 </div>
 
                 <div class="form-section" id="functionsCard" style="display: none;">
@@ -96,6 +104,19 @@
 
                     <div id="confluenceFunctions" style="display: none;">
                         {% for function, description in confluence_functions %}
+                            <div class="function-checkbox">
+                                <input type="checkbox" id="function_{{ function }}" 
+                                       name="function_{{ function }}" checked>
+                                <label for="function_{{ function }}">
+                                    <strong>{{ function }}</strong>
+                                    <span class="function-description">{{ description }}</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="sharepointFunctions" style="display: none;">
+                        {% for function, description in sharepoint_functions %}
                             <div class="function-checkbox">
                                 <input type="checkbox" id="function_{{ function }}" 
                                        name="function_{{ function }}" checked>
@@ -130,8 +151,10 @@ document.getElementById('type').addEventListener('change', function() {
     // Hide all sections first
     document.getElementById('jiraCredentials').style.display = 'none';
     document.getElementById('confluenceCredentials').style.display = 'none';
+    document.getElementById('sharepointCredentials').style.display = 'none';
     document.getElementById('jiraFunctions').style.display = 'none';
     document.getElementById('confluenceFunctions').style.display = 'none';
+    document.getElementById('sharepointFunctions').style.display = 'none';
     
     if (type) {
         credentialsCard.style.display = 'block';
@@ -143,6 +166,9 @@ document.getElementById('type').addEventListener('change', function() {
         } else if (type === 'confluence') {
             document.getElementById('confluenceCredentials').style.display = 'block';
             document.getElementById('confluenceFunctions').style.display = 'block';
+        } else if (type === 'sharepoint') {
+            document.getElementById('sharepointCredentials').style.display = 'block';
+            document.getElementById('sharepointFunctions').style.display = 'block';
         }
     } else {
         credentialsCard.style.display = 'none';

@@ -9,7 +9,9 @@ use App\Service\AuditLogService;
 use App\Service\EncryptionService;
 use App\Service\Integration\JiraService;
 use App\Service\Integration\ConfluenceService;
+use App\Service\Integration\SharePointService;
 use App\Service\ShareFileService;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,7 +31,9 @@ class IntegrationApiController extends AbstractController
         private EncryptionService $encryptionService,
         private JiraService $jiraService,
         private ConfluenceService $confluenceService,
+        private SharePointService $sharePointService,
         private ShareFileService $shareFileService,
+        private EntityManagerInterface $entityManager,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $mcpAuthUser,
@@ -374,6 +378,90 @@ class IntegrationApiController extends AbstractController
                     'required' => true,
                     'description' => 'MIME type of the file (e.g. application/pdf, image/png)'
                 ]
+            ],
+            'sharepoint_search_documents' => [
+                [
+                    'name' => 'query',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'Search query string'
+                ],
+                [
+                    'name' => 'limit',
+                    'type' => 'integer',
+                    'required' => false,
+                    'default' => 25,
+                    'description' => 'Maximum number of results'
+                ]
+            ],
+            'sharepoint_read_page' => [
+                [
+                    'name' => 'siteId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint site ID'
+                ],
+                [
+                    'name' => 'pageId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint page ID'
+                ]
+            ],
+            'sharepoint_list_files' => [
+                [
+                    'name' => 'siteId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint site ID'
+                ],
+                [
+                    'name' => 'path',
+                    'type' => 'string',
+                    'required' => false,
+                    'default' => '',
+                    'description' => 'Path within the document library'
+                ]
+            ],
+            'sharepoint_download_file' => [
+                [
+                    'name' => 'siteId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint site ID'
+                ],
+                [
+                    'name' => 'itemId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'File item ID'
+                ]
+            ],
+            'sharepoint_get_list_items' => [
+                [
+                    'name' => 'siteId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint site ID'
+                ],
+                [
+                    'name' => 'listId',
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'SharePoint list ID'
+                ],
+                [
+                    'name' => 'filter',
+                    'type' => 'string',
+                    'required' => false,
+                    'description' => 'OData filter expression'
+                ],
+                [
+                    'name' => 'orderby',
+                    'type' => 'string',
+                    'required' => false,
+                    'description' => 'OData orderby expression'
+                ]
             ]
         ];
         
@@ -382,10 +470,48 @@ class IntegrationApiController extends AbstractController
 
     private function executeToolFunction($integration, string $functionName, array $parameters): array
     {
+        // Handle empty credentials for SharePoint
+        if ($integration->getType() === 'sharepoint' && 
+            ($integration->getEncryptedCredentials() === null || $integration->getEncryptedCredentials() === '')) {
+            throw new \Exception('SharePoint integration is not connected. Please connect via OAuth2 first.');
+        }
+        
         $credentials = json_decode(
             $this->encryptionService->decrypt($integration->getEncryptedCredentials()),
             true
         );
+        
+        // Check if SharePoint has valid credentials
+        if ($integration->getType() === 'sharepoint') {
+            if (!isset($credentials['access_token'])) {
+                throw new \Exception('SharePoint integration is not connected. Please connect via OAuth2 first.');
+            }
+        }
+        
+        // Check if SharePoint token needs refresh
+        if ($integration->getType() === 'sharepoint' && isset($credentials['expires_at'])) {
+            if (time() >= $credentials['expires_at']) {
+                // Refresh the token
+                $newTokens = $this->sharePointService->refreshToken(
+                    $credentials['refresh_token'],
+                    $credentials['client_id'],
+                    $credentials['client_secret'],
+                    $credentials['tenant_id']
+                );
+                
+                // Update stored credentials
+                $credentials['access_token'] = $newTokens['access_token'];
+                $credentials['refresh_token'] = $newTokens['refresh_token'];
+                $credentials['expires_at'] = $newTokens['expires_at'];
+                
+                $integration->setEncryptedCredentials(
+                    $this->encryptionService->encrypt(json_encode($credentials))
+                );
+                
+                // Save the updated tokens
+                $this->entityManager->flush();
+            }
+        }
         
         switch ($functionName) {
             case 'jira_search':
@@ -408,6 +534,28 @@ class IntegrationApiController extends AbstractController
                 
             case 'confluence_get_comments':
                 return $this->confluenceService->getComments($credentials, $parameters['pageId']);
+                
+            case 'sharepoint_search_documents':
+                return $this->sharePointService->searchDocuments($credentials, $parameters['query'], $parameters['limit'] ?? 25);
+                
+            case 'sharepoint_read_page':
+                return $this->sharePointService->readPage($credentials, $parameters['siteId'], $parameters['pageId']);
+                
+            case 'sharepoint_list_files':
+                return $this->sharePointService->listFiles($credentials, $parameters['siteId'], $parameters['path'] ?? '');
+                
+            case 'sharepoint_download_file':
+                return $this->sharePointService->downloadFile($credentials, $parameters['siteId'], $parameters['itemId']);
+                
+            case 'sharepoint_get_list_items':
+                $filters = [];
+                if (isset($parameters['filter'])) {
+                    $filters['filter'] = $parameters['filter'];
+                }
+                if (isset($parameters['orderby'])) {
+                    $filters['orderby'] = $parameters['orderby'];
+                }
+                return $this->sharePointService->getListItems($credentials, $parameters['siteId'], $parameters['listId'], $filters);
                 
             default:
                 throw new \Exception('Unknown function: ' . $functionName);

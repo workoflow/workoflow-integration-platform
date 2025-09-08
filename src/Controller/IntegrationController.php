@@ -9,7 +9,10 @@ use App\Service\AuditLogService;
 use App\Service\EncryptionService;
 use App\Service\Integration\JiraService;
 use App\Service\Integration\ConfluenceService;
+use App\Service\Integration\SharePointService;
 use Doctrine\ORM\EntityManagerInterface;
+use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -77,6 +80,10 @@ class IntegrationController extends AbstractController
                 ];
                 
                 $functions = IntegrationFunction::getConfluenceFunctions();
+            } elseif ($type === Integration::TYPE_SHAREPOINT) {
+                // SharePoint uses OAuth2, so credentials will be set after OAuth flow
+                $functions = IntegrationFunction::getSharePointFunctions();
+                $credentials = [];
             }
             
             $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
@@ -107,6 +114,7 @@ class IntegrationController extends AbstractController
             'types' => Integration::getAvailableTypes(),
             'jira_functions' => IntegrationFunction::getJiraFunctions(),
             'confluence_functions' => IntegrationFunction::getConfluenceFunctions(),
+            'sharepoint_functions' => IntegrationFunction::getSharePointFunctions(),
         ]);
     }
 
@@ -145,6 +153,9 @@ class IntegrationController extends AbstractController
                     'username' => $request->request->get('confluence_username'),
                     'api_token' => $request->request->get('confluence_api_token'),
                 ];
+            } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
+                // SharePoint credentials cannot be edited manually (OAuth2)
+                $credentials = [];
             }
             
             if (!empty($credentials)) {
@@ -215,7 +226,8 @@ class IntegrationController extends AbstractController
         Integration $integration,
         EncryptionService $encryptionService,
         JiraService $jiraService,
-        ConfluenceService $confluenceService
+        ConfluenceService $confluenceService,
+        SharePointService $sharePointService
     ): JsonResponse {
         if ($integration->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
@@ -228,6 +240,8 @@ class IntegrationController extends AbstractController
                 $result = $jiraService->testConnection($credentials);
             } elseif ($integration->getType() === Integration::TYPE_CONFLUENCE) {
                 $result = $confluenceService->testConnection($credentials);
+            } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
+                $result = $sharePointService->testConnection($credentials);
             } else {
                 throw new \Exception('Unknown integration type');
             }
@@ -236,5 +250,78 @@ class IntegrationController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(['success' => false, 'message' => $e->getMessage()]);
         }
+    }
+
+    #[Route('/sharepoint/auth/{integrationId}', name: 'connect_microsoft_start')]
+    public function connectMicrosoft(
+        int $integrationId,
+        ClientRegistry $clientRegistry,
+        SessionInterface $session
+    ): Response {
+        // Store integration ID in session for callback
+        $session->set('sharepoint_integration_id', $integrationId);
+        
+        return $clientRegistry
+            ->getClient('azure')
+            ->redirect([
+                'User.Read',
+                'offline_access',
+                'Sites.Read.All',
+                'Files.Read.All'
+            ]);
+    }
+
+    #[Route('/oauth/callback/microsoft', name: 'connect_microsoft_check')]
+    public function connectMicrosoftCheck(
+        Request $request,
+        ClientRegistry $clientRegistry,
+        SessionInterface $session,
+        IntegrationRepository $integrationRepository,
+        EncryptionService $encryptionService,
+        EntityManagerInterface $em,
+        AuditLogService $auditLogService
+    ): Response {
+        $integrationId = $session->get('sharepoint_integration_id');
+        if (!$integrationId) {
+            $this->addFlash('error', 'Invalid OAuth callback - no integration ID found');
+            return $this->redirectToRoute('app_integrations');
+        }
+        
+        $integration = $integrationRepository->find($integrationId);
+        if (!$integration || $integration->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration not found or access denied');
+            return $this->redirectToRoute('app_integrations');
+        }
+        
+        try {
+            $client = $clientRegistry->getClient('azure');
+            $accessToken = $client->getAccessToken();
+            
+            // Store OAuth tokens
+            $credentials = [
+                'access_token' => $accessToken->getToken(),
+                'refresh_token' => $accessToken->getRefreshToken(),
+                'expires_at' => $accessToken->getExpires(),
+                'tenant_id' => $this->getParameter('azure_tenant_id'),
+                'client_id' => $this->getParameter('azure_client_id'),
+                'client_secret' => $this->getParameter('azure_client_secret')
+            ];
+            
+            $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
+            $em->flush();
+            
+            $auditLogService->log(
+                'integration.sharepoint_connected',
+                $this->getUser(),
+                ['integration_id' => $integrationId]
+            );
+            
+            $this->addFlash('success', 'SharePoint integration connected successfully');
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Failed to connect SharePoint: ' . $e->getMessage());
+        }
+        
+        $session->remove('sharepoint_integration_id');
+        return $this->redirectToRoute('app_integrations');
     }
 }

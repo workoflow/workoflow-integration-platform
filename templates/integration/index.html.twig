@@ -53,6 +53,11 @@
                                     <a href="{{ path('app_integration_edit', {id: integration.id}) }}">
                                         {{ 'action.edit'|trans }}
                                     </a>
+                                    {% if integration.type == 'sharepoint' and (integration.encryptedCredentials is null or integration.encryptedCredentials is empty) %}
+                                        <a href="{{ path('connect_microsoft_start', {integrationId: integration.id}) }}" class="connect-sharepoint">
+                                            {{ 'integration.connect_sharepoint'|trans|default('Connect to SharePoint') }}
+                                        </a>
+                                    {% endif %}
                                     <button class="test-connection" data-id="{{ integration.id }}">
                                         {{ 'integration.test_connection'|trans }}
                                     </button>

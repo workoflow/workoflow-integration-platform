@@ -101,6 +101,24 @@
                                value="{{ credentials.api_token|default('') }}" required>
                         <div class="form-help">{{ 'integration.confluence.api_token_help'|trans }}</div>
                     </div>
+                {% elseif integration.type == 'sharepoint' %}
+                    <div class="alert alert-info">
+                        <h4>{{ 'integration.sharepoint.oauth_info'|trans|default('SharePoint OAuth2 Authentication') }}</h4>
+                        {% if credentials.access_token is defined and credentials.access_token %}
+                            <p>{{ 'integration.sharepoint.connected'|trans|default('SharePoint account is connected and authenticated.') }}</p>
+                            {% if credentials.expires_at is defined %}
+                                <p>{{ 'integration.sharepoint.token_expires'|trans|default('Token expires') }}: {{ credentials.expires_at|date('Y-m-d H:i:s') }}</p>
+                            {% endif %}
+                            <a href="{{ path('connect_microsoft_start', {integrationId: integration.id}) }}" class="btn btn-sm btn-secondary">
+                                {{ 'integration.sharepoint.reconnect'|trans|default('Reconnect SharePoint Account') }}
+                            </a>
+                        {% else %}
+                            <p>{{ 'integration.sharepoint.not_connected'|trans|default('SharePoint account is not connected yet.') }}</p>
+                            <a href="{{ path('connect_microsoft_start', {integrationId: integration.id}) }}" class="btn btn-primary">
+                                {{ 'integration.sharepoint.connect'|trans|default('Connect SharePoint Account') }}
+                            </a>
+                        {% endif %}
+                    </div>
                 {% endif %}
             </div>
 

@@ -94,4 +94,15 @@ class IntegrationFunction
             'confluence_get_comments' => 'Zeigt Kommentare einer Confluence Seite. Nutze dies für Diskussionen.',
         ];
     }
+
+    public static function getSharePointFunctions(): array
+    {
+        return [
+            'sharepoint_search_documents' => 'Full-text search across SharePoint documents, sites and lists. Use this when searching for files, documents or content.',
+            'sharepoint_read_page' => 'Read SharePoint page content including web parts and text. Use this to view SharePoint pages.',
+            'sharepoint_list_files' => 'List files in SharePoint document libraries. Use this to browse files and folders.',
+            'sharepoint_download_file' => 'Download file content from SharePoint including PDFs and Office documents. Use this to retrieve file contents.',
+            'sharepoint_get_list_items' => 'Query SharePoint lists and retrieve list items with filtering. Use this for structured data from lists.',
+        ];
+    }
 }

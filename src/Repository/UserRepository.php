@@ -50,7 +50,8 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findByOrganisation(int $organisationId): array
     {
         return $this->createQueryBuilder('u')
-            ->andWhere('u.organisation = :org')
+            ->innerJoin('u.organisations', 'o')
+            ->andWhere('o.id = :org')
             ->setParameter('org', $organisationId)
             ->orderBy('u.name', 'ASC')
             ->getQuery()
@@ -60,7 +61,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     public function findOneByEmailWithOrganisation(string $email): ?User
     {
         return $this->createQueryBuilder('u')
-            ->leftJoin('u.organisation', 'o')
+            ->leftJoin('u.organisations', 'o')
             ->addSelect('o')
             ->andWhere('u.email = :email')
             ->setParameter('email', $email)

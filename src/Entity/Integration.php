@@ -14,6 +14,7 @@ class Integration
 {
     public const TYPE_JIRA = 'jira';
     public const TYPE_CONFLUENCE = 'confluence';
+    public const TYPE_SHAREPOINT = 'sharepoint';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -237,6 +238,7 @@ class Integration
         return [
             self::TYPE_JIRA => 'Jira',
             self::TYPE_CONFLUENCE => 'Confluence',
+            self::TYPE_SHAREPOINT => 'SharePoint',
         ];
     }
 }
