@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MailHog development mail catcher service
 
 ### Added
+- Unified deployment script for production environments (`./deploy.sh prod`)
+- External Docker volumes support for cloud/Kubernetes compatibility
+- Production-optimized Docker build with all dependencies baked in
+- Health check endpoint for monitoring application status
+- Automatic database backups during deployment
 - SharePoint integration with OAuth2 authentication
 - Document search and file management for SharePoint libraries
 - SharePoint page reading and list item access

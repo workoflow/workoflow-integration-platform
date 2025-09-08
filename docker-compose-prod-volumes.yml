@@ -1,0 +1,103 @@
+services:
+  frankenphp:
+    build: .
+    image: workoflow-frankenphp:latest
+    restart: unless-stopped
+    command: frankenphp run --config /etc/caddy/Caddyfile
+    ports:
+      - "3979:80"
+      - "443:443"
+    volumes:
+      # Only external volumes for persistent data
+      - app_var:/app/var
+      - app_uploads:/app/public/uploads
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Pass all environment variables directly
+      - SERVER_NAME=:80
+      - FRANKENPHP_CONFIG=worker ./public/index.php
+      - APP_ENV=prod
+      - APP_DEBUG=0
+      - APP_SECRET=${APP_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_PUBLIC_BUCKET=${MINIO_PUBLIC_BUCKET}
+      - MINIO_REGION=${MINIO_REGION}
+      - MINIO_USE_PATH_STYLE=${MINIO_USE_PATH_STYLE}
+      - REDIS_URL=${REDIS_URL}
+      - MCP_AUTH_USER=${MCP_AUTH_USER}
+      - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD}
+      - MCP_ALLOWED_IPS=${MCP_ALLOWED_IPS}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - APP_URL=${APP_URL}
+      - APP_LOCALE=${APP_LOCALE}
+      - APP_LOCALES=${APP_LOCALES}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES}
+      - JWT_PASSPHRASE=${JWT_PASSPHRASE}
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
+      - MAGIC_LINK_SECRET=${MAGIC_LINK_SECRET}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_REDIRECT_URL=${AZURE_REDIRECT_URL}
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - workoflow
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  mariadb:
+    image: mariadb:11.2
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - workoflow
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - workoflow
+
+# All volumes are external - must be created before running
+volumes:
+  mariadb_data:
+    external: true
+    name: workoflow_integration_mariadb_data
+  redis_data:
+    external: true
+    name: workoflow_integration_redis_data
+  caddy_data:
+    external: true
+    name: workoflow_integration_caddy_data
+  caddy_config:
+    external: true
+    name: workoflow_integration_caddy_config
+  app_var:
+    external: true
+    name: workoflow_integration_app_var
+  app_uploads:
+    external: true
+    name: workoflow_integration_app_uploads
+
+networks:
+  workoflow:
+    driver: bridge

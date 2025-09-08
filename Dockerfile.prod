@@ -1,0 +1,101 @@
+# Build stage
+FROM dunglas/frankenphp:php8.4 AS builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    nodejs \
+    npm
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files first for better caching
+COPY composer.json composer.lock symfony.lock ./
+
+# Install PHP dependencies for production
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copy package files for npm
+COPY package.json package-lock.json webpack.config.js ./
+
+# Install npm dependencies
+RUN npm ci --no-audit
+
+# Copy rest of application
+COPY . .
+
+# Build assets for production
+RUN npm run build
+
+# Generate optimized autoloader
+RUN composer dump-autoload --optimize --no-dev
+
+# Final stage
+FROM dunglas/frankenphp:php8.4
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
+
+# Configure PHP for production
+RUN { \
+    echo 'opcache.memory_consumption=128'; \
+    echo 'opcache.interned_strings_buffer=8'; \
+    echo 'opcache.max_accelerated_files=4000'; \
+    echo 'opcache.revalidate_freq=2'; \
+    echo 'opcache.fast_shutdown=1'; \
+    echo 'opcache.enable_cli=1'; \
+} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+# Install Composer for runtime operations (migrations, cache clear)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy application from builder
+COPY --from=builder --chown=www-data:www-data /app /app
+
+# Copy Caddyfile for production
+COPY --chown=www-data:www-data docker/frankenphp/Caddyfile /etc/caddy/Caddyfile
+
+# Ensure JWT keys are included (they should be in config/jwt/)
+# These will be generated during build or copied from secure storage
+
+# Create necessary directories with correct permissions
+RUN mkdir -p var/cache var/log public/uploads && \
+    chown -R www-data:www-data var public/uploads
+
+# Remove unnecessary files
+RUN rm -rf node_modules .git .env.* docker* tests .gitignore README.md DEPLOYMENT.md deploy*.sh
+
+# Set environment to production
+ENV APP_ENV=prod
+ENV APP_DEBUG=0
+
+EXPOSE 80 443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
