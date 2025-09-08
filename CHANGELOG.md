@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Integrations now properly filtered by selected organization
 - Dashboard now only shows integrations for the current organization
+- Resolved deprecation warnings for improved compatibility with future versions
 
 ## 2025-09-08
 
