@@ -7,6 +7,7 @@ use App\Repository\UserRepository;
 use App\Service\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -200,5 +201,52 @@ class OrganisationController extends AbstractController
         }
 
         return $this->redirectToRoute('app_organisation_members');
+    }
+
+    #[Route('/update-name', name: 'app_organisation_update_name', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function updateName(
+        Request $request,
+        EntityManagerInterface $em,
+        AuditLogService $auditLogService
+    ): JsonResponse {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+        
+        if (!$organisation) {
+            return new JsonResponse(['success' => false, 'error' => 'No organisation found'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $newName = $data['name'] ?? null;
+        
+        if (!$newName || trim($newName) === '') {
+            return new JsonResponse(['success' => false, 'error' => 'Name cannot be empty'], 400);
+        }
+        
+        $oldName = $organisation->getName();
+        if ($newName !== $oldName) {
+            $organisation->setName($newName);
+            $em->flush();
+            
+            $auditLogService->log(
+                'organisation.name_updated',
+                $user,
+                ['old_name' => $oldName, 'new_name' => $newName]
+            );
+            
+            return new JsonResponse([
+                'success' => true,
+                'name' => $newName,
+                'message' => 'Organisation name updated successfully'
+            ]);
+        }
+        
+        return new JsonResponse([
+            'success' => true,
+            'name' => $newName,
+            'message' => 'No changes made'
+        ]);
     }
 }

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-09-09
+
+### Added
+- Inline organization name editing for administrators directly on dashboard
+- Organization filtering for integrations list and dashboard views
+
+### Fixed
+- Integrations now properly filtered by selected organization
+- Dashboard now only shows integrations for the current organization
+
 ## 2025-09-08
 
 ### Removed

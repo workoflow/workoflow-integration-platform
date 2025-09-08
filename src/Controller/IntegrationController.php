@@ -25,13 +25,21 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class IntegrationController extends AbstractController
 {
     #[Route('/', name: 'app_integrations')]
-    public function index(IntegrationRepository $integrationRepository): Response
+    public function index(Request $request, IntegrationRepository $integrationRepository): Response
     {
         $user = $this->getUser();
-        $integrations = $integrationRepository->findByUser($user);
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+        
+        if (!$organisation) {
+            return $this->redirectToRoute('app_organisation_create');
+        }
+        
+        $integrations = $integrationRepository->findByUser($user, $organisation);
 
         return $this->render('integration/index.html.twig', [
             'integrations' => $integrations,
+            'organisation' => $organisation,
         ]);
     }
 

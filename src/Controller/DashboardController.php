@@ -35,7 +35,7 @@ class DashboardController extends AbstractController
             }
         }
 
-        $integrations = $integrationRepository->findByUser($user);
+        $integrations = $integrationRepository->findByUser($user, $organisation);
 
         return $this->render('dashboard/index.html.twig', [
             'user' => $user,

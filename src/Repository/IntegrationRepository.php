@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Integration;
+use App\Entity\Organisation;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -50,14 +51,20 @@ class IntegrationRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findByUser(User $user): array
+    public function findByUser(User $user, ?Organisation $organisation = null): array
     {
-        return $this->createQueryBuilder('i')
+        $qb = $this->createQueryBuilder('i')
             ->leftJoin('i.functions', 'f')
             ->addSelect('f')
             ->andWhere('i.user = :user')
-            ->setParameter('user', $user)
-            ->orderBy('i.name', 'ASC')
+            ->setParameter('user', $user);
+        
+        if ($organisation !== null) {
+            $qb->andWhere('i.organisation = :organisation')
+               ->setParameter('organisation', $organisation);
+        }
+        
+        return $qb->orderBy('i.name', 'ASC')
             ->getQuery()
             ->getResult();
     }
