@@ -17,13 +17,13 @@ The `share_file` tool appears in the tools list endpoint:
 
 ```
 GET /api/integration/{orgUuid}/tools?id={workflowUserId}
-Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==
+Authorization: Basic xxxx==
 ```
 
 ### Tool Execution
 ```
 POST /api/integration/{orgUuid}/execute?id={workflowUserId}
-Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==
+Authorization: Basic xxx==
 Content-Type: application/json
 
 {
@@ -100,7 +100,7 @@ with open('document.pdf', 'rb') as f:
 response = requests.post(
     'http://localhost:3979/api/integration/your-org-uuid/execute?id=your-workflow-id',
     headers={
-        'Authorization': 'Basic d29ya29mbG93Ondvcmtvd2xvdw==',
+        'Authorization': 'Basic xxxx==',
         'Content-Type': 'application/json'
     },
     json={

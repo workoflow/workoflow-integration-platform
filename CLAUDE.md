@@ -86,7 +86,7 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 ### REST API Endpoints
 ```
 GET /api/integrations/{org-uuid}?workflow_user_id={workflow-user-id}
-Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==
+Authorization: Basic xxxx==
 ```
 
 The REST API dynamically provides tools based on activated user integrations.

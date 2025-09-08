@@ -33,13 +33,15 @@ services:
       - REDIS_URL=${REDIS_URL}
       - MCP_AUTH_USER=${MCP_AUTH_USER}
       - MCP_AUTH_PASSWORD=${MCP_AUTH_PASSWORD}
-      - MCP_ALLOWED_IPS=${MCP_ALLOWED_IPS}
+      - MCP_ALLOWED_IPS=${MCP_ALLOWED_IPS:-127.0.0.1,localhost}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - APP_URL=${APP_URL}
       - APP_LOCALE=${APP_LOCALE}
       - APP_LOCALES=${APP_LOCALES}
       - TRUSTED_PROXIES=${TRUSTED_PROXIES}
       - JWT_PASSPHRASE=${JWT_PASSPHRASE}
+      - JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
+      - JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
       - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN}
       - MAGIC_LINK_SECRET=${MAGIC_LINK_SECRET}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}

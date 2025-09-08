@@ -20,7 +20,7 @@ Replace `{orgUuid}` with your organization's UUID (visible in Organization Setti
 ```bash
 curl -X GET \
   'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/tools?id=user123' \
-  -H 'Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==' \
+  -H 'Authorization: Basic xxxx==' \
   -H 'Accept: application/json'
 ```
 
@@ -89,7 +89,7 @@ curl -X GET \
 ```bash
 curl -X POST \
   'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==' \
+  -H 'Authorization: Basic xxxxx==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{
@@ -125,7 +125,7 @@ curl -X POST \
 ```bash
 curl -X POST \
   'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==' \
+  -H 'Authorization: Basic xxxx==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{
@@ -143,7 +143,7 @@ curl -X POST \
 ```bash
 curl -X POST \
   'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw==' \
+  -H 'Authorization: Basic xxxx==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{

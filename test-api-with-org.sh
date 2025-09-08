@@ -6,7 +6,7 @@
 ORG_UUID="550e8400-e29b-41d4-a716-446655440000"
 WORKFLOW_USER_ID="test-user-123"
 BASE_URL="http://localhost:3979/api/integration/$ORG_UUID"
-AUTH_HEADER="Authorization: Basic d29ya29mbG93Ondvcmtvd2xvdw=="
+AUTH_HEADER="Authorization: Basic xxxx=="
 
 echo "=== Testing Integration API ==="
 echo "Organization UUID: $ORG_UUID"
