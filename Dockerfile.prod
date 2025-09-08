@@ -100,6 +100,7 @@ RUN echo "APP_ENV=prod" > /app/.env && \
 # Set environment to production
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
+ENV APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime
 
 EXPOSE 80 443
 
