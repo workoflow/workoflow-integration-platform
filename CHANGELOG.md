@@ -10,11 +10,13 @@ All notable changes to this project will be documented in this file.
 - Automatic synchronization of integration functions when editing existing integrations
 - Inline organization name editing for administrators directly on dashboard
 - Organization filtering for integrations list and dashboard views
+- Automatic SharePoint site name resolution when accessing pages - system now accepts site names in addition to site IDs
 
 ### Improved
 - SharePoint document search now searches within site-specific content
 - Search results now include page metadata and site information
 - SharePoint integration error messages now provide detailed information for troubleshooting
+- SharePoint page access is now more flexible, accepting both site names and technical site IDs
 
 ### Fixed
 - API integration validation now correctly checks the integration's assigned organization
@@ -23,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - Resolved system deprecation warnings for improved compatibility with future versions
 - SharePoint page reading now works correctly with standard Microsoft Graph API
 - SharePoint file operations now include error handling for better reliability
+- SharePoint pages can now be accessed using site display names instead of requiring technical site IDs
 
 ## 2025-09-08
 
