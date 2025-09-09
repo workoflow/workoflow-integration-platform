@@ -14,12 +14,15 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - SharePoint document search now searches within site-specific content
 - Search results now include page metadata and site information
+- SharePoint integration error messages now provide detailed information for troubleshooting
 
 ### Fixed
 - API integration validation now correctly checks the integration's assigned organization
 - Integrations now properly filtered by selected organization
 - Dashboard now only shows integrations for the current organization
 - Resolved deprecation warnings for improved compatibility with future versions
+- SharePoint page reading now properly handles API errors and provides meaningful error messages
+- SharePoint file operations now include error handling for better reliability
 
 ## 2025-09-08
 

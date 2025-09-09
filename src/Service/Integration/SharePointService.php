@@ -241,81 +241,168 @@ class SharePointService
 
     public function readPage(array $credentials, string $siteId, string $pageId): array
     {
-        $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}", [
-            'auth_bearer' => $credentials['access_token'],
-            'query' => [
-                '$expand' => 'canvasLayout'
-            ]
-        ]);
+        try {
+            error_log('Reading SharePoint page - SiteID: ' . $siteId . ', PageID: ' . $pageId);
+            
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}", [
+                'auth_bearer' => $credentials['access_token'],
+                'query' => [
+                    '$expand' => 'canvasLayout'
+                ]
+            ]);
 
-        return $response->toArray();
+            $data = $response->toArray();
+            error_log('SharePoint page read successfully');
+            return $data;
+            
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorContent = $e->getResponse()->getContent(false);
+            error_log('SharePoint Read Page Client Error (' . $statusCode . '): ' . $errorContent);
+            error_log('Request URL: ' . self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}");
+            
+            // Parse error details if available
+            $errorData = json_decode($errorContent, true);
+            if (isset($errorData['error']['message'])) {
+                throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
+            }
+            throw new \Exception('Failed to read SharePoint page (HTTP ' . $statusCode . '): ' . $errorContent);
+            
+        } catch (\Exception $e) {
+            error_log('SharePoint Read Page Error: ' . $e->getMessage());
+            throw new \Exception('Failed to read SharePoint page: ' . $e->getMessage());
+        }
     }
 
     public function listFiles(array $credentials, string $siteId, string $path = ''): array
     {
-        $endpoint = $path 
-            ? "/sites/{$siteId}/drive/root:/{$path}:/children"
-            : "/sites/{$siteId}/drive/root/children";
+        try {
+            $endpoint = $path 
+                ? "/sites/{$siteId}/drive/root:/{$path}:/children"
+                : "/sites/{$siteId}/drive/root/children";
             
-        $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . $endpoint, [
-            'auth_bearer' => $credentials['access_token'],
-            'query' => [
-                '$select' => 'id,name,size,lastModifiedDateTime,file,folder,webUrl',
-                '$top' => 100
-            ]
-        ]);
+            error_log('Listing SharePoint files - SiteID: ' . $siteId . ', Path: ' . ($path ?: 'root'));
+            
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . $endpoint, [
+                'auth_bearer' => $credentials['access_token'],
+                'query' => [
+                    '$select' => 'id,name,size,lastModifiedDateTime,file,folder,webUrl',
+                    '$top' => 100
+                ]
+            ]);
 
-        return $response->toArray();
+            $data = $response->toArray();
+            error_log('SharePoint files listed successfully, count: ' . (isset($data['value']) ? count($data['value']) : 0));
+            return $data;
+            
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorContent = $e->getResponse()->getContent(false);
+            error_log('SharePoint List Files Client Error (' . $statusCode . '): ' . $errorContent);
+            
+            $errorData = json_decode($errorContent, true);
+            if (isset($errorData['error']['message'])) {
+                throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
+            }
+            throw new \Exception('Failed to list SharePoint files (HTTP ' . $statusCode . ')');
+            
+        } catch (\Exception $e) {
+            error_log('SharePoint List Files Error: ' . $e->getMessage());
+            throw new \Exception('Failed to list files: ' . $e->getMessage());
+        }
     }
 
     public function downloadFile(array $credentials, string $siteId, string $itemId): array
     {
-        // Get file metadata first
-        $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [
-            'auth_bearer' => $credentials['access_token'],
-        ]);
-        
-        $metadata = $metadataResponse->toArray();
-        
-        // Get download URL
-        $downloadResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
-            'auth_bearer' => $credentials['access_token'],
-            'max_redirects' => 0,
-        ]);
-        
-        // The download URL is in the Location header
-        $downloadUrl = $downloadResponse->getHeaders(false)['location'][0] ?? null;
-        
-        return [
-            'metadata' => $metadata,
-            'downloadUrl' => $downloadUrl,
-            'name' => $metadata['name'] ?? 'file',
-            'size' => $metadata['size'] ?? 0,
-            'mimeType' => $metadata['file']['mimeType'] ?? 'application/octet-stream'
-        ];
+        try {
+            error_log('Downloading SharePoint file - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
+            
+            // Get file metadata first
+            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [
+                'auth_bearer' => $credentials['access_token'],
+            ]);
+            
+            $metadata = $metadataResponse->toArray();
+            
+            // Get download URL
+            $downloadResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                'auth_bearer' => $credentials['access_token'],
+                'max_redirects' => 0,
+            ]);
+            
+            // The download URL is in the Location header
+            $downloadUrl = $downloadResponse->getHeaders(false)['location'][0] ?? null;
+            
+            error_log('SharePoint file download prepared successfully: ' . ($metadata['name'] ?? 'unknown'));
+            
+            return [
+                'metadata' => $metadata,
+                'downloadUrl' => $downloadUrl,
+                'name' => $metadata['name'] ?? 'file',
+                'size' => $metadata['size'] ?? 0,
+                'mimeType' => $metadata['file']['mimeType'] ?? 'application/octet-stream'
+            ];
+            
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorContent = $e->getResponse()->getContent(false);
+            error_log('SharePoint Download File Client Error (' . $statusCode . '): ' . $errorContent);
+            
+            $errorData = json_decode($errorContent, true);
+            if (isset($errorData['error']['message'])) {
+                throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
+            }
+            throw new \Exception('Failed to download SharePoint file (HTTP ' . $statusCode . ')');
+            
+        } catch (\Exception $e) {
+            error_log('SharePoint Download File Error: ' . $e->getMessage());
+            throw new \Exception('Failed to download file: ' . $e->getMessage());
+        }
     }
 
     public function getListItems(array $credentials, string $siteId, string $listId, array $filters = []): array
     {
-        $query = [
-            '$expand' => 'fields',
-            '$top' => 100
-        ];
-        
-        if (!empty($filters['filter'])) {
-            $query['$filter'] = $filters['filter'];
-        }
-        
-        if (!empty($filters['orderby'])) {
-            $query['$orderby'] = $filters['orderby'];
-        }
-        
-        $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/lists/{$listId}/items", [
-            'auth_bearer' => $credentials['access_token'],
-            'query' => $query
-        ]);
+        try {
+            error_log('Getting SharePoint list items - SiteID: ' . $siteId . ', ListID: ' . $listId);
+            
+            $query = [
+                '$expand' => 'fields',
+                '$top' => 100
+            ];
+            
+            if (!empty($filters['filter'])) {
+                $query['$filter'] = $filters['filter'];
+                error_log('Applying filter: ' . $filters['filter']);
+            }
+            
+            if (!empty($filters['orderby'])) {
+                $query['$orderby'] = $filters['orderby'];
+            }
+            
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/lists/{$listId}/items", [
+                'auth_bearer' => $credentials['access_token'],
+                'query' => $query
+            ]);
 
-        return $response->toArray();
+            $data = $response->toArray();
+            error_log('SharePoint list items retrieved successfully, count: ' . (isset($data['value']) ? count($data['value']) : 0));
+            return $data;
+            
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorContent = $e->getResponse()->getContent(false);
+            error_log('SharePoint Get List Items Client Error (' . $statusCode . '): ' . $errorContent);
+            
+            $errorData = json_decode($errorContent, true);
+            if (isset($errorData['error']['message'])) {
+                throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
+            }
+            throw new \Exception('Failed to get SharePoint list items (HTTP ' . $statusCode . ')');
+            
+        } catch (\Exception $e) {
+            error_log('SharePoint Get List Items Error: ' . $e->getMessage());
+            throw new \Exception('Failed to get list items: ' . $e->getMessage());
+        }
     }
 
     public function refreshToken(string $refreshToken, string $clientId, string $clientSecret, string $tenantId): array
