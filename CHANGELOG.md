@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - SharePoint page search now uses Microsoft Graph Search API for better results
+- SharePoint page reading now accepts page names/titles in addition to GUIDs - automatically resolves to correct page ID
 - Added detailed logging to help diagnose search issues
 
 ### Added

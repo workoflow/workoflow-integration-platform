@@ -318,6 +318,72 @@ class SharePointService
                 }
             }
             
+            // Check if pageId looks like a name/title rather than a GUID
+            // A proper page ID is a GUID format like "7b6fd3e8-80ad-4392-9643-6bab61be81e0"
+            if (!preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $pageId)) {
+                error_log('PageID appears to be a name/title, attempting to resolve to actual page ID');
+                
+                // Get all pages from the site and find the one matching the name/title
+                $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages", [
+                    'auth_bearer' => $credentials['access_token'],
+                    'query' => [
+                        '$top' => 100  // Get more pages to find the right one
+                    ]
+                ]);
+                
+                $pages = $pagesResponse->toArray();
+                
+                if (isset($pages['value'])) {
+                    $resolvedPageId = null;
+                    $pageNameLower = strtolower($pageId);
+                    
+                    // Try to find exact match first by title or name
+                    foreach ($pages['value'] as $page) {
+                        // Check title match
+                        if (isset($page['title']) && strtolower($page['title']) === $pageNameLower) {
+                            $resolvedPageId = $page['id'];
+                            error_log('Found exact page match by title: ' . $page['title'] . ' -> ' . $resolvedPageId);
+                            break;
+                        }
+                        // Check name match
+                        if (isset($page['name']) && strtolower($page['name']) === $pageNameLower) {
+                            $resolvedPageId = $page['id'];
+                            error_log('Found exact page match by name: ' . $page['name'] . ' -> ' . $resolvedPageId);
+                            break;
+                        }
+                        // Check for URL-friendly name match (with hyphens instead of spaces)
+                        $urlFriendlyPageId = str_replace('-', ' ', $pageId);
+                        if (isset($page['title']) && strtolower($page['title']) === strtolower($urlFriendlyPageId)) {
+                            $resolvedPageId = $page['id'];
+                            error_log('Found page match by URL-friendly title: ' . $page['title'] . ' -> ' . $resolvedPageId);
+                            break;
+                        }
+                    }
+                    
+                    // If no exact match, try partial match
+                    if (!$resolvedPageId) {
+                        foreach ($pages['value'] as $page) {
+                            if ((isset($page['title']) && str_contains(strtolower($page['title']), $pageNameLower)) ||
+                                (isset($page['name']) && str_contains(strtolower($page['name']), $pageNameLower))) {
+                                $resolvedPageId = $page['id'];
+                                $pageTitle = $page['title'] ?? $page['name'] ?? 'Unknown';
+                                error_log('Using partial page match: ' . $pageTitle . ' -> ' . $resolvedPageId);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if ($resolvedPageId) {
+                        $pageId = $resolvedPageId;
+                    } else {
+                        throw new \Exception('Could not resolve page name "' . $pageId . '" to a valid page ID. Available pages: ' . 
+                            implode(', ', array_map(function($p) { return $p['title'] ?? $p['name'] ?? 'Untitled'; }, $pages['value'])));
+                    }
+                } else {
+                    throw new \Exception('No pages found in site');
+                }
+            }
+            
             // Expand canvasLayout to get page content
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}/microsoft.graph.sitePage", [
                 'auth_bearer' => $credentials['access_token'],
