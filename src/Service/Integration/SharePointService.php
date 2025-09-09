@@ -177,202 +177,79 @@ class SharePointService
             error_log('SharePoint searchPages called with query: ' . $query . ', limit: ' . $limit);
             $results = [];
             
-            // Method 1: Try using the Microsoft Graph Search API (requires Sites.Read.All or Sites.ReadWrite.All)
-            try {
-                $searchRequest = [
-                    'requests' => [
-                        [
-                            'entityTypes' => ['listItem', 'site', 'driveItem'],
-                            'query' => [
-                                'queryString' => $query
-                            ],
-                            'size' => $limit,
-                            'fields' => [
-                                'title',
-                                'name', 
-                                'webUrl',
-                                'description',
-                                'createdDateTime',
-                                'lastModifiedDateTime',
-                                'siteId',
-                                'id'
-                            ]
+            // Use the Microsoft Graph Search API
+            $searchRequest = [
+                'requests' => [
+                    [
+                        'entityTypes' => ['listItem', 'site', 'driveItem'],
+                        'query' => [
+                            'queryString' => $query
+                        ],
+                        'size' => $limit,
+                        'fields' => [
+                            'title',
+                            'name', 
+                            'webUrl',
+                            'description',
+                            'createdDateTime',
+                            'lastModifiedDateTime',
+                            'siteId',
+                            'id'
                         ]
                     ]
-                ];
-                
-                error_log('Attempting Microsoft Graph Search API with query: ' . json_encode($searchRequest));
-                
-                $searchResponse = $this->httpClient->request('POST', self::GRAPH_API_BASE . '/search/query', [
-                    'auth_bearer' => $credentials['access_token'],
-                    'json' => $searchRequest
-                ]);
-                
-                $searchData = $searchResponse->toArray();
-                error_log('Search API response received');
-                
-                if (isset($searchData['value'][0]['hitsContainers'])) {
-                    foreach ($searchData['value'][0]['hitsContainers'] as $container) {
-                        if (isset($container['hits'])) {
-                            foreach ($container['hits'] as $hit) {
-                                if (isset($hit['resource'])) {
-                                    $resource = $hit['resource'];
-                                    // Filter for SharePoint pages/sites
-                                    if (isset($resource['@odata.type']) && 
-                                        (str_contains($resource['@odata.type'], 'site') || 
-                                         str_contains($resource['@odata.type'], 'listItem'))) {
-                                        
-                                        $results[] = [
-                                            'type' => 'page',
-                                            'id' => $resource['id'] ?? '',
-                                            'title' => $resource['title'] ?? $resource['name'] ?? $hit['summary'] ?? '',
-                                            'name' => $resource['name'] ?? '',
-                                            'webUrl' => $resource['webUrl'] ?? '',
-                                            'description' => $resource['description'] ?? $hit['summary'] ?? '',
-                                            'createdDateTime' => $resource['createdDateTime'] ?? '',
-                                            'lastModifiedDateTime' => $resource['lastModifiedDateTime'] ?? '',
-                                            'siteId' => $resource['siteId'] ?? '',
-                                            'siteName' => $resource['displayName'] ?? '',
-                                            'siteUrl' => $resource['webUrl'] ?? '',
-                                            'summary' => $hit['summary'] ?? ''
-                                        ];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                error_log('Search API found ' . count($results) . ' results');
-                
-            } catch (\Exception $e) {
-                error_log('Microsoft Graph Search API failed (may require app permissions): ' . $e->getMessage());
-                error_log('Falling back to manual site/page enumeration method');
-                
-                // Method 2: Fallback to getting all pages from all sites and filtering manually
-                $remainingLimit = $limit;
-                
-                // First search for sites that might contain the query
-                $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                    'auth_bearer' => $credentials['access_token'],
-                    'query' => [
-                        'search' => $query,  // This searches site names/descriptions
-                        '$top' => 25
-                    ]
-                ]);
-                
-                $sites = $sitesResponse->toArray();
-                $siteIds = [];
-                
-                // Collect site IDs from search results
-                if (isset($sites['value'])) {
-                    foreach ($sites['value'] as $site) {
-                        $siteIds[] = $site['id'];
-                    }
-                }
-                
-                // Also get user's most recent sites to search within
-                try {
-                    $recentSitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/me/followedSites', [
-                        'auth_bearer' => $credentials['access_token'],
-                        'query' => [
-                            '$top' => 10
-                        ]
-                    ]);
+                ]
+            ];
+            
+            error_log('Attempting Microsoft Graph Search API with query: ' . json_encode($searchRequest));
+            
+            $searchResponse = $this->httpClient->request('POST', self::GRAPH_API_BASE . '/search/query', [
+                'auth_bearer' => $credentials['access_token'],
+                'json' => $searchRequest
+            ]);
+            
+            $searchData = $searchResponse->toArray();
+            error_log('Search API full response: ' . json_encode($searchData));
+            
+            if (isset($searchData['value'][0]['hitsContainers'])) {
+                foreach ($searchData['value'][0]['hitsContainers'] as $container) {
+                    error_log('Processing container with entityType: ' . ($container['@odata.type'] ?? 'unknown'));
+                    error_log('Container has ' . (isset($container['hits']) ? count($container['hits']) : 0) . ' hits');
                     
-                    $recentSites = $recentSitesResponse->toArray();
-                    if (isset($recentSites['value'])) {
-                        foreach ($recentSites['value'] as $site) {
-                            if (!in_array($site['id'], $siteIds)) {
-                                $siteIds[] = $site['id'];
-                            }
-                        }
-                    }
-                } catch (\Exception $e) {
-                    error_log('Could not get followed sites: ' . $e->getMessage());
-                }
-                
-                // If no sites found from search, get all accessible sites
-                if (empty($siteIds)) {
-                    $allSitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                        'auth_bearer' => $credentials['access_token'],
-                        'query' => [
-                            '$top' => 50
-                        ]
-                    ]);
-                    
-                    $allSites = $allSitesResponse->toArray();
-                    if (isset($allSites['value'])) {
-                        foreach ($allSites['value'] as $site) {
-                            $siteIds[] = $site['id'];
-                        }
-                    }
-                }
-                
-                error_log('Searching in ' . count($siteIds) . ' sites for pages');
-                
-                // Now search for pages in each site
-                foreach ($siteIds as $siteId) {
-                    if ($remainingLimit <= 0) break;
-                    
-                    try {
-                        // Get all pages from the site (without filter since it's unreliable)
-                        $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $siteId . '/pages', [
-                            'auth_bearer' => $credentials['access_token'],
-                            'query' => [
-                                '$top' => 100,  // Get more pages to filter manually
-                                '$expand' => 'canvasLayout'  // Try to get content for better filtering
-                            ]
-                        ]);
-                        
-                        $pages = $pagesResponse->toArray();
-                        if (isset($pages['value'])) {
-                            foreach ($pages['value'] as $page) {
-                                // Manual filtering - check if query matches title, name, or content
-                                $queryLower = strtolower($query);
-                                $titleMatch = isset($page['title']) && str_contains(strtolower($page['title']), $queryLower);
-                                $nameMatch = isset($page['name']) && str_contains(strtolower($page['name']), $queryLower);
-                                $descriptionMatch = isset($page['description']) && str_contains(strtolower($page['description']), $queryLower);
+                    if (isset($container['hits'])) {
+                        foreach ($container['hits'] as $hit) {
+                            if (isset($hit['resource'])) {
+                                $resource = $hit['resource'];
+                                error_log('Hit resource type: ' . ($resource['@odata.type'] ?? 'unknown'));
                                 
-                                // Check content if available
-                                $contentMatch = false;
-                                if (isset($page['canvasLayout'])) {
-                                    $pageContent = $this->extractPageContent($page);
-                                    if ($pageContent && str_contains(strtolower($pageContent), $queryLower)) {
-                                        $contentMatch = true;
-                                    }
-                                }
+                                // Log all available fields for debugging
+                                error_log('Resource fields: ' . json_encode(array_keys($resource)));
                                 
-                                if ($titleMatch || $nameMatch || $descriptionMatch || $contentMatch) {
-                                    // Get site info for context
-                                    $siteInfo = $this->getSiteInfo($credentials, $siteId);
-                                    
-                                    $results[] = [
-                                        'type' => 'page',
-                                        'id' => $page['id'] ?? '',
-                                        'title' => $page['title'] ?? $page['name'] ?? '',
-                                        'name' => $page['name'] ?? '',
-                                        'webUrl' => $page['webUrl'] ?? '',
-                                        'description' => $page['description'] ?? '',
-                                        'createdDateTime' => $page['createdDateTime'] ?? '',
-                                        'lastModifiedDateTime' => $page['lastModifiedDateTime'] ?? '',
-                                        'siteId' => $siteId,
-                                        'siteName' => $siteInfo['displayName'] ?? $siteInfo['name'] ?? '',
-                                        'siteUrl' => $siteInfo['webUrl'] ?? '',
-                                        'matchedIn' => $titleMatch ? 'title' : ($nameMatch ? 'name' : ($descriptionMatch ? 'description' : 'content'))
-                                    ];
-                                    $remainingLimit--;
-                                    if ($remainingLimit <= 0) break;
-                                }
+                                // More flexible filtering - include any SharePoint content
+                                $results[] = [
+                                    'type' => 'page',
+                                    'id' => $resource['id'] ?? '',
+                                    'title' => $resource['title'] ?? $resource['name'] ?? $hit['summary'] ?? '',
+                                    'name' => $resource['name'] ?? '',
+                                    'webUrl' => $resource['webUrl'] ?? '',
+                                    'description' => $resource['description'] ?? $hit['summary'] ?? '',
+                                    'createdDateTime' => $resource['createdDateTime'] ?? '',
+                                    'lastModifiedDateTime' => $resource['lastModifiedDateTime'] ?? '',
+                                    'siteId' => $resource['siteId'] ?? '',
+                                    'siteName' => $resource['displayName'] ?? '',
+                                    'siteUrl' => $resource['webUrl'] ?? '',
+                                    'summary' => $hit['summary'] ?? '',
+                                    'resourceType' => $resource['@odata.type'] ?? 'unknown'
+                                ];
                             }
                         }
-                    } catch (\Exception $e) {
-                        error_log('Failed to get pages from site ' . $siteId . ': ' . $e->getMessage());
                     }
                 }
-                
-                error_log('Manual search found ' . count($results) . ' results');
+            } else {
+                error_log('No hitsContainers found in search response');
+                error_log('Response structure: ' . json_encode(array_keys($searchData)));
             }
+            
+            error_log('Search API found ' . count($results) . ' results');
             
             return [
                 'value' => $results,
@@ -382,6 +259,7 @@ class SharePointService
             
         } catch (\Exception $e) {
             error_log('SharePoint Pages Search Error: ' . $e->getMessage());
+            error_log('Error trace: ' . $e->getTraceAsString());
             throw $e;
         }
     }

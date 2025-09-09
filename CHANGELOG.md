@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2025-09-09
 
 ### Fixed
-- SharePoint page search now properly searches across all accessible sites and page content, not just page titles
-- Improved SharePoint search with fallback to comprehensive site-by-site search when API search is unavailable
+- SharePoint page search now uses Microsoft Graph Search API for better results
+- Added detailed logging to help diagnose search issues
 
 ### Added
 - Enhanced SharePoint search to include SharePoint pages and site pages
