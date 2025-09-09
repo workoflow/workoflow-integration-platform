@@ -293,12 +293,26 @@ class SharePointService
                 }
             }
             
-            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}", [
-                'auth_bearer' => $credentials['access_token']
+            // Expand canvasLayout to get page content
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}/microsoft.graph.sitePage", [
+                'auth_bearer' => $credentials['access_token'],
+                'query' => [
+                    '$expand' => 'canvasLayout'
+                ]
             ]);
 
             $data = $response->toArray();
-            error_log('SharePoint page read successfully');
+            
+            // Extract content from canvasLayout if available
+            $content = $this->extractPageContent($data);
+            if ($content !== null) {
+                $data['content'] = $content;
+                $data['contentLength'] = strlen($content);
+                error_log('SharePoint page read successfully with content (length: ' . strlen($content) . ')');
+            } else {
+                error_log('SharePoint page read successfully (no extractable content)');
+            }
+            
             return $data;
             
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
@@ -497,5 +511,83 @@ class SharePointService
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Extract readable content from SharePoint page canvasLayout
+     * 
+     * @param array $pageData The page data with expanded canvasLayout
+     * @param int $maxLength Maximum length of content to return (default 1000)
+     * @return string|null The extracted content or null if no content found
+     */
+    private function extractPageContent(array $pageData, int $maxLength = 1000): ?string
+    {
+        $content = '';
+        
+        // Check if canvasLayout exists
+        if (!isset($pageData['canvasLayout'])) {
+            return null;
+        }
+        
+        $canvasLayout = $pageData['canvasLayout'];
+        
+        // Process horizontal sections
+        if (isset($canvasLayout['horizontalSections']) && is_array($canvasLayout['horizontalSections'])) {
+            foreach ($canvasLayout['horizontalSections'] as $section) {
+                if (isset($section['columns']) && is_array($section['columns'])) {
+                    foreach ($section['columns'] as $column) {
+                        if (isset($column['webparts']) && is_array($column['webparts'])) {
+                            foreach ($column['webparts'] as $webpart) {
+                                // Extract content from text web parts
+                                if (isset($webpart['innerHtml'])) {
+                                    // Strip HTML tags to get plain text
+                                    $text = strip_tags($webpart['innerHtml']);
+                                    // Normalize whitespace
+                                    $text = preg_replace('/\s+/', ' ', trim($text));
+                                    if (!empty($text)) {
+                                        $content .= $text . ' ';
+                                    }
+                                }
+                                
+                                // Also check for other content types in data field
+                                if (isset($webpart['data']['properties']['title'])) {
+                                    $content .= $webpart['data']['properties']['title'] . ' ';
+                                }
+                                if (isset($webpart['data']['description'])) {
+                                    $content .= $webpart['data']['description'] . ' ';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Process vertical section if exists
+        if (isset($canvasLayout['verticalSection']['webparts']) && is_array($canvasLayout['verticalSection']['webparts'])) {
+            foreach ($canvasLayout['verticalSection']['webparts'] as $webpart) {
+                if (isset($webpart['innerHtml'])) {
+                    $text = strip_tags($webpart['innerHtml']);
+                    $text = preg_replace('/\s+/', ' ', trim($text));
+                    if (!empty($text)) {
+                        $content .= $text . ' ';
+                    }
+                }
+            }
+        }
+        
+        // Trim and limit content length
+        $content = trim($content);
+        
+        if (empty($content)) {
+            return null;
+        }
+        
+        // Truncate to maxLength if necessary
+        if (strlen($content) > $maxLength) {
+            $content = substr($content, 0, $maxLength) . '...';
+        }
+        
+        return $content;
     }
 }

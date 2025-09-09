@@ -11,12 +11,14 @@ All notable changes to this project will be documented in this file.
 - Inline organization name editing for administrators directly on dashboard
 - Organization filtering for integrations list and dashboard views
 - Automatic SharePoint site name resolution when accessing pages - system now accepts site names in addition to site IDs
+- SharePoint page content extraction - AI agents can now read the actual content of SharePoint pages, not just metadata
 
 ### Improved
 - SharePoint document search now searches within site-specific content
 - Search results now include page metadata and site information
 - SharePoint integration error messages now provide detailed information for troubleshooting
 - SharePoint page access is now more flexible, accepting both site names and technical site IDs
+- SharePoint page reading now includes the actual page content (up to 1000 characters) for AI processing
 
 ### Fixed
 - API integration validation now correctly checks the integration's assigned organization
