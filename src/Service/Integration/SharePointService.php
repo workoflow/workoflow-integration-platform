@@ -245,10 +245,7 @@ class SharePointService
             error_log('Reading SharePoint page - SiteID: ' . $siteId . ', PageID: ' . $pageId);
             
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}", [
-                'auth_bearer' => $credentials['access_token'],
-                'query' => [
-                    '$expand' => 'canvasLayout'
-                ]
+                'auth_bearer' => $credentials['access_token']
             ]);
 
             $data = $response->toArray();

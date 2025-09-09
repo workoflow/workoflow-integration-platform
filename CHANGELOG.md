@@ -20,8 +20,8 @@ All notable changes to this project will be documented in this file.
 - API integration validation now correctly checks the integration's assigned organization
 - Integrations now properly filtered by selected organization
 - Dashboard now only shows integrations for the current organization
-- Resolved deprecation warnings for improved compatibility with future versions
-- SharePoint page reading now properly handles API errors and provides meaningful error messages
+- Resolved system deprecation warnings for improved compatibility with future versions
+- SharePoint page reading now works correctly with standard Microsoft Graph API
 - SharePoint file operations now include error handling for better reliability
 
 ## 2025-09-08
