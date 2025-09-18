@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Copy curl command button on dashboard for easy API testing
 - Direct workflow user ID display on dashboard for quick reference
 - Link styling in integration function descriptions for better navigation
+- Tool type filtering for API endpoints - can now filter tools by type (jira, confluence, sharepoint, system)
 
 ### Changed
 - Workflow user IDs are now managed per user-organization relationship instead of per integration

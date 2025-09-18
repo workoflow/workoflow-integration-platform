@@ -64,9 +64,30 @@ class IntegrationApiController extends AbstractController
             return new JsonResponse(['error' => 'Missing workflow user ID parameter'], 400);
         }
 
+        // Get tool type filter from query parameter
+        $toolTypeFilter = $request->query->get('tool_type', 'all');
+        $requestedTypes = [];
+
+        if ($toolTypeFilter !== 'all') {
+            // Support comma-separated values
+            $requestedTypes = array_map('trim', explode(',', $toolTypeFilter));
+
+            // Validate requested types
+            $validTypes = ['jira', 'confluence', 'sharepoint', 'system'];
+            $invalidTypes = array_diff($requestedTypes, $validTypes);
+
+            if (!empty($invalidTypes)) {
+                return new JsonResponse([
+                    'error' => 'Invalid tool type(s): ' . implode(', ', $invalidTypes),
+                    'valid_types' => $validTypes
+                ], 400);
+            }
+        }
+
         $this->logger->info('API tools list request', [
             'org_uuid' => $orgUuid,
             'workflow_user_id' => $workflowUserId,
+            'tool_type_filter' => $toolTypeFilter,
             'remote_addr' => $request->getClientIp()
         ]);
 
@@ -90,20 +111,27 @@ class IntegrationApiController extends AbstractController
         
         // Build tools array
         $tools = [];
-        
-        // Add static share_file tool
-        $tools[] = [
-            'id' => 'share_file',
-            'name' => 'share_file',
-            'description' => 'Upload and share a file. Returns a signed URL that can be used to access the file.',
-            'integration_id' => null,
-            'integration_name' => 'File Sharing',
-            'integration_type' => 'system',
-            'parameters' => $this->getParametersForFunction('share_file')
-        ];
-        
+
+        // Add static share_file tool (only if system type is requested or no filter)
+        if (empty($requestedTypes) || in_array('system', $requestedTypes)) {
+            $tools[] = [
+                'id' => 'share_file',
+                'name' => 'share_file',
+                'description' => 'Upload and share a file. Returns a signed URL that can be used to access the file.',
+                'integration_id' => null,
+                'integration_name' => 'File Sharing',
+                'integration_type' => 'system',
+                'parameters' => $this->getParametersForFunction('share_file')
+            ];
+        }
+
         foreach ($integrations as $integration) {
             if (!$integration->isActive()) {
+                continue;
+            }
+
+            // Skip this integration if it doesn't match the filter
+            if (!empty($requestedTypes) && !in_array($integration->getType(), $requestedTypes)) {
                 continue;
             }
 
@@ -117,7 +145,7 @@ class IntegrationApiController extends AbstractController
                     'integration_type' => $integration->getType(),
                     'parameters' => $this->getParametersForFunction($function->getFunctionName())
                 ];
-                
+
                 $tools[] = $tool;
             }
         }
