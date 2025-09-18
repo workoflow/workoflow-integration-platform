@@ -16,7 +16,7 @@ final class Version20250118000001 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $this->addSql('CREATE TABLE waitlist_entries (
+        $this->addSql('CREATE TABLE IF NOT EXISTS waitlist_entries (
             id INT AUTO_INCREMENT NOT NULL,
             email VARCHAR(255) NOT NULL,
             ip_address VARCHAR(45) DEFAULT NULL,
