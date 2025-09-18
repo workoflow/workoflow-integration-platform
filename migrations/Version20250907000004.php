@@ -16,32 +16,63 @@ final class Version20250907000004 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // First, add an ID column to make user_organisation a proper entity
-        // We need to add the id column and then make it primary key
-        $this->addSql('ALTER TABLE user_organisation ADD id INT NOT NULL AUTO_INCREMENT FIRST, DROP PRIMARY KEY, ADD PRIMARY KEY (id)');
-        $this->addSql('ALTER TABLE user_organisation ADD UNIQUE KEY unique_user_org (user_id, organisation_id)');
+        // Skip this migration if the table already has the expected structure
+        // Check if workflow_user_id already exists in user_organisation
+        $this->addSql("
+            SET @has_workflow_id = (
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'user_organisation'
+                AND COLUMN_NAME = 'workflow_user_id'
+            )
+        ");
 
-        // Add workflow_user_id column to user_organisation table
-        $this->addSql('ALTER TABLE user_organisation ADD workflow_user_id VARCHAR(255) DEFAULT NULL');
-        $this->addSql('CREATE INDEX IDX_USER_ORG_WORKFLOW ON user_organisation (workflow_user_id)');
+        // Only run migration if workflow_user_id doesn't exist yet
+        $this->addSql("
+            SET @should_migrate = IF(@has_workflow_id = 0, 1, 0)
+        ");
 
-        // Migrate existing workflow_user_id data from integration to user_organisation
-        // This will set the workflow_user_id for all user-organisation pairs that have integrations
-        $this->addSql('
+        // Add ID column if migration is needed
+        $this->addSql("
+            ALTER TABLE user_organisation
+            ADD COLUMN IF NOT EXISTS id INT NOT NULL AUTO_INCREMENT FIRST
+        ");
+
+        // Add workflow_user_id column if it doesn't exist
+        $this->addSql('ALTER TABLE user_organisation ADD COLUMN IF NOT EXISTS workflow_user_id VARCHAR(255) DEFAULT NULL');
+        $this->addSql('CREATE INDEX IF NOT EXISTS IDX_USER_ORG_WORKFLOW ON user_organisation (workflow_user_id)');
+        $this->addSql('ALTER TABLE user_organisation ADD UNIQUE KEY IF NOT EXISTS unique_user_org (user_id, organisation_id)');
+
+        // Migrate existing workflow_user_id data from integration to user_organisation if column exists in integration
+        $this->addSql("
+            SET @has_integration_workflow = (
+                SELECT COUNT(*)
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'integration'
+                AND COLUMN_NAME = 'workflow_user_id'
+            )
+        ");
+
+        // Only migrate if the column exists in integration table
+        $this->addSql("
             UPDATE user_organisation uo
             INNER JOIN (
                 SELECT DISTINCT i.user_id, i.organisation_id, i.workflow_user_id
                 FROM integration i
                 WHERE i.workflow_user_id IS NOT NULL
                   AND i.organisation_id IS NOT NULL
+                  AND @has_integration_workflow = 1
             ) AS integration_data
             ON uo.user_id = integration_data.user_id
             AND uo.organisation_id = integration_data.organisation_id
             SET uo.workflow_user_id = integration_data.workflow_user_id
-        ');
+            WHERE @has_integration_workflow = 1
+        ");
 
-        // Remove workflow_user_id column from integration table
-        $this->addSql('ALTER TABLE integration DROP COLUMN workflow_user_id');
+        // Remove workflow_user_id column from integration table if it exists
+        $this->addSql('ALTER TABLE integration DROP COLUMN IF EXISTS workflow_user_id');
     }
 
     public function down(Schema $schema): void

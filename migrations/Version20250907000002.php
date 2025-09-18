@@ -16,14 +16,14 @@ final class Version20250907000002 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        // Add organisation_id column to integration table
-        $this->addSql('ALTER TABLE integration ADD organisation_id INT DEFAULT NULL');
-        
-        // Add index for organisation_id
-        $this->addSql('CREATE INDEX IDX_7A997E5F9E6B1585 ON integration (organisation_id)');
-        
-        // Add foreign key constraint to organisation table
-        $this->addSql('ALTER TABLE integration ADD CONSTRAINT FK_7A997E5F9E6B1585 FOREIGN KEY (organisation_id) REFERENCES organisation (id)');
+        // Add organisation_id column to integration table if it doesn't exist
+        $this->addSql('ALTER TABLE integration ADD COLUMN IF NOT EXISTS organisation_id INT DEFAULT NULL');
+
+        // Add index for organisation_id if it doesn't exist
+        $this->addSql('CREATE INDEX IF NOT EXISTS IDX_7A997E5F9E6B1585 ON integration (organisation_id)');
+
+        // Add foreign key constraint to organisation table if it doesn't exist
+        $this->addSql('ALTER TABLE integration ADD CONSTRAINT IF NOT EXISTS FK_7A997E5F9E6B1585 FOREIGN KEY (organisation_id) REFERENCES organisation (id)');
     }
 
     public function down(Schema $schema): void

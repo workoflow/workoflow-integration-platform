@@ -17,7 +17,7 @@ final class Version20250702000001 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // Organisation table
-        $this->addSql('CREATE TABLE organisation (
+        $this->addSql('CREATE TABLE IF NOT EXISTS organisation (
             id INT AUTO_INCREMENT NOT NULL, 
             uuid CHAR(36) NOT NULL COMMENT \'(DC2Type:guid)\', 
             name VARCHAR(255) NOT NULL, 
@@ -28,7 +28,7 @@ final class Version20250702000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // User table
-        $this->addSql('CREATE TABLE `user` (
+        $this->addSql('CREATE TABLE IF NOT EXISTS `user` (
             id INT AUTO_INCREMENT NOT NULL, 
             organisation_id INT DEFAULT NULL, 
             email VARCHAR(180) NOT NULL, 
@@ -46,7 +46,7 @@ final class Version20250702000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // Integration table
-        $this->addSql('CREATE TABLE integration (
+        $this->addSql('CREATE TABLE IF NOT EXISTS integration (
             id INT AUTO_INCREMENT NOT NULL, 
             user_id INT NOT NULL, 
             type VARCHAR(50) NOT NULL, 
@@ -63,7 +63,7 @@ final class Version20250702000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // IntegrationFunction table
-        $this->addSql('CREATE TABLE integration_function (
+        $this->addSql('CREATE TABLE IF NOT EXISTS integration_function (
             id INT AUTO_INCREMENT NOT NULL, 
             integration_id INT NOT NULL, 
             function_name VARCHAR(100) NOT NULL, 
@@ -74,7 +74,7 @@ final class Version20250702000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         // AuditLog table
-        $this->addSql('CREATE TABLE audit_log (
+        $this->addSql('CREATE TABLE IF NOT EXISTS audit_log (
             id INT AUTO_INCREMENT NOT NULL, 
             organisation_id INT DEFAULT NULL, 
             user_id INT DEFAULT NULL, 

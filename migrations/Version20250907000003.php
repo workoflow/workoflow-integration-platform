@@ -17,7 +17,7 @@ final class Version20250907000003 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // Create join table for many-to-many relationship
-        $this->addSql('CREATE TABLE user_organisation (
+        $this->addSql('CREATE TABLE IF NOT EXISTS user_organisation (
             user_id INT NOT NULL,
             organisation_id INT NOT NULL,
             role VARCHAR(50) DEFAULT "MEMBER",
