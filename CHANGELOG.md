@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## 2025-09-18
 
 ### Added
+- Enhanced "How It Works" section with comprehensive enterprise-focused explanations
+- Channel-based architecture explanation for isolated business areas
+- Real-world examples showcasing customer chatbot, admin backend, and internal team use cases
+- Enterprise benefits highlighting data sovereignty and precision control
+- Visual improvements with color-coded example cards and gradient backgrounds
+
+### Added
 - Coming soon landing page with redesigned user interface
 - Email waitlist functionality for early access signups
 - Modern navigation bar with smooth scrolling

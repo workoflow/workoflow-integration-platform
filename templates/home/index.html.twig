@@ -176,36 +176,205 @@
     </div>
 </section>
 
-<!-- Steps Section -->
-<section id="how-it-works" class="steps-section">
+<!-- How It Works Section -->
+<section id="how-it-works" class="how-it-works-section">
     <div class="container">
         <div class="section-header animate-fade-in">
             <h2>How It Works</h2>
+            <p class="section-subtitle">Enterprise AI Orchestration, Not Just Another Chatbot</p>
         </div>
-        
-        <div class="steps-grid">
-            <div class="step-item animate-fade-in">
-                <div class="step-number">01</div>
-                <h3>Sign In</h3>
-                <p>Login with Google</p>
+
+        <!-- Not Another Chatbot -->
+        <div class="concept-block animate-fade-in">
+            <div class="concept-header">
+                <div class="concept-icon">🚀</div>
+                <h3>Beyond Traditional AI Assistants</h3>
             </div>
-            
-            <div class="step-item animate-fade-in">
-                <div class="step-number">02</div>
-                <h3>Connect Tools</h3>
-                <p>Add Jira & Confluence</p>
+            <p class="concept-description">
+                Unlike ChatGPT, Copilot, or other AI chatbots, Workoflow isn't just another conversational interface.
+                It's an <strong>enterprise orchestration platform</strong> that connects the right tools to the right channels
+                with centralized management and granular permissions.
+            </p>
+            <div class="key-differentiators">
+                <div class="differentiator-item">
+                    <span class="check-icon">✓</span>
+                    <span>Your data stays on-premise</span>
+                </div>
+                <div class="differentiator-item">
+                    <span class="check-icon">✓</span>
+                    <span>Full control over tool access</span>
+                </div>
+                <div class="differentiator-item">
+                    <span class="check-icon">✓</span>
+                    <span>Authentication layer n8n lacks</span>
+                </div>
             </div>
-            
-            <div class="step-item animate-fade-in">
-                <div class="step-number">03</div>
-                <h3>Configure Access</h3>
-                <p>Choose which tools AI can use</p>
+        </div>
+
+        <!-- Channel Architecture -->
+        <div class="architecture-section animate-fade-in">
+            <h3 class="subsection-title">1. Define Your Channels</h3>
+            <p class="subsection-description">
+                Create isolated channels for different parts of your business. Each channel has its own permissions and tool access.
+            </p>
+            <div class="channels-grid">
+                <div class="channel-card">
+                    <div class="channel-icon">🛍️</div>
+                    <h4>Frontend Channels</h4>
+                    <p>Customer-facing stores</p>
+                    <span class="channel-examples">Shopware, Spryker, Magento [...]</span>
+                </div>
+                <div class="channel-card">
+                    <div class="channel-icon">⚙️</div>
+                    <h4>Backend Channels</h4>
+                    <p>Administrative interfaces</p>
+                    <span class="channel-examples">Admin panels, dashboards [...]</span>
+                </div>
+                <div class="channel-card">
+                    <div class="channel-icon">💬</div>
+                    <h4>Messaging Channels</h4>
+                    <p>Corporate communication</p>
+                    <span class="channel-examples">Teams, Slack, WhatsApp [...]</span>
+                </div>
             </div>
-            
-            <div class="step-item animate-fade-in">
-                <div class="step-number">04</div>
-                <h3>Start Using</h3>
-                <p>AI agents work with your tools</p>
+        </div>
+
+        <!-- Tool Control -->
+        <div class="tool-control-section animate-fade-in">
+            <h3 class="subsection-title">2. Control Tool Access</h3>
+            <div class="tool-control-content">
+                <div class="tool-stats">
+                    <div class="stat-number">1157+</div>
+                    <div class="stat-label">Out-of-the-box integrations</div>
+                </div>
+                <div class="tool-description">
+                    <p>
+                        After creating a channel (public or private), you control exactly which tools that channel can access.
+                        The AI will intelligently use only the tools you've authorized, ensuring complete data isolation and security.
+                    </p>
+                    <p class="highlight-text">
+                        <strong>Your data. Your decisions. Your control.</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real Example -->
+        <div class="example-section animate-fade-in">
+            <h3 class="subsection-title">3. See It In Action</h3>
+            <p class="subsection-description">Here's how different channels serve different purposes with isolated permissions:</p>
+
+            <div class="examples-grid">
+                <div class="example-card">
+                    <div class="example-header customer">
+                        <span class="example-type">Customer Chatbot</span>
+                        <span class="example-badge">Public</span>
+                    </div>
+                    <div class="example-tools">
+                        <h5>Available Tools:</h5>
+                        <ul>
+                            <li>shopware_read_order</li>
+                            <li>shopware_return_order</li>
+                            <li>shopware_search_product</li>
+                            <li>public_knowledge_base</li>
+                        </ul>
+                    </div>
+                    <div class="example-benefit">
+                        Customers get instant help without exposing sensitive data
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <div class="example-header admin">
+                        <span class="example-type">Admin Backend</span>
+                        <span class="example-badge">Private</span>
+                    </div>
+                    <div class="example-tools">
+                        <h5>Available Tools:</h5>
+                        <ul>
+                            <li>admin_search_orders</li>
+                            <li>admin_search_customers</li>
+                            <li>admin_unpaid_orders</li>
+                            <li>admin_analytics</li>
+                        </ul>
+                    </div>
+                    <div class="example-benefit">
+                        Staff access powerful tools with role-based permissions
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <div class="example-header internal">
+                        <span class="example-type">Internal Teams</span>
+                        <span class="example-badge">Restricted</span>
+                    </div>
+                    <div class="example-tools">
+                        <h5>Available Tools:</h5>
+                        <ul>
+                            <li>Same admin tools</li>
+                            <li>Cross-system queries</li>
+                            <li>Automation triggers</li>
+                            <li>Custom workflows</li>
+                        </ul>
+                    </div>
+                    <div class="example-benefit">
+                        Teams chat naturally while AI handles complex operations
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefits -->
+        <div class="benefits-section animate-fade-in">
+            <h3 class="subsection-title">Why Enterprises Choose Workoflow</h3>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">🔐</div>
+                    <h4>Data Sovereignty</h4>
+                    <p>On-premise hosting means your data never leaves your control</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🎯</div>
+                    <h4>Precision Control</h4>
+                    <p>Granular permissions ensure AI accesses only what you allow</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">🔧</div>
+                    <h4>Easy Integration</h4>
+                    <p>Connect any API or internal system with guided onboarding</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">📈</div>
+                    <h4>Scale Intelligently</h4>
+                    <p>From customer service to complex automation workflows</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="quick-start-section animate-fade-in">
+            <h3 class="subsection-title">Get Started in 4 Steps</h3>
+            <div class="steps-grid">
+                <div class="step-item">
+                    <div class="step-number">01</div>
+                    <h4>Sign In</h4>
+                    <p>Secure Google authentication</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">02</div>
+                    <h4>Create Channels</h4>
+                    <p>Define your business touchpoints</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">03</div>
+                    <h4>Connect Tools</h4>
+                    <p>1157+ integrations ready</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">04</div>
+                    <h4>Deploy AI</h4>
+                    <p>LLM orchestrates your tools</p>
+                </div>
             </div>
         </div>
     </div>
