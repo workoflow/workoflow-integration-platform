@@ -3,8 +3,20 @@
 {% block title %}Workoflow - AI Integration Platform{% endblock %}
 
 {% block body %}
+<!-- Navigation Bar -->
+<nav class="home-nav">
+    <div class="nav-container">
+        <a href="#hero" class="nav-link">Home</a>
+        <a href="#getting-started" class="nav-link">Getting Started</a>
+        <a href="#integrations" class="nav-link">Integrations</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#waitlist" class="nav-link">Join Waitlist</a>
+    </div>
+</nav>
+
 <!-- Hero Section -->
-<section class="hero-section">
+<section id="hero" class="hero-section">
     <div class="container">
         <div class="hero-content animate-fade-in">
             <!-- Spinning Logo -->
@@ -13,8 +25,8 @@
                 <img src="{{ asset('images/valantic-logo-white.png') }}" alt="Valantic Logo" class="logo-icon">
             </div>
             
-            <div class="hero-badge">
-                BETA - RELEASE
+            <div class="coming-soon-badge">
+                Coming Soon
             </div>
             
             <h1 class="hero-title">
@@ -28,8 +40,8 @@
             </p>
             
             <div class="hero-actions">
-                <a href="{{ path('app_login') }}" class="btn btn-primary">
-                    Login →
+                <a href="#waitlist" class="btn btn-primary">
+                    Join the Waitlist →
                 </a>
                 <a href="#features" class="btn btn-secondary">
                     See Features
@@ -40,7 +52,7 @@
 </section>
 
 <!-- Getting Started Video Section -->
-<section class="video-section">
+<section id="getting-started" class="video-section">
     <div class="container">
         <div class="section-header animate-fade-in">
             <h2>Getting Started</h2>
@@ -56,6 +68,61 @@
                         allowfullscreen 
                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
                 </iframe>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Integrations Section -->
+<section id="integrations" class="integrations-showcase-section">
+    <div class="container">
+        <div class="section-header animate-fade-in">
+            <h2>Integrates with all your applications</h2>
+            <p>Connect with the tools and platforms your team already uses</p>
+        </div>
+
+        <div class="integrations-logos">
+            <div class="integration-logo-item animate-fade-in">
+                <div class="logo-wrapper">
+{#                    <img id="dimg_QdfLaJL8F8GN9u8PrOe64Q4_31" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAODhENDQ0QDw0OEBMQDxANEhAQDw8TFR0XFhUTFRUYHSggGBolGxgUITEhJSkrLi4uFx8zOjMtNygtLi0BCgoKDg0OGxAQGi0dHyItKy8rLS0rLS0tLSstMC4tLS0vLS0uLS0rLS0vKy0tLS0rLS0yLS4tKy0tLS0rLS0tLf/AABEIANkA6QMBEQACEQEDEQH/xAAcAAEAAgMBAQEAAAAAAAAAAAAAAQYCBQcEAwj/xABKEAACAQIBBggKBgcHBQAAAAAAAQIDEQQFBhIhMVETMkFUYXGBkQcUFSJScpKTocEWNUJ0stIXIzOxs9PhQ1NigpTC0SQ0VaLw/8QAGgEBAAMBAQEAAAAAAAAAAAAAAAECAwQFBv/EADERAQACAQEDCAoDAQAAAAAAAAABAgMRBBIxBRMhMkFRUoEUM2FxkaGxwdHhFSLwI//aAAwDAQACEQMRAD8A7iAAAAAAAAAAAAAABo8uZy0cLeC/W1vQi7KPry5OrWzr2fY75enhHf8AhS14hTcfnPi6zf610o+jR8y3+bjfE9XHseGnZr7/APaM5vMtVUrSnrnOUnvlJyfxOmKxHCNFWVHE1Ia6dWcH/glKP7mRalbcYiTVusnZ24mi0qklXhuqapdk1r77nLl2DFfh/WfZ+FovMLpkbLdHFr9W7VErypzsprp6V0o8nPs18M/24d7WtolsznWAAAAAAAAAAAAAAAAAAAAAAAAABWM784Hh14vQf6+SvOS/sov/AHP4bdx6GxbLzn978PqzvbTohQG763rb1tvaz2mIAAAAM6FaVOSqU5OM4u8ZR1NMi1YtGk9MJdKzay2sZS860a9OyqRWx7profw7jwNq2acNujhPBvW2rcnKsAAAAAAAAAAAAAAAAAAAAAAAPNlHFxoUalaWynFytvfIu12XaaYsc5LxWO1EzpGrk2IryqzlUqO85ycpPpfyPpa1isRWOEOd8yUAAAAAAe3IuUHhcRCsr2TtNL7UHxl8+tIyz4oy0mvw960TpOrrEZJpNO6aumuVHzUxo6EgAAGrynnDg8K3HEYqnCa2wT06i/yRvL4G2PZ8uTq11Vm0Rxa2OfuTW7eMSXS6Ne34Tf8Aj9o8Pzj8o5yrc5Oyrh8Ur4evTq22qEk5R647V2nNkxXx9eNFomJ4PaZpAAAAAAAAAAAAAAAKxn/iNHDQpr+0qq/TGKb/AH6J6HJtdck27oZ5J6FAPaYgAAAAAAAHUM1MRwmBot7YxcPYbivgkfPbZXdzWjz+LopPQ2xzLIbtrepIDlueGfNStKWHwM3Tw61SrQdqlb1X9mPStb6tR7mybBWsb2SNZ7u5hfJr0Qo56TMAzo1ZU5KdOUoTi7xnBuMovemtaImImNJ6YHTcx89XiJRwmNa4d6qVXUlV/wAMlsU9z2Poe3xds2Hcjfx8O2O79NqX16JXs8xqAAAAAAAAAAAAAAp3hFT0cO+S9T/b/U9TkzjbyZZOxSj1mQAAAAAAAB0bMZf9FHpnO3eeFyh66fdDfHwWA4l1N8J2V3QwscNTdp4tuMmtqpRtp994rqbPR5Ow7+TfnhX69jPJOkaOTHusAAAAmMmmmm000007NNbGnyMDueamVvHcFSry/aNaFW2rz46pO3Je1+po+Z2rDzWWaxw7Pc6azrGrbnOsAAAAAAAAAAAABWs/sO5YPhIq7o1Iyfqu8X8Wn2Hdyffdy6d8KZI6HN+Ge5HtbzE4Z7kN4OGe5DeGUa29WJ3h9SUAAAB1TNzCujg6NNq0tDSkuVOd5Nd7PnNqvv5bT/ujodFY0hsjBZyjwrVG8dTh9mOGi0umUql38F3Hu8mR/wApn2/aGGXipZ6LMAAAAHUPBJUfi2IhyKupL/NGKf4UeLypH/Ss+z7tsXBezy2rmeeOedaVaeGwdR0qVKThOpD9pUktUrS+zFPVq1u172PX2XY6xWLXjWZY2v2QqjyxiueYn39b8x28zj8MfCFNZR5YxXPMT7+t+Yczj8MfCDWUeWMVzzE+/rfmHM4/DHwg1k8sYrnmJ9/W/MTzOPwx8INZR5YxXPMT7+t+Yczj8MfCDWTyxiueYn39b8w5nH4Y+EGso8sYrnmJ9/W/MOZx+GPhBrJ5ZxXPMT7+t+Yczj8MfCDWUeWcVzzE+/rfmHM4/DHwg1k8s4vnuJ9/W/MTzOPwx8INZYVMrYmScZYvESjJWcZVqri1uab1iMVI6YrHwg1l5eFl6Uu9l9EHCy9KXexol8p1Zx86M5atqbbXczHJWY/tWUw2WAxXCx16pR1SS2dDFL70Ew2dJ+ajeOCGYQAbbNjJbxWIjFq9KnadV8llsj2vV1X3HNtefmsevbPD/exasay6gfPOgA5n4WsE1Vw+JS82cHRk+ROLcort0p9x7PJd/wCtqebHLHaoB6rIAAAAHW/BdgnTwDqSWvEVZTj6qtBfGMn2ng8pX3s2ndH7b446FwPPaPz3KV229bbu2fUOVAEAQSAEAAIAgASIAAQBAGM9j6mVt1ZS+2RONL1fmc2HjK0rBR4qOqOCrMlD15MydVxVRU6Mbv7UnxYLfJ8hnlzVxV3rJiJl03I2S4YSkqVPW9s5vbOXK3/wfP581stt6XRWNIe4xSAazOPI8cdhZ4eTs351Oe3QmuLL5PobNtnzThyReP8AQraNY0cPx2DqYerKhWg4VabtKL+DT5U9qZ9NS9b1i1emJc0xo85YAAG1zbyHUx+IVGndQVnWqclOG/1nrSXK+hMw2jPXDTenyjvWrXWXccLh40qcKVOOjTpxUIRWxRirJHzVrTaZtPGXS+pUfnk+ocqCQAgABAACCRAACAAEAQBnQoSqzjShbTqyjThd2WlJqKu+toredKzPslMN/k/M3KNGcuEwc0rWTjOlNPX/AIZM8/FtGKJ6bLzWW7wua+NkkvF3HpnKmkvjc6PTMMR1vqjclvcnZju6liqyt6FHl65tfLtOXLyl2Y4+P4WjH3rbgsHToQVOjBQguSPK97e1vpZ5mTJbJO9adZaRERwfcokAAANPnFm3h8oQSrRcakVaFWFlUh0dK6H/AFOjBtN8M/14dytqxLneU/B5jaTfAaGJhyOElTn2xm7Lskz18fKWK3W/r8/p+GU45ayOZ+UW7LBVL9MqaXe5WNvTcHi+qu5bubzJHg3xFRqWLqRoQ5YU2qlV9F+LHr87qObLynSOpGs/L8/RaMU9ro2Scl0cHSVHD01CC1vllJ8spPa2ePly3y23rTq2iIjg9pmkA/PB9S5UAAIAuuR/B9LFYeliVjFBVoKei6Llo35L6av3Hn5dvil5ru66e39NIx6xq9n6L5c/j7h/zCn8nHg+f6TzftP0Xy5/H3D/AJg/k48Hz/RzftR+i6XP4+4f8wfyceD5/o5v2n6Lpc/j/p3/ADB/Jx4Pn+jm/afoul/5CP8Ap3/MH8nHg+f6Ob9rV5x5iSwOFnini1VUHBaCpOF9KSjt03v3G2DbYy3im7p5/pFqaRqp53M0AQB7shf95hfvVD8cSmb1dvdP0THF+gT5h0gAAAAAAAAAAAAAAAD87n1LlQAAgDr2aucODpYDDU6mMowqQpRUoynFSi9zR4e0bPltltMVni3raNG0+lOA59h/eRMfRs3hn4J3o73owOW8LiJ8HQxNKrU0XLRpzUpWVk3Zcmtd5W+HJSNbVmExMS2BklrcXnBg6NSVKti6NOpC2lCc4qUbpNXXU0+01rgy2jWtZmEb0Q+P0pwHP8P7yJb0XN4Z+CN6O9Xs/svYSvk6rSoYqjUqSlSahCcZSdpxb1dSZ1bHgyUzRNqzEdP0VvaJhyk9liAQSJhVlBqcG4zg1KMltjJa010plbxrWfcmG8yTnRj5ykpY2s0o8suk8/FgxzPTWF5tLd0svYuy/wCqq+0dMbNh06sK7097Py7i+dVfaJ9Fw+GDenvPLuL51V9oei4fDBvT3nl3F86q+0PRcPhg3p70eXcXzqr7Q9Gw+GDenvPLuL51V9pj0bD4YN6e95cblnHWcqeNrprW46V010Exs2Hwwb097WfSjH89re0W9Ew+GEb9u8+lGP57W9oeiYfDBv27z6UY/ntb2h6Jh8MG/bvPpRj+e1vaHomHwwb9u8+lGP57W9oeiYfDBv271gzYz/rU6kaWPmqtCTSdVqMalK/2naylHfy8t9Vjl2nk+k11xxpPd3rVyT2upXW88Nu/O59S5UACRAACALh4K/rGX3ap+KmcPKPqfOPu0x8XXDw2ziXhB+tcV10v4VM+h2L1FfP6ywv1leOlRAEACRAGMtj6iturKYerInHl6vzOXDxlaVgo8VHVHBVmSgAAAAACts0QgAAAAANj5cxP99LvMfR8fcnelrywgABAACALh4KvrGX3ap+KmcPKPqfOPu0x8XXTw2ziPhB+tcV61L+FTPodi9RXz+ssL9ZXjpUQSIAgCAIlsK26skPXkTjy9X5nLh4yvKwUeKjqjgqzJQAAAAABW5bX1miEAAAAAAAGaUAAIAAQBcPBV9Yy+7VPxUzh5R9T5x92mPi68eG2cQ8IX1tivWpfwqZ9DsXqK+f1lz360q6dSqAAEARcDGTK26skPbkTjy9X5nLh4yvKwUeKjqjgqzJQAAAAABW5bX1miEAAAAAAAgzSgABAACALj4KfrGX3ap+KmcPKPqfOPu0x8XXjw2zh/hC+tsV61L+FTPodi9RXz+sue/WlXbnUqgCAIuBFwIbK26skPdkTjy9X5nLh4yvKwUeKjqjgqzJQAAAAABW5bX1miEAAAAAAAxM0oAAQBAAkXHwUfWUvu1T8VM4OUfU+cfdpj4uvnhtnDvCH9bYr1qX8KmfQ7F6ivn9Zc9+tKuHUqi4C4EXAi4GLZW3VkhsMiceXq/M5cPGV5WCjxUdUcFWZKAAAAAAK3La+s0QgAAAAAAGBmlAACLkiAIAuXgn+spfdan4qZwco+p84+6+Pi7AeG3cN8If1tivWpfwqZ9DsXqK+f1lz36yuXOpVFwIuBFwIuBDZW3VlMNjkTjy9X5nLh4ytKwUeKjqjgqzJQAAAAABW5bX1miEAAAAAAA+ZmlBIgCAAEAb3MvLtPJ+LeIqwnODozp2paOleTg0/OaVvNZzbVhnNTdjo6Vq20lef0p4TmuK7qP5zz/4zJ4o+f4ac5DnWdOVIYzG1sXTjKMKrg4xqW0lowhB3s2tsXynp7PjnHjik9n5ZWnWdWqubIRcCLgRcCLgQRbqymGzyJx5er8zkw8ZWlYKPFR1RwVZkoAAAAAArctr6zRCAAAAAAAfEokAgCAIAi4EXAi4EXAi4C4EXAi4EXAi5FurKW0yJx5er8zkw8ZWlYKPFR1RwVZkoAAAAAArctr6zRCAAAAAA2Pkir6LMefqtutOy6EAQAuBFwIuBFwIuBFwIuBFwIuBFyRFwIuVv1ZTDbZE48vV+ZyYeMrSsFHio6o4KsyUAAAAAAVuW19ZohAAAAA+2Cwsq9WnQhxq04010aTSv2XuVveKVm09hEau8eSqP92j5fnbd7q0hybPjNKtha9SvRpyqYSrJ1FKmnLgXLW4TS2JO9nstblPa2Taq3rFbTpMfNjesxKn8JH0l3o7tJURwkfSXehpIjhI+ku9DSRHCx9Jd6GkiOFj6S70NJEcLH0l3oaSI4WPpLvQ0kSpX2a+oaCAIAgCAIAx0taS3nNmyxpuxxWiG5yIvOl6q/eZ4eMplYKPFR1RwVZkoAAAABjOVk3uTfcSK4XQAAAAC9eC7IrqVpY6cf1dC8KV/tVGrSa6FFtdcug8zlLPu15uOM8fc1x17XUTxGwBFluAaK3ANFbgGitwDRW4BorcA0VuQHIfDHkeXjdHFQS0a1Hg5cnnU3e/apr2Tv2XW1ZiOxS3Q5/4hU3LvOnm7K6weIVNy7xzdjWDxCpuXeObsaweIVNy7xzdjWDxCpuXeObsavtRwLWttX/cWjHKNW4yZBRbS3d50Y40VluaaskjohVkAAAAAHmyjU0aUt8vNXbt+FyY4jRl0AAABuc2M3auUKuhC8aMWuGq21QW5b5PkRz7TtNcFdZ49kLVrvO1ZPwVPD0oUKMdGnTjoxXze9t3bfK2fOXva9ptbjLoiNHoKJAAAAAAAAAFfz4yT43gZxir1aT4anba3G94rri5LrsdGy5NzJGvCehW0aw45wS3s9nRicEukaBwS6RoHBLpGgcEukaCVRT1K/YN0bLBYXQV3xn8DaldES9RdAAAAAAH2xebGMr0IYihSVSm9LzYySqatWlou11q1Wd+gwna8VLzS06T8ltyZjVWsVhalF2rUqlJ7qsJQf/sjpreturOvuUmNHw0lvRfQe3AZKxGIaVDD1al9jhCWh2y2LtZlfNjp1rRCYiZ4LnkHwbzk1PH1FCO3gaLvN9Ep7I9l+tHnZ+U4joxRr7Z/DSuLvdFwWDp0KcaNCnGnTgrRjBWS6el9PKeRe9rzvWnWWsRo+5VIAAAAAAAAAAAOaZ25G8VruUIrgKzcoWWqL+1D5rofQe9seeMtNJ4x/tWF66S0eityOzRQ0VuQ0DRW5DQNFbkNASAkAAAAAAHvyJkyWLrxoxuo8apJfZgtr6+RdLMc+aMVJtPl71qxrLqlKnGEYwglGMEoxS2JLUkfOTM2nWXQya3kDBUIJ3UIp71FXJ3p7x9CAAAAAAAAAAAAAAAA8uU8BDE0pUaq82WxrbF8kl0o0xZbYrRaqJjWNHL8q5NqYWq6VVdMZLizj6S/45D6LDmrlrvVc8xo8ZogAAAAAAAAAfXC4adacaVKLlObskv39C6St71pXet0QmI1dOzfyPHB0tBWlUlZ1Z+k9y6Fyf1Pn9p2ic19ezsb1rpDZnOsAAAAAAAAAAAAAAAAAAAB48qZMpYqnwdaN1tjJapQe+LNcOa2K29VExEuc5byDWwcryWnRb82rFeb1SX2X/8Aaz3cG00zR0dE9zC1ZhqzoVAAAAAAAe3JeS62KnoUYXS403qhDrfy2mWbPTFGtpWiJng6LkLIdPBwtHzqsl59RrW+hLkXQeHtG02zT09EdzatYhtDmWAAAAAAAAAAAAAAAAAAAAAAInFSTUkmmrNPWmtzRMTp0wKzlXM2jUvLDy4Cb+zbSpPs2x7NXQd+HlC9ei/9vqznHHYq+OzaxdHbRdSPpUfPT7F53wPRx7Zhv26e/o/TOaTDU1IuL0ZJxlukrPuZ0xOvTCqCQWt2WtvYltIGywWQMVW4mHml6VRcHHr87b2XML7Vipxt8OlaKzKy5LzJhG0sVU03/d0rxh2y2vssefl5RmejHGntn/flpGPvWvD0IU4qFOEYQjsjFJJHnWtNp1tOstNH0KgAAAAAAAAAAAAAAAAAAAAAAAAAAGvy1+yN8HWRZz+v+1Par1WHau2bfEfUeTtXFtVujkWAAAAAAAAAAAAAAf/Z" class="YQ4gaf" height="217" style="object-position:33% 25%" width="233" alt="File:Microsoft Office Teams (2018–present).svg - Wikimedia Commons" data-csiid="QdfLaJL8F8GN9u8PrOe64Q4_6" data-atf="1">#}
+                    <svg viewBox="0 0 100 100" class="teams-logo" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Microsoft Teams full logo -->
+                        <img src="{{ asset('images/Microsoft_Office_Teams_(2018–present).svg') }}" alt="Teams Logo" class="logo-icon">
+                    </svg>
+                </div>
+                <span>Microsoft Teams</span>
+            </div>
+            <div class="integration-logo-item animate-fade-in">
+                <div class="logo-wrapper">
+                    <svg viewBox="0 0 100 100" class="shopware-logo">
+                        <img src="{{ asset('images/Shopware_icon.svg') }}" width="50" height="50" alt="Magento Logo" class="logo-icon">
+                    </svg>
+                </div>
+                <span>Shopware</span>
+            </div>
+            <div class="integration-logo-item animate-fade-in">
+                <div class="logo-wrapper">
+                    <img src="{{ asset('images/Spryker Systems_idDzoJyYFN_0.svg') }}" alt="Magento Logo" class="logo-icon">
+                </div>
+                <span>Spryker</span>
+            </div>
+            <div class="integration-logo-item animate-fade-in">
+                <div class="logo-wrapper">
+                    <img src="{{ asset('images/Magento_Shiny_Icon.svg') }}" width="50" height="50" alt="Magento Logo" class="logo-icon">
+                </div>
+                <span>Magento</span>
+            </div>
+            <div class="integration-logo-item animate-fade-in">
+                <div class="logo-wrapper">
+                    <img src="{{ asset('images/WhatsApp.svg') }}" alt="Magento Logo" class="logo-icon">
+                </div>
+                <span>WhatsApp</span>
+            </div>
+            <div class="integration-logo-item animate-fade-in more-integrations">
+                <div class="logo-wrapper">
+                    <span class="plus-icon">+</span>
+                </div>
+                <span>and many more</span>
             </div>
         </div>
     </div>
@@ -110,7 +177,7 @@
 </section>
 
 <!-- Steps Section -->
-<section class="steps-section">
+<section id="how-it-works" class="steps-section">
     <div class="container">
         <div class="section-header animate-fade-in">
             <h2>How It Works</h2>
@@ -144,12 +211,38 @@
     </div>
 </section>
 
+<!-- Waitlist Section -->
+<section id="waitlist" class="waitlist-section">
+    <div class="container">
+        <div class="waitlist-card animate-fade-in">
+            <h2>Join the waitlist</h2>
+            <p>Join the waitlist to be the first to know when we officially launch.</p>
+
+            <form id="waitlistForm" class="waitlist-form">
+                <div class="form-group">
+                    <input type="email"
+                           id="waitlistEmail"
+                           placeholder="Enter your email"
+                           required
+                           class="form-input">
+                    <button type="submit" id="waitlistSubmit" class="btn btn-primary">
+                        <span class="btn-text">Join</span>
+                        <span class="btn-loader" style="display: none;">⏳</span>
+                        <span class="btn-success" style="display: none;">✓ Joined!</span>
+                    </button>
+                </div>
+                <div class="form-message" id="formMessage" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+</section>
+
 <!-- CTA Section -->
 <section class="cta-section">
     <div class="container">
-        <h2 class="animate-fade-in">Ready to Get Started?</h2>
-        <a href="{{ path('app_login') }}" class="btn btn-primary animate-fade-in">
-            Login →
+        <h2 class="animate-fade-in">Be Part of the Future of AI Integration</h2>
+        <a href="#waitlist" class="btn btn-primary animate-fade-in">
+            Join the Waitlist →
         </a>
     </div>
 </section>
@@ -178,7 +271,75 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         e.preventDefault();
         const target = document.querySelector(this.getAttribute('href'));
         if (target) {
-            target.scrollIntoView({ behavior: 'smooth' });
+            target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+    });
+});
+
+// Waitlist form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('waitlistForm');
+    const emailInput = document.getElementById('waitlistEmail');
+    const submitBtn = document.getElementById('waitlistSubmit');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnLoader = submitBtn.querySelector('.btn-loader');
+    const btnSuccess = submitBtn.querySelector('.btn-success');
+    const formMessage = document.getElementById('formMessage');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = emailInput.value.trim();
+        if (!email) return;
+
+        // Show loading state
+        btnText.style.display = 'none';
+        btnLoader.style.display = 'inline';
+        submitBtn.disabled = true;
+        formMessage.style.display = 'none';
+
+        try {
+            const response = await fetch('{{ path('app_waitlist_submit') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ email: email })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Show success state
+                btnLoader.style.display = 'none';
+                btnSuccess.style.display = 'inline';
+                submitBtn.classList.add('btn-success-state');
+                emailInput.disabled = true;
+
+                // Show success message
+                formMessage.textContent = data.message || 'Successfully joined the waitlist!';
+                formMessage.className = 'form-message success';
+                formMessage.style.display = 'block';
+            } else {
+                // Show error
+                btnLoader.style.display = 'none';
+                btnText.style.display = 'inline';
+                submitBtn.disabled = false;
+
+                formMessage.textContent = data.error || 'An error occurred. Please try again.';
+                formMessage.className = 'form-message error';
+                formMessage.style.display = 'block';
+            }
+        } catch (error) {
+            // Network error
+            btnLoader.style.display = 'none';
+            btnText.style.display = 'inline';
+            submitBtn.disabled = false;
+
+            formMessage.textContent = 'An error occurred. Please try again.';
+            formMessage.className = 'form-message error';
+            formMessage.style.display = 'block';
         }
     });
 });

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## 2025-09-18
 
 ### Added
+- Coming soon landing page with redesigned user interface
+- Email waitlist functionality for early access signups
+- Modern navigation bar with smooth scrolling
+- Showcase of upcoming integrations (Teams, Shopware, Spryker, Magento, WhatsApp)
+- Interactive waitlist signup form with real-time feedback
+
+## 2025-09-18
+
+### Added
 - Workflow user ID management moved to user-organization level for better multi-tenant support
 - Copy curl command button on dashboard for easy API testing
 - Direct workflow user ID display on dashboard for quick reference

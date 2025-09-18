@@ -38,6 +38,7 @@ security:
         - { path: ^/api, roles: ROLE_USER }
         - { path: ^/auth, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/waitlist, roles: PUBLIC_ACCESS }
         - { path: '^/[a-f0-9\-]+/file/', roles: PUBLIC_ACCESS }
         - { route: app_home, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }

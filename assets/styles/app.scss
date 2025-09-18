@@ -609,13 +609,262 @@ body {
   }
 }
 
+// Navigation Bar (Home Page)
+.home-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1000;
+  padding: var(--space-md) 0;
+
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xl);
+  }
+
+  .nav-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--text-sm);
+    transition: var(--transition);
+    padding: var(--space-xs) var(--space-sm);
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+}
+
+// Adjust hero section for fixed nav
+.hero-section {
+  padding-top: 60px; // Account for fixed nav
+}
+
+// Coming Soon Badge
+.coming-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(255, 107, 53, 0.15);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  border-radius: 50px;
+  padding: var(--space-sm) var(--space-lg);
+  margin-bottom: var(--space-xl);
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent, rgba(255, 107, 53, 0.2), transparent);
+    animation: shimmer 2s infinite;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+// Integrations Showcase Section
+.integrations-showcase-section {
+  padding: var(--space-3xl) 0;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+
+  .integrations-logos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-2xl);
+    margin-top: var(--space-3xl);
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .integration-logo-item {
+    text-align: center;
+    transition: var(--transition);
+
+    &:hover {
+      transform: translateY(-5px);
+
+      .logo-wrapper {
+        border-color: var(--color-primary);
+        background: rgba(255, 107, 53, 0.05);
+      }
+    }
+
+    .logo-wrapper {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto var(--space-md);
+      border: 2px solid var(--border-color);
+      border-radius: var(--border-radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      transition: var(--transition);
+      padding: var(--space-lg);
+
+      svg {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+      }
+
+      .plus-icon {
+        font-size: var(--text-3xl);
+        color: var(--color-primary);
+        font-weight: 300;
+      }
+    }
+
+    span {
+      display: block;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    &.more-integrations {
+      .logo-wrapper {
+        border-style: dashed;
+        background: transparent;
+      }
+    }
+  }
+}
+
+// Waitlist Section
+.waitlist-section {
+  padding: var(--space-3xl) 0;
+  background: var(--bg-secondary);
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+
+  .waitlist-card {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-xl);
+    padding: var(--space-3xl);
+
+    h2 {
+      font-size: var(--text-3xl);
+      margin-bottom: var(--space-md);
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: var(--space-2xl);
+      font-size: var(--text-base);
+    }
+  }
+
+  .waitlist-form {
+    .form-group {
+      display: flex;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-input {
+      flex: 1;
+      padding: var(--space-md) var(--space-lg);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      font-size: var(--text-base);
+      transition: var(--transition);
+
+      &::placeholder {
+        color: var(--text-muted);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        background: var(--bg-primary);
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    #waitlistSubmit {
+      min-width: 120px;
+      position: relative;
+
+      &.btn-success-state {
+        background: #22c55e;
+        border-color: #22c55e;
+
+        &:hover {
+          background: #22c55e;
+          transform: none;
+        }
+      }
+
+      .btn-text, .btn-loader, .btn-success {
+        transition: opacity 0.2s;
+      }
+    }
+
+    .form-message {
+      padding: var(--space-md);
+      border-radius: var(--border-radius);
+      font-size: var(--text-sm);
+      margin-top: var(--space-md);
+
+      &.success {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #22c55e;
+      }
+
+      &.error {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #ef4444;
+      }
+    }
+  }
+}
+
 // Footer
 .footer {
   padding: var(--space-2xl) 0;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   text-align: center;
-  
+
   p {
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -627,15 +876,74 @@ body {
   .hero-actions {
     flex-direction: column;
     width: 100%;
-    
+
     .btn {
       width: 100%;
     }
   }
-  
+
   .features-grid,
   .steps-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-nav {
+    .nav-container {
+      gap: var(--space-md);
+      padding: 0 var(--space-sm);
+      flex-wrap: wrap;
+      font-size: var(--text-xs);
+    }
+
+    .nav-link {
+      padding: var(--space-xs);
+      font-size: var(--text-xs);
+    }
+  }
+
+  .integrations-showcase-section {
+    .integrations-logos {
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .integration-logo-item {
+      .logo-wrapper {
+        width: 80px;
+        height: 80px;
+        padding: var(--space-md);
+
+        svg {
+          width: 50px;
+          height: 50px;
+        }
+      }
+
+      span {
+        font-size: var(--text-xs);
+      }
+    }
+  }
+
+  .waitlist-section {
+    .waitlist-card {
+      padding: var(--space-xl);
+
+      h2 {
+        font-size: var(--text-2xl);
+      }
+    }
+
+    .waitlist-form {
+      .form-group {
+        flex-direction: column;
+      }
+
+      .form-input,
+      #waitlistSubmit {
+        width: 100%;
+      }
+    }
   }
 }
 
