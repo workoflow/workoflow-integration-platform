@@ -49,7 +49,6 @@ class GetIntegrationCommand extends Command
             ['Name', $integration->getName()],
             ['Type', $integration->getType()],
             ['Active', $integration->isActive() ? 'Yes' : 'No'],
-            ['Workflow User ID', $integration->getWorkflowUserId() ?? 'Not set'],
             ['User', $integration->getUser()->getEmail()],
             ['Organisation', $integration->getOrganisation() ? $integration->getOrganisation()->getName() : 'Not set'],
             ['Organisation UUID', $integration->getOrganisation() ? $integration->getOrganisation()->getUuid() : 'Not set'],
@@ -116,23 +115,20 @@ class GetIntegrationCommand extends Command
 
         // Show API usage example
         $io->section('API Usage Example');
-        
+
         $orgUuid = $integration->getOrganisation() ? $integration->getOrganisation()->getUuid() : 'YOUR_ORG_UUID';
-        $workflowUserId = $integration->getWorkflowUserId() ?? 'YOUR_WORKFLOW_USER_ID';
-        
+
         $io->text('List tools:');
         $io->text(sprintf(
-            'curl -X GET "http://localhost:3979/api/integration/%s/tools?id=%s" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw=="',
-            $orgUuid,
-            $workflowUserId
+            'curl -X GET "http://localhost:3979/api/integration/%s/tools?id=YOUR_WORKFLOW_USER_ID" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw=="',
+            $orgUuid
         ));
-        
+
         if ($integration->getType() === 'sharepoint') {
             $io->text("\nExecute SharePoint search:");
             $io->text(sprintf(
-                'curl -X POST "http://localhost:3979/api/integration/%s/execute?id=%s" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==" -H "Content-Type: application/json" -d \'{"tool_id": "sharepoint_search_documents_%d", "parameters": {"query": "test", "limit": 10}}\'',
+                'curl -X POST "http://localhost:3979/api/integration/%s/execute?id=YOUR_WORKFLOW_USER_ID" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==" -H "Content-Type: application/json" -d \'{"tool_id": "sharepoint_search_documents_%d", "parameters": {"query": "test", "limit": 10}}\'',
                 $orgUuid,
-                $workflowUserId,
                 $integration->getId()
             ));
             

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\UserOrganisation;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -45,8 +46,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $tokenExpiresAt = null;
 
-    #[ORM\ManyToMany(targetEntity: Organisation::class, inversedBy: 'users')]
-    #[ORM\JoinTable(name: 'user_organisation')]
+    #[ORM\OneToMany(targetEntity: UserOrganisation::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private Collection $userOrganisations;
+
+    /**
+     * @var Collection<int, Organisation> Cached collection of organisations
+     */
     private Collection $organisations;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
@@ -65,6 +70,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->integrations = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
+        $this->userOrganisations = new ArrayCollection();
         $this->organisations = new ArrayCollection();
         $this->roles = [self::ROLE_USER];
     }
@@ -181,20 +187,65 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getOrganisations(): Collection
     {
-        return $this->organisations;
+        $organisations = new ArrayCollection();
+        foreach ($this->userOrganisations as $userOrg) {
+            $organisations->add($userOrg->getOrganisation());
+        }
+        return $organisations;
+    }
+
+    /**
+     * @return Collection<int, UserOrganisation>
+     */
+    public function getUserOrganisations(): Collection
+    {
+        return $this->userOrganisations;
     }
 
     public function addOrganisation(Organisation $organisation): static
     {
-        if (!$this->organisations->contains($organisation)) {
-            $this->organisations->add($organisation);
+        // Check if already exists
+        foreach ($this->userOrganisations as $userOrg) {
+            if ($userOrg->getOrganisation() === $organisation) {
+                return $this;
+            }
         }
+
+        $userOrganisation = new UserOrganisation();
+        $userOrganisation->setUser($this);
+        $userOrganisation->setOrganisation($organisation);
+        $this->userOrganisations->add($userOrganisation);
+
         return $this;
     }
 
     public function removeOrganisation(Organisation $organisation): static
     {
-        $this->organisations->removeElement($organisation);
+        foreach ($this->userOrganisations as $userOrg) {
+            if ($userOrg->getOrganisation() === $organisation) {
+                $this->userOrganisations->removeElement($userOrg);
+                break;
+            }
+        }
+        return $this;
+    }
+
+    public function addUserOrganisation(UserOrganisation $userOrganisation): static
+    {
+        if (!$this->userOrganisations->contains($userOrganisation)) {
+            $this->userOrganisations->add($userOrganisation);
+            $userOrganisation->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeUserOrganisation(UserOrganisation $userOrganisation): static
+    {
+        if ($this->userOrganisations->removeElement($userOrganisation)) {
+            if ($userOrganisation->getUser() === $this) {
+                $userOrganisation->setUser(null);
+            }
+        }
         return $this;
     }
 
@@ -205,15 +256,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // If a session organisation ID is provided, try to find it in user's organisations
         if ($sessionOrganisationId !== null) {
-            foreach ($this->organisations as $org) {
-                if ($org->getId() === $sessionOrganisationId) {
-                    return $org;
+            foreach ($this->userOrganisations as $userOrg) {
+                if ($userOrg->getOrganisation()->getId() === $sessionOrganisationId) {
+                    return $userOrg->getOrganisation();
                 }
             }
         }
-        
+
         // Fallback to first organisation
-        return $this->organisations->first() ?: null;
+        $firstUserOrg = $this->userOrganisations->first();
+        return $firstUserOrg ? $firstUserOrg->getOrganisation() : null;
+    }
+
+    /**
+     * Get current UserOrganisation from session or fallback to first one
+     */
+    public function getCurrentUserOrganisation(?int $sessionOrganisationId = null): ?UserOrganisation
+    {
+        // If a session organisation ID is provided, try to find it in user's organisations
+        if ($sessionOrganisationId !== null) {
+            foreach ($this->userOrganisations as $userOrg) {
+                if ($userOrg->getOrganisation()->getId() === $sessionOrganisationId) {
+                    return $userOrg;
+                }
+            }
+        }
+
+        // Fallback to first organisation
+        return $this->userOrganisations->first() ?: null;
     }
 
     /**
@@ -223,7 +293,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // This method is kept for backward compatibility
         // In controllers, we'll use getCurrentOrganisation() instead
-        return $this->organisations->first() ?: null;
+        $firstUserOrg = $this->userOrganisations->first();
+        return $firstUserOrg ? $firstUserOrg->getOrganisation() : null;
     }
 
     /**
@@ -231,9 +302,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function setOrganisation(?Organisation $organisation): static
     {
-        $this->organisations->clear();
+        $this->userOrganisations->clear();
         if ($organisation) {
-            $this->organisations->add($organisation);
+            $this->addOrganisation($organisation);
         }
         return $this;
     }

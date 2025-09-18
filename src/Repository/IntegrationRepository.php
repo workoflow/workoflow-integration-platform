@@ -36,20 +36,6 @@ class IntegrationRepository extends ServiceEntityRepository
         }
     }
 
-    public function findActiveByUserAndWorkflowId(User $user, string $workflowUserId): array
-    {
-        return $this->createQueryBuilder('i')
-            ->leftJoin('i.functions', 'f')
-            ->addSelect('f')
-            ->andWhere('i.user = :user')
-            ->andWhere('i.workflowUserId = :workflowId')
-            ->andWhere('i.active = :active')
-            ->setParameter('user', $user)
-            ->setParameter('workflowId', $workflowUserId)
-            ->setParameter('active', true)
-            ->getQuery()
-            ->getResult();
-    }
 
     public function findByUser(User $user, ?Organisation $organisation = null): array
     {

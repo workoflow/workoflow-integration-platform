@@ -30,12 +30,6 @@
                                placeholder="{{ 'integration.name_placeholder'|trans }}">
                     </div>
 
-                    <div class="form-group">
-                        <label for="workflow_user_id" class="form-label">{{ 'integration.workflow_id'|trans }}</label>
-                        <input type="text" class="form-control" id="workflow_user_id" name="workflow_user_id" required 
-                               placeholder="{{ 'integration.workflow_id_placeholder'|trans }}">
-                        <div class="form-help">{{ 'integration.workflow_id_help'|trans }}</div>
-                    </div>
                 </div>
 
                 <div class="form-section" id="credentialsCard" style="display: none;">
@@ -55,7 +49,7 @@
                         <div class="form-group">
                             <label for="jira_api_token" class="form-label">{{ 'integration.jira.api_token'|trans }}</label>
                             <input type="password" class="form-control" id="jira_api_token" name="jira_api_token">
-                            <div class="form-help">{{ 'integration.jira.api_token_help'|trans }}</div>
+                            <div class="form-help">{{ 'integration.jira.api_token_help'|trans|raw }}</div>
                         </div>
                     </div>
 
@@ -73,7 +67,7 @@
                         <div class="form-group">
                             <label for="confluence_api_token" class="form-label">{{ 'integration.confluence.api_token'|trans }}</label>
                             <input type="password" class="form-control" id="confluence_api_token" name="confluence_api_token">
-                            <div class="form-help">{{ 'integration.confluence.api_token_help'|trans }}</div>
+                            <div class="form-help">{{ 'integration.confluence.api_token_help'|trans|raw }}</div>
                         </div>
                     </div>
 

@@ -49,6 +49,7 @@ services:
         arguments:
             $userRepository: '@App\Repository\UserRepository'
             $organisationRepository: '@App\Repository\OrganisationRepository'
+            $userOrganisationRepository: '@App\Repository\UserOrganisationRepository'
             $entityManager: '@doctrine.orm.entity_manager'
             $magicLinkService: '@App\Service\MagicLinkService'
             $auditLogService: '@App\Service\AuditLogService'

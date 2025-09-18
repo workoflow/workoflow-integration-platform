@@ -58,6 +58,9 @@ dashboard:
   welcome: Welcome, %name%!
   organisation: Your Organisation
   integration_api_url: Integration API URL
+  workflow_user_id: Organisation Specific ID
+  copy_curl_command: Copy curl command for tools
+  copied: Copied!
   integrations_count: Integrations
   active_integrations: Active Integrations
   your_role: Your Role
@@ -135,12 +138,12 @@ integration:
     url: Jira URL
     username: Username (Email)
     api_token: API Token
-    api_token_help: Create an API token at Atlassian Account Settings
+    api_token_help: 'Create an API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Atlassian Account Settings</a>'
   confluence:
     url: Confluence URL
     username: Username (Email)
     api_token: API Token
-    api_token_help: Create an API token at Atlassian Account Settings
+    api_token_help: 'Create an API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">Atlassian Account Settings</a>'
   sharepoint:
     oauth_info: SharePoint OAuth2 Authentication
     oauth_description: SharePoint integration uses OAuth2 authentication. After saving this integration, you will be able to connect your SharePoint account.

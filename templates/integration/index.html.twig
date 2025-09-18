@@ -34,8 +34,7 @@
                                     {% endif %}
                                 </div>
                                 <div class="integration-details">
-                                    <p><span class="label">{{ 'integration.workflow_id'|trans }}:</span> {{ integration.workflowUserId }}</p>
-                                    <p><span class="label">{{ 'integration.functions'|trans }}:</span> 
+                                    <p><span class="label">{{ 'integration.functions'|trans }}:</span>
                                     {{ integration.activeFunctions|length }} {{ 'integration.active_of'|trans }} {{ integration.functions|length }}</p>
                                     {% if integration.lastAccessedAt %}
                                         <p class="last-accessed">

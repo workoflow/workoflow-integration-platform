@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-09-18
+
+### Added
+- Workflow user ID management moved to user-organization level for better multi-tenant support
+- Copy curl command button on dashboard for easy API testing
+- Direct workflow user ID display on dashboard for quick reference
+- Link styling in integration function descriptions for better navigation
+
+### Changed
+- Workflow user IDs are now managed per user-organization relationship instead of per integration
+- Enhanced dashboard UI with improved workflow user ID visibility
+
+### Fixed
+- FrankenPHP runtime configuration for proper Symfony integration
+
 ## 2025-09-09
 
 ### Fixed

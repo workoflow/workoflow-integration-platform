@@ -21,11 +21,12 @@ class MagicLinkService
         $this->logger = $logger;
     }
 
-    public function generateToken(string $name, string $orgUuid): string
+    public function generateToken(string $name, string $orgUuid, string $workflowUserId): string
     {
         $payload = [
             'name' => $name,
             'org_uuid' => $orgUuid,
+            'workflow_user_id' => $workflowUserId,
             'iat' => time(),
             'exp' => time() + $this->ttl,
             'type' => 'magic_link'
@@ -33,7 +34,8 @@ class MagicLinkService
 
         $this->logger->info('Generating magic link token', [
             'name' => $name,
-            'org_uuid' => $orgUuid
+            'org_uuid' => $orgUuid,
+            'workflow_user_id' => $workflowUserId
         ]);
 
         return JWT::encode($payload, $this->secret, $this->algorithm);
@@ -54,14 +56,15 @@ class MagicLinkService
             }
 
             // Verify required fields
-            if (!isset($payload['name']) || !isset($payload['org_uuid'])) {
+            if (!isset($payload['name']) || !isset($payload['org_uuid']) || !isset($payload['workflow_user_id'])) {
                 $this->logger->warning('Missing required fields in token', ['payload' => $payload]);
                 return null;
             }
 
             $this->logger->info('Successfully validated magic link token', [
                 'name' => $payload['name'],
-                'org_uuid' => $payload['org_uuid']
+                'org_uuid' => $payload['org_uuid'],
+                'workflow_user_id' => $payload['workflow_user_id']
             ]);
 
             return $payload;
@@ -73,9 +76,9 @@ class MagicLinkService
         }
     }
 
-    public function generateMagicLink(string $name, string $orgUuid, string $baseUrl): string
+    public function generateMagicLink(string $name, string $orgUuid, string $baseUrl, string $workflowUserId): string
     {
-        $token = $this->generateToken($name, $orgUuid);
+        $token = $this->generateToken($name, $orgUuid, $workflowUserId);
         return $baseUrl . '/auth/magic-link?token=' . $token;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\UserOrganisation;
 use App\Repository\OrganisationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -30,7 +31,12 @@ class Organisation
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
-    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'organisations')]
+    #[ORM\OneToMany(targetEntity: UserOrganisation::class, mappedBy: 'organisation', cascade: ['persist', 'remove'])]
+    private Collection $userOrganisations;
+
+    /**
+     * @var Collection<int, User> Cached collection of users
+     */
     private Collection $users;
 
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'organisation')]
@@ -41,6 +47,7 @@ class Organisation
 
     public function __construct()
     {
+        $this->userOrganisations = new ArrayCollection();
         $this->users = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
         $this->integrations = new ArrayCollection();
@@ -111,23 +118,63 @@ class Organisation
 
     public function getUsers(): Collection
     {
-        return $this->users;
+        $users = new ArrayCollection();
+        foreach ($this->userOrganisations as $userOrg) {
+            $users->add($userOrg->getUser());
+        }
+        return $users;
+    }
+
+    /**
+     * @return Collection<int, UserOrganisation>
+     */
+    public function getUserOrganisations(): Collection
+    {
+        return $this->userOrganisations;
     }
 
     public function addUser(User $user): static
     {
-        if (!$this->users->contains($user)) {
-            $this->users->add($user);
-            $user->setOrganisation($this);
+        // Check if already exists
+        foreach ($this->userOrganisations as $userOrg) {
+            if ($userOrg->getUser() === $user) {
+                return $this;
+            }
         }
+
+        $userOrganisation = new UserOrganisation();
+        $userOrganisation->setUser($user);
+        $userOrganisation->setOrganisation($this);
+        $this->userOrganisations->add($userOrganisation);
+
         return $this;
     }
 
     public function removeUser(User $user): static
     {
-        if ($this->users->removeElement($user)) {
-            if ($user->getOrganisation() === $this) {
-                $user->setOrganisation(null);
+        foreach ($this->userOrganisations as $userOrg) {
+            if ($userOrg->getUser() === $user) {
+                $this->userOrganisations->removeElement($userOrg);
+                break;
+            }
+        }
+        return $this;
+    }
+
+    public function addUserOrganisation(UserOrganisation $userOrganisation): static
+    {
+        if (!$this->userOrganisations->contains($userOrganisation)) {
+            $this->userOrganisations->add($userOrganisation);
+            $userOrganisation->setOrganisation($this);
+        }
+        return $this;
+    }
+
+    public function removeUserOrganisation(UserOrganisation $userOrganisation): static
+    {
+        if ($this->userOrganisations->removeElement($userOrganisation)) {
+            if ($userOrganisation->getOrganisation() === $this) {
+                $userOrganisation->setOrganisation(null);
             }
         }
         return $this;

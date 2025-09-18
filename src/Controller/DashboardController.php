@@ -22,7 +22,8 @@ class DashboardController extends AbstractController
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+        $userOrganisation = $user->getCurrentUserOrganisation($sessionOrgId);
+
         if (!$organisation) {
             // If user has no organisations at all, redirect to create
             if ($user->getOrganisations()->isEmpty()) {
@@ -32,6 +33,7 @@ class DashboardController extends AbstractController
             $organisation = $user->getOrganisations()->first();
             if ($organisation) {
                 $request->getSession()->set('current_organisation_id', $organisation->getId());
+                $userOrganisation = $user->getCurrentUserOrganisation($organisation->getId());
             }
         }
 
@@ -40,6 +42,7 @@ class DashboardController extends AbstractController
         return $this->render('dashboard/index.html.twig', [
             'user' => $user,
             'organisation' => $organisation,
+            'userOrganisation' => $userOrganisation,
             'integrations' => $integrations,
         ]);
     }

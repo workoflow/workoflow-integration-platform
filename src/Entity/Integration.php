@@ -56,8 +56,6 @@ class Integration
     #[ORM\OneToMany(targetEntity: IntegrationFunction::class, mappedBy: 'integration', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $functions;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $workflowUserId = null;
 
     public function __construct()
     {
@@ -222,16 +220,6 @@ class Integration
         return $this->functions->filter(fn(IntegrationFunction $f) => $f->isActive());
     }
 
-    public function getWorkflowUserId(): ?string
-    {
-        return $this->workflowUserId;
-    }
-
-    public function setWorkflowUserId(?string $workflowUserId): static
-    {
-        $this->workflowUserId = $workflowUserId;
-        return $this;
-    }
 
     public static function getAvailableTypes(): array
     {

@@ -4,8 +4,10 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Entity\Organisation;
+use App\Entity\UserOrganisation;
 use App\Repository\UserRepository;
 use App\Repository\OrganisationRepository;
+use App\Repository\UserOrganisationRepository;
 use App\Service\MagicLinkService;
 use App\Service\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +30,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
     public function __construct(
         private UserRepository $userRepository,
         private OrganisationRepository $organisationRepository,
+        private UserOrganisationRepository $userOrganisationRepository,
         private EntityManagerInterface $entityManager,
         private MagicLinkService $magicLinkService,
         private AuditLogService $auditLogService,
@@ -55,6 +58,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
         $name = $payload['name'];
         $orgUuid = $payload['org_uuid'];
+        $workflowUserId = $payload['workflow_user_id'];
 
         // Generate a generic email from the name (without org UUID)
         $sanitizedName = strtolower(str_replace(' ', '.', $name));
@@ -79,7 +83,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
         }
 
         return new SelfValidatingPassport(
-            new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $request) {
+            new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $workflowUserId, $request) {
                 $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
                 
                 if (!$user) {
@@ -88,9 +92,18 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
                     $user->setEmail($userIdentifier);  // Generated email
                     $user->setName($name);  // Actual name from token
                     $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
-                    $user->addOrganisation($organisation);
-                    
+
                     $this->entityManager->persist($user);
+                    $this->entityManager->flush();
+
+                    // Create UserOrganisation with workflow_user_id
+                    $userOrganisation = new UserOrganisation();
+                    $userOrganisation->setUser($user);
+                    $userOrganisation->setOrganisation($organisation);
+                    $userOrganisation->setWorkflowUserId($workflowUserId);
+                    $userOrganisation->setRole('MEMBER');
+
+                    $this->entityManager->persist($userOrganisation);
                     $this->entityManager->flush();
                     
                     $this->logger->info('Created new user via magic link', [
@@ -111,33 +124,46 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
                         ]
                     );
                 } else {
-                    // Add organisation if not already associated
-                    if (!$user->getOrganisations()->contains($organisation)) {
-                        $user->addOrganisation($organisation);
-                        
+                    // Check if user is already associated with this organisation
+                    $userOrganisation = $this->userOrganisationRepository->findOneByUserAndOrganisation($user, $organisation);
+
+                    if (!$userOrganisation) {
+                        // Create new UserOrganisation with workflow_user_id
+                        $userOrganisation = new UserOrganisation();
+                        $userOrganisation->setUser($user);
+                        $userOrganisation->setOrganisation($organisation);
+                        $userOrganisation->setWorkflowUserId($workflowUserId);
+                        $userOrganisation->setRole('MEMBER');
+
+                        $this->entityManager->persist($userOrganisation);
+
                         // Ensure user has member role if not admin
                         if (!$user->isAdmin()) {
                             $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
                         }
-                        
-                        $this->entityManager->flush();
-                        
-                        $this->logger->info('Added user to organisation via magic link', [
-                            'email' => $userIdentifier,
-                            'name' => $user->getName(),
-                            'organisation' => $organisation->getName()
-                        ]);
-
-                        // Log organisation addition
-                        $this->auditLogService->log(
-                            'user.organisation_added_via_magic_link',
-                            $user,
-                            [
-                                'organisation_id' => $organisation->getId(),
-                                'organisation_name' => $organisation->getName()
-                            ]
-                        );
+                    } else {
+                        // Update existing UserOrganisation with new workflow_user_id
+                        $userOrganisation->setWorkflowUserId($workflowUserId);
                     }
+
+                    $this->entityManager->flush();
+
+                    $this->logger->info('Added user to organisation via magic link', [
+                        'email' => $userIdentifier,
+                        'name' => $user->getName(),
+                        'organisation' => $organisation->getName(),
+                        'workflow_user_id' => $workflowUserId
+                    ]);
+
+                    // Log organisation addition
+                    $this->auditLogService->log(
+                        'user.organisation_added_via_magic_link',
+                        $user,
+                        [
+                            'organisation_id' => $organisation->getId(),
+                            'organisation_name' => $organisation->getName()
+                        ]
+                    );
                 }
 
                 // Store current organisation in session for context

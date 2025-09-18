@@ -16,7 +16,7 @@ services:
     environment:
       - SERVER_NAME=:80
       - FRANKENPHP_CONFIG=worker ./public/index.php
-      - APP_RUNTIME=Runtime\\FrankenPhpSymfony\\Runtime
+      - APP_RUNTIME=Runtime\FrankenPhpSymfony\Runtime
     depends_on:
       - mariadb
       - redis

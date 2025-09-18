@@ -18,6 +18,7 @@ services:
     environment:
       - SERVER_NAME=:80
       - FRANKENPHP_CONFIG=worker ./public/index.php
+      - APP_RUNTIME=Runtime\FrankenPhpSymfony\Runtime
       - APP_ENV=prod
       - APP_DEBUG=0
     depends_on:

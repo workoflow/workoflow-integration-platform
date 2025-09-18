@@ -1189,6 +1189,18 @@ body {
     font-size: var(--text-xs);
     color: var(--text-muted);
     line-height: 1.4;
+
+    a {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: var(--color-primary-light);
+        text-decoration: underline;
+      }
+    }
   }
   
   .function-checkbox {

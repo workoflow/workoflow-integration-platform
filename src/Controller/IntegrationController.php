@@ -53,8 +53,7 @@ class IntegrationController extends AbstractController
         if ($request->isMethod('POST')) {
             $type = $request->request->get('type');
             $name = $request->request->get('name');
-            $workflowUserId = $request->request->get('workflow_user_id');
-            
+
             $user = $this->getUser();
             $sessionOrgId = $request->getSession()->get('current_organisation_id');
             $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -69,7 +68,6 @@ class IntegrationController extends AbstractController
             $integration->setOrganisation($organisation);
             $integration->setType($type);
             $integration->setName($name);
-            $integration->setWorkflowUserId($workflowUserId);
             
             $credentials = [];
             if ($type === Integration::TYPE_JIRA) {
@@ -140,11 +138,9 @@ class IntegrationController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name');
-            $workflowUserId = $request->request->get('workflow_user_id');
             $active = $request->request->has('active');
             
             $integration->setName($name);
-            $integration->setWorkflowUserId($workflowUserId);
             $integration->setActive($active);
             
             // Update credentials

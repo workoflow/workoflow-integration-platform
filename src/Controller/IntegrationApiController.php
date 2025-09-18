@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Repository\IntegrationRepository;
 use App\Repository\OrganisationRepository;
 use App\Repository\UserRepository;
+use App\Repository\UserOrganisationRepository;
 use App\Service\AuditLogService;
 use App\Service\EncryptionService;
 use App\Service\Integration\JiraService;
@@ -26,6 +27,7 @@ class IntegrationApiController extends AbstractController
     public function __construct(
         private OrganisationRepository $organisationRepository,
         private UserRepository $userRepository,
+        private UserOrganisationRepository $userOrganisationRepository,
         private IntegrationRepository $integrationRepository,
         private AuditLogService $auditLogService,
         private EncryptionService $encryptionService,
@@ -68,13 +70,22 @@ class IntegrationApiController extends AbstractController
             'remote_addr' => $request->getClientIp()
         ]);
 
-        // Find all integrations with this workflow user ID from users in this organisation
-        $users = $this->userRepository->findByOrganisation($organisation->getId());
+        // Find users with this workflow user ID in this organisation
+        $userOrganisations = $this->userOrganisationRepository->findByWorkflowUserId($workflowUserId);
         $integrations = [];
-        
-        foreach ($users as $user) {
-            $userIntegrations = $this->integrationRepository->findActiveByUserAndWorkflowId($user, $workflowUserId);
-            $integrations = array_merge($integrations, $userIntegrations);
+
+        foreach ($userOrganisations as $userOrg) {
+            // Only process if the user belongs to the requested organisation
+            if ($userOrg->getOrganisation()->getId() === $organisation->getId()) {
+                $user = $userOrg->getUser();
+                // Get all active integrations for this user in this organisation
+                $userIntegrations = $this->integrationRepository->findBy([
+                    'user' => $user,
+                    'organisation' => $organisation,
+                    'active' => true
+                ]);
+                $integrations = array_merge($integrations, $userIntegrations);
+            }
         }
         
         // Build tools array
@@ -213,14 +224,15 @@ class IntegrationApiController extends AbstractController
             return new JsonResponse(['error' => 'Integration not found or inactive'], 404);
         }
 
-        // Verify integration belongs to a user in this organisation and has the correct workflow ID
+        // Verify integration belongs to a user in this organisation with the correct workflow ID
         $integrationUser = $integration->getUser();
         if (!$integrationUser || $integration->getOrganisation()->getId() !== $organisation->getId()) {
             return new JsonResponse(['error' => 'Integration not found in this organisation'], 403);
         }
-        
-        // Verify workflow user ID matches
-        if ($integration->getWorkflowUserId() !== $workflowUserId) {
+
+        // Verify workflow user ID matches via the user_organisation table
+        $userOrg = $this->userOrganisationRepository->findOneByUserAndOrganisation($integrationUser, $organisation);
+        if (!$userOrg || $userOrg->getWorkflowUserId() !== $workflowUserId) {
             return new JsonResponse(['error' => 'Integration not found for this workflow user'], 403);
         }
 
