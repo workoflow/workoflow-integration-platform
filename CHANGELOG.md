@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 - Modern navigation bar with smooth scrolling
 - Showcase of upcoming integrations (Teams, Shopware, Spryker, Magento, WhatsApp)
 - Interactive waitlist signup form with real-time feedback
+- Multi-tenant support for SharePoint integration - any Microsoft organization can now use the platform
+
+### Changed
+- SharePoint OAuth configuration now uses multi-tenant endpoints allowing access from any organization
+- SharePoint integration automatically extracts and stores tenant ID from access tokens
+- Added consent prompt option for SharePoint connection to force re-authorization when needed
 
 ## 2025-09-18
 

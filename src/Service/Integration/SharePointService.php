@@ -558,7 +558,13 @@ class SharePointService
 
     public function refreshToken(string $refreshToken, string $clientId, string $clientSecret, string $tenantId): array
     {
-        $response = $this->httpClient->request('POST', "https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token", [
+        // Use 'common' endpoint for multi-tenant apps, or specific tenant if stored
+        // 'common' allows tokens from any tenant to be refreshed
+        $endpoint = ($tenantId === 'common' || empty($tenantId))
+            ? 'common'
+            : $tenantId;
+
+        $response = $this->httpClient->request('POST', "https://login.microsoftonline.com/{$endpoint}/oauth2/v2.0/token", [
             'body' => [
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
@@ -569,7 +575,7 @@ class SharePointService
         ]);
 
         $data = $response->toArray();
-        
+
         return [
             'access_token' => $data['access_token'],
             'refresh_token' => $data['refresh_token'] ?? $refreshToken,

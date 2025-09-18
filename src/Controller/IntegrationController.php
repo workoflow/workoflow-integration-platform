@@ -10,6 +10,8 @@ use App\Service\EncryptionService;
 use App\Service\Integration\JiraService;
 use App\Service\Integration\ConfluenceService;
 use App\Service\Integration\SharePointService;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -275,6 +277,8 @@ class IntegrationController extends AbstractController
                 'offline_access',
                 'Sites.Read.All',
                 'Files.Read.All'
+            ], [
+                'prompt' => 'consent'  // Forces consent screen to appear
             ]);
     }
 
@@ -303,13 +307,43 @@ class IntegrationController extends AbstractController
         try {
             $client = $clientRegistry->getClient('azure');
             $accessToken = $client->getAccessToken();
-            
-            // Store OAuth tokens
+
+            // Extract tenant_id from the access token
+            // Microsoft tokens have the tenant ID in the 'tid' claim
+            $tokenParts = explode('.', $accessToken->getToken());
+            $tenantId = null;
+
+            if (count($tokenParts) >= 2) {
+                try {
+                    // Decode the payload (second part of JWT)
+                    $payload = json_decode(base64_decode(strtr($tokenParts[1], '-_', '+/')), true);
+                    $tenantId = $payload['tid'] ?? null;
+
+                    if (!$tenantId) {
+                        // Fallback to issuer parsing if tid not present
+                        // Issuer format: https://login.microsoftonline.com/{tenant_id}/v2.0
+                        if (isset($payload['iss'])) {
+                            preg_match('/\/([a-f0-9-]+)\/v2\.0$/', $payload['iss'], $matches);
+                            $tenantId = $matches[1] ?? null;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // If decoding fails, fall back to configured tenant
+                    error_log('Failed to decode token for tenant ID: ' . $e->getMessage());
+                }
+            }
+
+            // Use extracted tenant_id or fall back to configured value
+            if (!$tenantId) {
+                $tenantId = $this->getParameter('azure_tenant_id');
+            }
+
+            // Store OAuth tokens with the correct tenant_id
             $credentials = [
                 'access_token' => $accessToken->getToken(),
                 'refresh_token' => $accessToken->getRefreshToken(),
                 'expires_at' => $accessToken->getExpires(),
-                'tenant_id' => $this->getParameter('azure_tenant_id'),
+                'tenant_id' => $tenantId,
                 'client_id' => $this->getParameter('azure_client_id'),
                 'client_secret' => $this->getParameter('azure_client_secret')
             ];
