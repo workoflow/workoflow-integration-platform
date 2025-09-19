@@ -1,0 +1,108 @@
+<footer class="footer" style="background-color: #0a0a0a; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: auto; padding: 2rem 0;">
+    <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+            {# Copyright and Legal Links - Center #}
+            <div style="text-align: center;">
+                <div style="color: #999; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    © {{ 'now'|date('Y') }} Workoflow. {{ 'footer.rights'|trans }}
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-size: 0.875rem;">
+                    <a href="{% if app.request.locale == 'de' %}https://www.valantic.com/de/impressum-und-rechtshinweise/{% else %}https://www.valantic.com/en/legal-notice/{% endif %}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="color: #1e90ff; text-decoration: none;">
+                        {{ 'footer.legal_notice'|trans }}
+                    </a>
+                    <span style="color: #666;">•</span>
+                    <a href="{% if app.request.locale == 'de' %}https://www.valantic.com/de/datenschutzerklaerung/{% else %}https://www.valantic.com/en/data-privacy-declaration/{% endif %}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="color: #1e90ff; text-decoration: none;">
+                        {{ 'footer.data_privacy'|trans }}
+                    </a>
+                </div>
+            </div>
+
+            {# GitHub Links - Bottom #}
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <span style="color: #666; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                    {{ 'footer.open_source'|trans }}
+                </span>
+
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <a href="https://github.com/patrickjaja/workoflow-hosting"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.hosting'|trans }}</span>
+                    </a>
+
+                    <a href="https://github.com/patrickjaja/workoflow-tests"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.tests'|trans }}</span>
+                    </a>
+
+                    <a href="https://github.com/patrickjaja/workoflow-bot"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.bot'|trans }}</span>
+                    </a>
+
+                    <a href="https://github.com/patrickjaja/workoflow-integration-platform"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.platform'|trans }}</span>
+                    </a>
+
+                    <a href="https://github.com/patrickjaja/workoflow-pptx"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.pptx'|trans }}</span>
+                    </a>
+
+                    <a href="https://github.com/patrickjaja/workoflow-rag"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: #999; transition: color 0.2s;"
+                       onmouseover="this.style.color='#fff'"
+                       onmouseout="this.style.color='#999'">
+                        <img src="/images/github-mark-white.svg"
+                             alt="GitHub"
+                             style="width: 20px; height: 20px; opacity: 0.7;">
+                        <span style="font-size: 0.875rem;">{{ 'footer.github.rag'|trans }}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>

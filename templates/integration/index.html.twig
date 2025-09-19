@@ -5,13 +5,10 @@
 {% block body %}
 <div class="integrations-page">
     {% include '_partials/header.html.twig' %}
-    
+
     <div class="integrations-container">
         <div class="integrations-header">
             <h1>{{ 'integration.title'|trans }}</h1>
-            <a href="{{ path('app_integration_new') }}" class="btn btn-primary">
-                {{ 'integration.add_new'|trans }}
-            </a>
         </div>
 
         {% if integrations|length == 0 %}
@@ -19,103 +16,724 @@
                 <p>{{ 'integration.no_integrations'|trans }}</p>
             </div>
         {% else %}
-            <div class="integrations-grid">
-                {% for integration in integrations %}
-                    <div class="integration-card">
-                        <div class="integration-content">
-                            <div class="integration-info">
-                                <h3>{{ integration.name }}</h3>
-                                <div class="integration-badges">
-                                    <span class="badge badge-type">{{ integration.type|upper }}</span>
-                                    {% if integration.active %}
-                                        <span class="badge badge-active">{{ 'status.active'|trans }}</span>
-                                    {% else %}
-                                        <span class="badge badge-inactive">{{ 'status.inactive'|trans }}</span>
+            {# User Integrations Section #}
+            {% set userIntegrations = integrations|filter(i => not i.isSystem) %}
+            {% set hasConfiguredIntegrations = userIntegrations|filter(i => i.hasCredentials)|length > 0 %}
+
+            <div class="integration-section">
+                    <div class="section-header">
+                        <div class="section-header-content">
+                            <h2>{{ 'integration.external_integrations'|trans|default('External Integrations') }}</h2>
+                            <p class="section-description">{{ 'integration.external_integrations_description'|trans|default('Connect to external services like Jira, Confluence, and SharePoint') }}</p>
+                        </div>
+                        <div class="add-integration-dropdown">
+                            <button class="btn btn-primary dropdown-toggle" onclick="toggleDropdown(event)">
+                                <i class="fas fa-plus"></i> {{ 'integration.add_new'|trans|default('Add New Integration') }}
+                            </button>
+                            <div class="dropdown-menu" id="integrationDropdown">
+                                {% for availableType in availableTypes %}
+                                    <a href="{{ path('app_integration_setup', {type: availableType.type}) }}" class="dropdown-item">
+                                        {% if availableType.type == 'jira' %}
+                                            <i class="fab fa-jira"></i>
+                                        {% elseif availableType.type == 'confluence' %}
+                                            <i class="fab fa-confluence"></i>
+                                        {% elseif availableType.type == 'sharepoint' %}
+                                            <i class="fab fa-microsoft"></i>
+                                        {% else %}
+                                            <i class="fas fa-plug"></i>
+                                        {% endif %}
+                                        {{ availableType.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="integrations-grid">
+                        {% if hasConfiguredIntegrations %}
+                            {% for integration in userIntegrations %}
+                                {% if integration.hasCredentials %}
+                            <div class="integration-card user-integration">
+                                <div class="integration-content">
+                                    <div class="integration-header">
+                                        <div class="header-left">
+                                            <h3>{{ integration.instanceName|default(integration.name) }}</h3>
+                                            <div class="badges-row">
+                                                <span class="badge badge-type">{{ integration.type|upper }}</span>
+                                                {% if integration.hasCredentials %}
+                                                    <span class="badge badge-connected">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        {{ 'status.connected'|trans|default('Verbunden') }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge badge-disconnected">
+                                                        <i class="fas fa-times-circle"></i>
+                                                        {{ 'status.not_connected'|trans|default('Nicht verbunden') }}
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if integration.hasCredentials %}
+                                        <div class="integration-tools">
+                                            <div class="tools-table">
+                                                {% for tool in integration.tools %}
+                                                    <div class="tool-row">
+                                                        <div class="tool-toggle-cell">
+                                                            <label class="tool-toggle">
+                                                                <input type="checkbox"
+                                                                       {% if tool.enabled %}checked{% endif %}
+                                                                       data-integration="{{ integration.type }}"
+                                                                       data-tool="{{ tool.name }}"
+                                                                       onchange="toggleTool(this)">
+                                                                <span class="toggle-slider"></span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="tool-name-cell">
+                                                            <span class="tool-name">{{ tool.name }}</span>
+                                                        </div>
+                                                        <div class="tool-desc-cell">
+                                                            <span class="tool-description">{{ tool.description }}</span>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        {% if integration.lastAccessedAt %}
+                                            <p class="last-accessed">
+                                                <i class="fas fa-clock"></i>
+                                                {{ 'integration.last_accessed'|trans }}: {{ integration.lastAccessedAt|date('d.m.Y H:i') }}
+                                            </p>
+                                        {% endif %}
                                     {% endif %}
-                                </div>
-                                <div class="integration-details">
-                                    <p><span class="label">{{ 'integration.functions'|trans }}:</span>
-                                    {{ integration.activeFunctions|length }} {{ 'integration.active_of'|trans }} {{ integration.functions|length }}</p>
-                                    {% if integration.lastAccessedAt %}
-                                        <p class="last-accessed">
-                                            {{ 'integration.last_accessed'|trans }}: 
-                                            {{ integration.lastAccessedAt|date('d.m.Y H:i') }}
-                                        </p>
-                                    {% endif %}
+
+                                    <div class="integration-footer">
+                                        <div class="integration-status">
+                                            <label class="integration-toggle">
+                                                <input type="checkbox"
+                                                       {% if integration.active %}checked{% endif %}
+                                                       data-integration="{{ integration.type }}"
+                                                       data-instance="{{ integration.instanceId }}"
+                                                       onchange="toggleIntegration(this)">
+                                                <span class="toggle-slider"></span>
+                                                <span>{{ integration.active ? 'status.active'|trans : 'status.inactive'|trans }}</span>
+                                            </label>
+                                        </div>
+                                        <div class="integration-actions">
+                                            {% if not integration.hasCredentials %}
+                                                <a href="{{ path('app_integration_setup', {type: integration.type}) }}" class="btn btn-primary">
+                                                    <i class="fas fa-cog"></i> {{ 'integration.setup'|trans|default('Einrichten') }}
+                                                </a>
+                                            {% else %}
+                                                <a href="{{ path('app_integration_edit', {type: integration.type}) }}" class="btn btn-secondary">
+                                                    <i class="fas fa-edit"></i> {{ 'action.edit'|trans|default('Bearbeiten') }}
+                                                </a>
+                                                <button class="btn btn-secondary test-connection"
+                                                        data-type="{{ integration.type }}">
+                                                    <i class="fas fa-plug"></i> {{ 'integration.test_connection'|trans|default('Verbindung testen') }}
+                                                </button>
+                                                <form method="post" action="{{ path('app_integration_delete', {type: integration.type}) }}"
+                                                      class="inline-form"
+                                                      onsubmit="return confirm('{{ 'integration.delete_confirm'|trans }}');">
+                                                    <button type="submit" class="btn btn-danger">
+                                                        <i class="fas fa-trash"></i> {{ 'action.delete'|trans|default('Löschen') }}
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="integration-actions">
-                                <button class="action-menu" onclick="toggleMenu({{ integration.id }})">
-                                    ⋮
-                                </button>
-                                <div class="dropdown-menu" id="menu-{{ integration.id }}">
-                                    <a href="{{ path('app_integration_edit', {id: integration.id}) }}">
-                                        {{ 'action.edit'|trans }}
-                                    </a>
-                                    {% if integration.type == 'sharepoint' and (integration.encryptedCredentials is null or integration.encryptedCredentials is empty) %}
-                                        <a href="{{ path('connect_microsoft_start', {integrationId: integration.id}) }}" class="connect-sharepoint">
-                                            {{ 'integration.connect_sharepoint'|trans|default('Connect to SharePoint') }}
-                                        </a>
-                                    {% endif %}
-                                    <button class="test-connection" data-id="{{ integration.id }}">
-                                        {{ 'integration.test_connection'|trans }}
-                                    </button>
-                                    <hr>
-                                    <form method="post" action="{{ path('app_integration_delete', {id: integration.id}) }}" 
-                                          onsubmit="return confirm('{{ 'integration.delete_confirm'|trans }}');">
-                                        <button type="submit" class="delete-action">
-                                            {{ 'action.delete'|trans }}
-                                        </button>
-                                    </form>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {# Show placeholder when no integrations are configured #}
+                            <div class="no-integrations-message">
+                                <div class="empty-state">
+                                    <i class="fas fa-plug empty-icon"></i>
+                                    <h3>{{ 'integration.no_integrations'|trans|default('No integrations configured yet') }}</h3>
+                                    <p>{{ 'integration.no_integrations_desc'|trans|default('Start by adding your first integration to connect external services') }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {# System Integrations Section #}
+            {% set systemIntegrations = integrations|filter(i => i.isSystem) %}
+            {% if systemIntegrations|length > 0 %}
+                <div class="integration-section">
+                    <h2>{{ 'integration.system_tools'|trans|default('System Tools') }}</h2>
+                    <p class="section-description">{{ 'integration.system_tools_description'|trans|default('Built-in tools that are available to all users') }}</p>
+
+                    <div class="integrations-grid">
+                        <div class="integration-card system-integration">
+                            <div class="integration-content">
+                                <div class="integration-header">
+                                    <span class="badge badge-system">{{ 'badge.system'|trans|default('SYSTEM') }}</span>
+                                    <h3>{{ 'integration.system_tools'|trans|default('System Tools') }}</h3>
+                                </div>
+
+                                <div class="integration-tools">
+                                    <div class="tools-table">
+                                        {% for integration in systemIntegrations %}
+                                            {% for tool in integration.tools %}
+                                                <div class="tool-row">
+                                                    <div class="tool-toggle-cell">
+                                                        <label class="tool-toggle">
+                                                            <input type="checkbox"
+                                                                   {% if tool.enabled %}checked{% endif %}
+                                                                   data-integration="{{ integration.type }}"
+                                                                   data-tool="{{ tool.name }}"
+                                                                   onchange="toggleTool(this)">
+                                                            <span class="toggle-slider"></span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="tool-name-cell">
+                                                        <span class="tool-name">{{ tool.name }}</span>
+                                                    </div>
+                                                    <div class="tool-desc-cell">
+                                                        <span class="tool-description">{{ tool.description }}</span>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="integration-footer">
+                                    <div class="integration-status">
+                                        <span class="system-tools-info">{{ 'integration.system_tools_always_active'|trans|default('System tools are always active') }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 </div>
 
-<script>
-function toggleMenu(id) {
-    const menu = document.getElementById('menu-' + id);
-    const allMenus = document.querySelectorAll('.dropdown-menu');
-    
-    allMenus.forEach(m => {
-        if (m !== menu) m.classList.remove('show');
-    });
-    
-    menu.classList.toggle('show');
+<style>
+/* Integration page specific overrides */
+.integration-section {
+    margin-bottom: var(--space-3xl);
 }
 
-// Close menus when clicking outside
-document.addEventListener('click', (e) => {
-    if (!e.target.matches('.action-menu')) {
-        document.querySelectorAll('.dropdown-menu').forEach(menu => {
-            menu.classList.remove('show');
+.integration-section h2 {
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+    font-size: var(--text-2xl);
+    text-align: left;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xl);
+    font-size: var(--text-base);
+    text-align: left;
+}
+
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-2xl);
+    align-items: start;
+}
+
+.integration-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.integration-card.system-integration {
+    border-left: 4px solid var(--color-primary);
+    grid-column: 1 / -1;  /* Span full width */
+}
+
+.integration-card.user-integration {
+    border-left: 4px solid var(--color-accent);
+}
+
+.integration-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.integration-content {
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.integration-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.integration-card.system-integration .integration-header {
+    gap: var(--space-sm);
+}
+
+.integration-card.user-integration .integration-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.header-left h3 {
+    margin: 0;
+    font-size: var(--text-xl);
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.badges-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.instance-name {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-left: 0.5rem;
+}
+
+.instance-name::before {
+    content: '- ';
+}
+
+.add-instance-card {
+    border: 2px dashed var(--border-color);
+    background: var(--secondary-background);
+}
+
+.add-instance-content {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.add-instance-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+}
+
+.add-instance-content p {
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem 0;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-xl);
+}
+
+.section-header-content {
+    flex: 1;
+}
+
+.section-header-content h2 {
+    margin-bottom: var(--space-xs);
+}
+
+.add-integration-dropdown {
+    position: relative;
+    flex-shrink: 0;
+    margin-left: var(--space-xl);
+}
+
+.dropdown-toggle {
+    position: relative;
+    padding-right: 2.5rem;
+}
+
+.dropdown-toggle::after {
+    content: '▼';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.75rem;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1000;
+    display: none;
+    min-width: 220px;
+    padding: 0.5rem 0;
+    margin: 0.125rem 0 0;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: var(--secondary-background);
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.no-integrations-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.empty-state {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-type {
+    background: var(--secondary-background);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.badge-system {
+    background: var(--color-primary);
+    color: white;
+}
+
+.badge-connected {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-connected i {
+    font-size: 10px;
+}
+
+.badge-disconnected {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-disconnected i {
+    font-size: 10px;
+}
+
+.integration-tools {
+    margin: var(--space-lg) 0;
+}
+
+.tools-table {
+    background: var(--secondary-background);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tool-row {
+    display: grid;
+    grid-template-columns: 60px minmax(150px, 200px) 1fr;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+    min-height: 60px;
+}
+
+.tool-row:last-child {
+    border-bottom: none;
+}
+
+.tool-row:hover {
+    background: var(--card-background);
+}
+
+.tool-toggle-cell {
+    display: flex;
+    align-items: center;
+}
+
+.tool-name-cell {
+    padding-right: var(--space-lg);
+}
+
+.tool-desc-cell {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    padding-right: var(--space-md);
+    word-break: break-word;
+}
+
+.tool-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.tool-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--border-color);
+    border-radius: 12px;
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.3s;
+}
+
+.tool-toggle input:checked + .toggle-slider,
+.integration-toggle input:checked + .toggle-slider {
+    background: var(--color-primary);
+}
+
+.tool-toggle input:checked + .toggle-slider::after,
+.integration-toggle input:checked + .toggle-slider::after {
+    transform: translateX(20px);
+}
+
+.tool-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+}
+
+.tool-description {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.integration-footer {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.integration-status {
+    margin-bottom: var(--space-md);
+}
+
+.integration-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    cursor: pointer;
+}
+
+.integration-toggle input[type="checkbox"] {
+    display: none;
+}
+
+.integration-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.inline-form {
+    display: inline;
+}
+
+.last-accessed {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    margin: var(--space-lg) 0 var(--space-sm) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.last-accessed i {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    white-space: nowrap;
+}
+
+.btn i {
+    font-size: calc(var(--text-sm) * 0.75);
+}
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+    transform: translateY(-2px);
+}
+
+.system-tools-info {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-style: italic;
+}
+</style>
+
+<script>
+async function toggleTool(checkbox) {
+    const integration = checkbox.dataset.integration;
+    const instance = checkbox.dataset.instance || '';
+    const tool = checkbox.dataset.tool;
+    const enabled = checkbox.checked;
+
+    try {
+        const response = await fetch(`/integrations/${integration}/toggle-tool`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `tool=${encodeURIComponent(tool)}&enabled=${enabled}&instance=${encodeURIComponent(instance)}`
         });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle tool');
+        }
+    } catch (error) {
+        console.error('Error toggling tool:', error);
+        checkbox.checked = !checkbox.checked;
+        alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
     }
-});
+}
+
+async function toggleIntegration(checkbox) {
+    const integration = checkbox.dataset.integration;
+    const active = checkbox.checked;
+
+    try {
+        const response = await fetch(`/integrations/${integration}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `active=${active}`
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle integration');
+        }
+
+        // Update label text
+        const label = checkbox.parentElement.querySelector('span:last-child');
+        label.textContent = active ? '{{ 'status.active'|trans }}' : '{{ 'status.inactive'|trans }}';
+    } catch (error) {
+        console.error('Error toggling integration:', error);
+        checkbox.checked = !checkbox.checked;
+        alert('{{ 'integration.toggle_error'|trans|default('Failed to update integration setting') }}');
+    }
+}
 
 document.querySelectorAll('.test-connection').forEach(button => {
     button.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = e.target.dataset.id;
+        const type = e.target.dataset.type;
         const btn = e.target;
         btn.disabled = true;
         btn.textContent = 'Testing...';
-        
+
         try {
-            const response = await fetch(`/integrations/${id}/test`, {
+            const response = await fetch(`/integrations/${type}/test`, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 alert('{{ 'integration.test_success'|trans }}');
             } else {
@@ -128,6 +746,24 @@ document.querySelectorAll('.test-connection').forEach(button => {
             btn.textContent = '{{ 'integration.test_connection'|trans }}';
         }
     });
+});
+
+function toggleDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('integrationDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('integrationDropdown');
+    const button = event.target.closest('.dropdown-toggle');
+
+    if (!button && dropdown && dropdown.classList.contains('show')) {
+        dropdown.classList.remove('show');
+    }
 });
 </script>
 {% endblock %}

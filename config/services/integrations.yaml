@@ -15,6 +15,42 @@ services:
     App\Integration\SystemTools\ShareFileIntegration:
         tags: ['app.integration']
 
+    App\Integration\SystemTools\ContentLearnIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\ContentQueryIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\ReadFileIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\EmployeeQueryIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\EmployeeProfileIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\PowerPointGeneratorIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\PdfGeneratorIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\WebSearchIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\WebPageReaderIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\CompanyEventsIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\MemoryManagementIntegration:
+        tags: ['app.integration']
+
+    App\Integration\SystemTools\IssueReportingIntegration:
+        tags: ['app.integration']
+
     # User Integrations - Require user-specific external service credentials
     App\Integration\UserIntegrations\JiraIntegration:
         tags: ['app.integration']

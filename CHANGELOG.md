@@ -2,24 +2,100 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-09-19 (Latest)
+
+### Changed
+- Reduced button sizes by 50% on the integrations page for a more compact interface
+- System tools now grouped into a single full-width card for better organization
+- System tools card spans the entire width for improved visibility and cleaner layout
+- Integration cards now display user-defined names with badges on the next line for improved readability
+
 ## 2025-09-19
 
+### Added
+- 12 new AI agent system tools for enhanced automation capabilities:
+  - Content learning from uploaded files (CSV, PDF, TXT)
+  - Content search across platform data
+  - File reading and processing
+  - Employee search and profile lookup
+  - PDF and PowerPoint generation
+  - Web search and page reading
+  - Company events management
+  - Conversation memory management
+  - Issue reporting system
+- All system tools can be individually enabled or disabled per user
+
+## 2025-09-19 (Earlier)
+
+### Changed
+- System integration "File Sharing" renamed to "Standard" for better clarity
+- System badge positioning moved above integration name for improved visual hierarchy
+- Reorganized integrations page layout - System Tools section now appears below External Integrations for better visual hierarchy
+
 ### Fixed
-- Improved styling for OAuth authentication sections in integration forms to match dark theme
-- Fixed visual consistency issues with credential input areas for SharePoint and other OAuth-based integrations
+- API response filtering based on `tool_type` parameter now works correctly
+  - `tool_type=jira` returns only Jira integration tools
+  - `tool_type=confluence` returns only Confluence integration tools
+  - `tool_type=sharepoint` returns only SharePoint integration tools
+  - `tool_type=system` returns all system tools (file sharing, etc.)
+  - `tool_type=system.share_file` returns specific system integration tools
+  - No parameter returns all available tools (user integrations and system tools)
+  - Enables precise tool selection for AI agents based on integration type
 
 ### Added
+- Edit functionality for integrations allowing users to update names and credentials
+- Table-style layout for integration tools providing better organization
+- Icons for all action buttons (Edit, Test Connection, Delete)
+- System Tools section showing all platform built-in tools (like file sharing)
+- Enable/disable toggles for individual tools within each integration
+- Visual separation between System Tools and External Integrations
+- Automatic availability of new system tools without user login required
+- Setup wizard for configuring external service credentials
+- Support for multiple instances of the same integration (e.g., multiple Jira servers, SharePoint sites)
+- Instance naming to identify different connections (e.g., "Production Jira", "Dev SharePoint")
+- "Add Another Instance" button to easily connect additional services
+
+### Changed
+- Improved integration card layout with better visual structure and no overlapping elements
+- Action buttons now contained within integration cards for cleaner interface
+- Enhanced visual hierarchy with proper spacing between integration elements
+- Complete redesign of integration management system
+- All integrations now defined in code - instant availability of new features
+- Simplified database structure - only stores user preferences and credentials
+- System tools enabled by default for all users and organisations
+- External integrations (Jira, Confluence) now have individual tool toggles
+- Integration page now groups tools by type (System vs External)
+- API now includes instance names in tool descriptions for clarity
+
+### Removed
+- Complex database relationships for integration management
+- Need for manual database updates when adding new system tools
+
+---
+
+## 2025-09-19 (Earlier)
+
+### Added
+- Footer with legal information links (Legal Notice and Data Protection Declaration) available in both German and English
+- Footer with links to Workoflow's open source repositories on GitHub (Hosting, Tests, Bot, Integration Platform)
+- Global footer display across all pages, whether logged in or not
+- System tools management for platform features - all users now have system integrations automatically
+- Platform tools section in integration management page with distinct visual styling
+- Per-user configuration for system tools - each user can enable/disable individual tools
 - Plugin-based integration system for easier management
-- System tools filtering - platform-internal tools now excluded from API by default
 - Dynamic integration management UI - new integrations automatically appear in web interface
 - Central integration registry for better organization
 
 ### Changed
+- API authentication variables renamed from MCP_AUTH to API_AUTH for clarity
+- System tools now excluded from API by default - use `tool_type=system` to include them
 - Integrations now use flexible plugin architecture
 - Web forms for adding integrations are now generated automatically
-- API tools can be filtered by type - use `tool_type=system` to include internal tools
+- System integrations cannot be deleted, only individual tools can be toggled
 
 ### Fixed
+- Improved styling for OAuth authentication sections in integration forms to match dark theme
+- Fixed visual consistency issues with credential input areas for SharePoint and other OAuth-based integrations
 - Integration creation dropdown now properly displays available integration types (Jira, Confluence, SharePoint)
 - Fixed service configuration to correctly register and tag integration services
 

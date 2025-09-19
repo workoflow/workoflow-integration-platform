@@ -2,8 +2,8 @@ parameters:
     locale: '%env(APP_LOCALE)%'
     app.supported_locales: '%env(csv:APP_LOCALES)%'
     app.url: '%env(APP_URL)%'
-    app.mcp_auth_user: '%env(MCP_AUTH_USER)%'
-    app.mcp_auth_password: '%env(MCP_AUTH_PASSWORD)%'
+    app.api_auth_user: '%env(API_AUTH_USER)%'
+    app.api_auth_password: '%env(API_AUTH_PASSWORD)%'
     app.encryption_key: '%env(ENCRYPTION_KEY)%'
     minio.endpoint: '%env(MINIO_ENDPOINT)%'
     minio.root_user: '%env(MINIO_ROOT_USER)%'
@@ -39,8 +39,8 @@ services:
     
     App\Controller\IntegrationApiController:
         arguments:
-            $mcpAuthUser: '%app.mcp_auth_user%'
-            $mcpAuthPassword: '%app.mcp_auth_password%'
+            $apiAuthUser: '%app.api_auth_user%'
+            $apiAuthPassword: '%app.api_auth_password%'
     
     App\Security\TestAuthenticator:
         arguments:

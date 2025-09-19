@@ -5,48 +5,37 @@ namespace App\Integration\SystemTools;
 use App\Integration\IntegrationInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
-use App\Service\ShareFileService;
 
-class ShareFileIntegration implements IntegrationInterface
+class ContentQueryIntegration implements IntegrationInterface
 {
-    public function __construct(
-        private ShareFileService $shareFileService
-    ) {}
-
     public function getType(): string
     {
-        return 'system.share_file';
+        return 'system.content_query';
     }
 
     public function getName(): string
     {
-        return 'Standard';
+        return 'Content Query';
     }
 
     public function getTools(): array
     {
         return [
             new ToolDefinition(
-                'share_file',
-                'Upload and share a file. Returns a signed URL that can be used to access the file.',
+                'content_query',
+                'Use this tool to retrieve content that does not specifically relate to employees or colleagues. The tool returns not only available content but also the source, which needs to be validated against what was requested.',
                 [
                     [
-                        'name' => 'binaryData',
+                        'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Base64 encoded file content'
+                        'description' => 'The search query to find relevant content'
                     ],
                     [
-                        'name' => 'fileName',
-                        'type' => 'string',
-                        'required' => true,
-                        'description' => 'Original file name'
-                    ],
-                    [
-                        'name' => 'contentType',
+                        'name' => 'type',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'MIME type of the file'
+                        'description' => 'The type of content to search for (default: all)'
                     ]
                 ]
             )
@@ -55,15 +44,15 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function executeTool(string $toolName, array $parameters, ?array $credentials = null): array
     {
-        if ($toolName !== 'share_file') {
+        if ($toolName !== 'content_query') {
             throw new \InvalidArgumentException("Unknown tool: $toolName");
         }
 
-        return $this->shareFileService->shareFile(
-            $parameters['organisationId'],
-            $parameters['workflowUserId'],
-            $parameters
-        );
+        // Stub implementation - no actual logic
+        return [
+            'success' => true,
+            'message' => 'Tool execution simulated - content_query'
+        ];
     }
 
     public function requiresCredentials(): bool
@@ -73,7 +62,7 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return true; // No external credentials needed (API Basic Auth still required)
+        return true; // No external credentials needed
     }
 
     public function getCredentialFields(): array

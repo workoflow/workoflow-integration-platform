@@ -2,476 +2,507 @@
 
 namespace App\Controller;
 
-use App\Entity\Integration;
-use App\Entity\IntegrationFunction;
-use App\Repository\IntegrationRepository;
+use App\Entity\IntegrationConfig;
+use App\Integration\IntegrationRegistry;
+use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
 use App\Service\EncryptionService;
-use App\Service\Integration\JiraService;
-use App\Service\Integration\ConfluenceService;
-use App\Service\Integration\SharePointService;
-use App\Integration\IntegrationRegistry;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use Doctrine\ORM\EntityManagerInterface;
-use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/integrations')]
-#[IsGranted('ROLE_USER')]
+#[IsGranted('IS_AUTHENTICATED_FULLY')]
 class IntegrationController extends AbstractController
 {
+    public function __construct(
+        private IntegrationConfigRepository $integrationConfigRepository,
+        private IntegrationRegistry $integrationRegistry,
+        private EncryptionService $encryptionService,
+        private AuditLogService $auditLogService,
+        private EntityManagerInterface $entityManager
+    ) {}
+
     #[Route('/', name: 'app_integrations')]
-    public function index(Request $request, IntegrationRepository $integrationRepository): Response
+    public function index(Request $request): Response
     {
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
         }
-        
-        $integrations = $integrationRepository->findByUser($user, $organisation);
+
+        // Get all integrations from registry (code-defined)
+        $allIntegrations = $this->integrationRegistry->getAllIntegrations();
+
+        // Get user configs from database
+        $configs = $this->integrationConfigRepository->findByOrganisation($organisation);
+
+        // Build config map for quick lookup (type => array of configs)
+        $configMap = [];
+        foreach ($configs as $config) {
+            $type = $config->getIntegrationType();
+            if (!isset($configMap[$type])) {
+                $configMap[$type] = [];
+            }
+            $configMap[$type][] = $config;
+        }
+
+        // Build display data
+        $displayData = [];
+        foreach ($allIntegrations as $integration) {
+            $type = $integration->getType();
+            $integrationConfigs = $configMap[$type] ?? [];
+
+            // For system integrations, always show one entry
+            if (!$integration->requiresCredentials()) {
+                $config = $integrationConfigs[0] ?? null;
+
+                // Build tools display with enabled/disabled status
+                $tools = [];
+                foreach ($integration->getTools() as $tool) {
+                    $tools[] = [
+                        'name' => $tool->getName(),
+                        'description' => $tool->getDescription(),
+                        'enabled' => !($config && $config->isToolDisabled($tool->getName()))
+                    ];
+                }
+
+                $displayData[] = [
+                    'type' => $integration->getType(),
+                    'name' => $integration->getName(),
+                    'instanceName' => null,
+                    'instanceId' => $config?->getId(),
+                    'isSystem' => true,
+                    'config' => $config,
+                    'tools' => $tools,
+                    'hasCredentials' => false,
+                    'active' => $config ? $config->isActive() : true,
+                    'lastAccessedAt' => $config?->getLastAccessedAt()
+                ];
+            } else {
+                // For user integrations, show each instance
+                if (empty($integrationConfigs)) {
+                    // Show placeholder for adding new instance
+                    $displayData[] = [
+                        'type' => $integration->getType(),
+                        'name' => $integration->getName(),
+                        'instanceName' => null,
+                        'instanceId' => null,
+                        'isSystem' => false,
+                        'config' => null,
+                        'tools' => [],
+                        'hasCredentials' => false,
+                        'active' => false,
+                        'lastAccessedAt' => null
+                    ];
+                } else {
+                    // Show each configured instance
+                    foreach ($integrationConfigs as $config) {
+                        // Build tools display with enabled/disabled status
+                        $tools = [];
+                        foreach ($integration->getTools() as $tool) {
+                            $tools[] = [
+                                'name' => $tool->getName(),
+                                'description' => $tool->getDescription(),
+                                'enabled' => !$config->isToolDisabled($tool->getName())
+                            ];
+                        }
+
+                        $displayData[] = [
+                            'type' => $integration->getType(),
+                            'name' => $integration->getName(),
+                            'instanceName' => $config->getName(),
+                            'instanceId' => $config->getId(),
+                            'isSystem' => false,
+                            'config' => $config,
+                            'tools' => $tools,
+                            'hasCredentials' => $config->hasCredentials(),
+                            'active' => $config->isActive(),
+                            'lastAccessedAt' => $config->getLastAccessedAt()
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Sort: system tools first, then user integrations
+        usort($displayData, function ($a, $b) {
+            if ($a['isSystem'] !== $b['isSystem']) {
+                return $a['isSystem'] ? -1 : 1;
+            }
+            return strcmp($a['name'], $b['name']);
+        });
+
+        // Get available integration types for the dropdown
+        $availableTypes = [];
+        foreach ($this->integrationRegistry->getUserIntegrations() as $integration) {
+            $availableTypes[] = [
+                'type' => $integration->getType(),
+                'name' => $integration->getName()
+            ];
+        }
 
         return $this->render('integration/index.html.twig', [
-            'integrations' => $integrations,
+            'integrations' => $displayData,
             'organisation' => $organisation,
+            'availableTypes' => $availableTypes
         ]);
     }
 
-    #[Route('/new', name: 'app_integration_new', methods: ['GET', 'POST'])]
-    public function new(
-        Request $request,
-        EntityManagerInterface $em,
-        EncryptionService $encryptionService,
-        AuditLogService $auditLogService,
-        IntegrationRegistry $integrationRegistry
-    ): Response {
+    #[Route('/setup/{type}', name: 'app_integration_setup', methods: ['GET', 'POST'])]
+    public function setup(string $type, Request $request): Response
+    {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->redirectToRoute('app_organisation_create');
+        }
+
+        // Find integration in registry
+        $integration = $this->integrationRegistry->get($type);
+        if (!$integration) {
+            $this->addFlash('error', 'Integration type not found');
+            return $this->redirectToRoute('app_integrations');
+        }
+
+        // System tools don't need setup
+        if (!$integration->requiresCredentials()) {
+            $this->addFlash('info', 'This integration does not require setup');
+            return $this->redirectToRoute('app_integrations');
+        }
+
+        // Check if editing existing or creating new
+        $instanceId = $request->query->get('instance');
+        $config = null;
+
+        if ($instanceId) {
+            $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
+            if (!$config || $config->getOrganisation() !== $organisation) {
+                $this->addFlash('error', 'Instance not found');
+                return $this->redirectToRoute('app_integrations');
+            }
+        }
+
+        // Get existing instances for this type
+        $existingInstances = $this->integrationConfigRepository->findByOrganisationAndType($organisation, $type);
+
         if ($request->isMethod('POST')) {
-            $type = $request->request->get('type');
+            $name = $request->request->get('name', '');
+            $workflowUserId = $request->request->get('workflow_user_id');
+
+            // Validate name is provided and unique
+            if (empty($name)) {
+                $this->addFlash('error', 'Please provide a name for this integration instance');
+            } else {
+                // Check for duplicate names
+                $isDuplicate = false;
+                foreach ($existingInstances as $existing) {
+                    if ($existing->getName() === $name && (!$config || $existing->getId() !== $config->getId())) {
+                        $isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if ($isDuplicate) {
+                    $this->addFlash('error', 'An integration with this name already exists');
+                } else {
+                    // Get credentials from form
+                    $credentials = [];
+                    foreach ($integration->getCredentialFields() as $field) {
+                        $value = $request->request->get($field->getName());
+                        if ($value) {
+                            $credentials[$field->getName()] = $value;
+                        }
+                    }
+
+                    // Validate credentials
+                    if (!empty($credentials) && $integration->validateCredentials($credentials)) {
+                        // Create or update config
+                        if (!$config) {
+                            $config = new IntegrationConfig();
+                            $config->setOrganisation($organisation);
+                            $config->setIntegrationType($type);
+                        }
+
+                        $config->setName($name);
+                        $config->setWorkflowUserId($workflowUserId);
+                        $config->setEncryptedCredentials(
+                            $this->encryptionService->encrypt(json_encode($credentials))
+                        );
+                        $config->setActive(true);
+
+                        $this->entityManager->persist($config);
+                        $this->entityManager->flush();
+
+                        $this->auditLogService->log(
+                            $instanceId ? 'integration.updated' : 'integration.setup',
+                            $this->getUser(),
+                            ['type' => $type, 'name' => $name]
+                        );
+
+                        $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
+                        return $this->redirectToRoute('app_integrations');
+                    } else {
+                        $this->addFlash('error', 'Invalid credentials provided');
+                    }
+                }
+            }
+        }
+
+        return $this->render('integration/setup.html.twig', [
+            'integration' => $integration,
+            'config' => $config,
+            'organisation' => $organisation,
+            'credentialFields' => $integration->getCredentialFields(),
+            'existingInstances' => $existingInstances,
+            'isEdit' => $config !== null
+        ]);
+    }
+
+    #[Route('/{type}/toggle-tool', name: 'app_integration_toggle_tool', methods: ['POST'])]
+    public function toggleTool(string $type, Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->json(['error' => 'No organisation'], Response::HTTP_FORBIDDEN);
+        }
+
+        $toolName = $request->request->get('tool');
+        $enabled = $request->request->get('enabled') === 'true';
+        $instanceId = $request->request->get('instance');
+
+        // Get specific instance or system config
+        if ($instanceId) {
+            $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
+            if (!$config || $config->getOrganisation() !== $organisation) {
+                return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
+            }
+        } else {
+            // For system tools without instances
+            $config = $this->integrationConfigRepository->getOrCreate($organisation, $type, null, ucfirst($type));
+        }
+
+        // Update tool state
+        if ($enabled) {
+            $config->enableTool($toolName);
+        } else {
+            $config->disableTool($toolName);
+        }
+
+        $this->entityManager->persist($config);
+        $this->entityManager->flush();
+
+        $this->auditLogService->log(
+            $enabled ? 'integration.tool.enabled' : 'integration.tool.disabled',
+            $this->getUser(),
+            ['type' => $type, 'tool' => $toolName, 'instance' => $config->getName()]
+        );
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{type}/toggle', name: 'app_integration_toggle', methods: ['POST'])]
+    public function toggleIntegration(string $type, Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->json(['error' => 'No organisation'], Response::HTTP_FORBIDDEN);
+        }
+
+        $active = $request->request->get('active') === 'true';
+
+        // Get or create config
+        $config = $this->integrationConfigRepository->getOrCreate($organisation, $type);
+        $config->setActive($active);
+
+        $this->entityManager->persist($config);
+        $this->entityManager->flush();
+
+        $this->auditLogService->log(
+            $active ? 'integration.activated' : 'integration.deactivated',
+            $this->getUser(),
+            ['type' => $type]
+        );
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{type}/edit', name: 'app_integration_edit', methods: ['GET', 'POST'])]
+    public function edit(string $type, Request $request): Response
+    {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->redirectToRoute('app_organisation_create');
+        }
+
+        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
+        if (!$config) {
+            $this->addFlash('error', 'Integration not found');
+            return $this->redirectToRoute('app_integrations');
+        }
+
+        $integration = $this->integrationRegistry->get($type);
+        if (!$integration) {
+            $this->addFlash('error', 'Integration type not found');
+            return $this->redirectToRoute('app_integrations');
+        }
+
+        if ($request->isMethod('POST')) {
+            // Update name
             $name = $request->request->get('name');
-
-            $user = $this->getUser();
-            $sessionOrgId = $request->getSession()->get('current_organisation_id');
-            $organisation = $user->getCurrentOrganisation($sessionOrgId);
-            
-            if (!$organisation) {
-                $this->addFlash('error', 'No organisation selected');
-                return $this->redirectToRoute('app_integrations');
-            }
-            
-            $integration = new Integration();
-            $integration->setUser($user);
-            $integration->setOrganisation($organisation);
-            $integration->setType($type);
-            $integration->setName($name);
-            
-            // Get integration definition from registry
-            $integrationDef = $integrationRegistry->get($type);
-            if (!$integrationDef) {
-                $this->addFlash('error', 'Unknown integration type');
-                return $this->redirectToRoute('app_integrations');
+            if ($name) {
+                $config->setName($name);
             }
 
-            // Collect credentials based on integration's field definitions
-            $credentials = [];
-            foreach ($integrationDef->getCredentialFields() as $field) {
-                if ($field->getType() !== 'oauth') {
-                    $fieldName = $field->getName();
-                    $value = $request->request->get($type . '_' . $fieldName);
-                    if ($value !== null) {
+            // Update credentials if provided
+            if ($integration->requiresCredentials()) {
+                $credentials = [];
+                foreach ($request->request->all() as $key => $value) {
+                    if (strpos($key, $type . '_') === 0 && !empty($value)) {
+                        $fieldName = str_replace($type . '_', '', $key);
                         $credentials[$fieldName] = $value;
                     }
                 }
+
+                if (!empty($credentials)) {
+                    $encryptedCredentials = $this->encryptionService->encrypt($credentials);
+                    $config->setEncryptedCredentials($encryptedCredentials);
+                }
             }
 
-            // Special handling for OAuth integrations
-            if ($type === 'sharepoint') {
-                // SharePoint uses OAuth2, credentials will be set after OAuth flow
-                $credentials = [];
+            // Update enabled tools
+            foreach ($integration->getTools() as $tool) {
+                $toolEnabled = $request->request->get('function_' . $tool->getName()) === 'on';
+                if ($toolEnabled) {
+                    $config->enableTool($tool->getName());
+                } else {
+                    $config->disableTool($tool->getName());
+                }
             }
-            
-            $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
-            $integration->setConfig([]);
 
-            // Add functions from the integration definition
-            foreach ($integrationDef->getTools() as $tool) {
-                $function = new IntegrationFunction();
-                $function->setFunctionName($tool->getName());
-                $function->setDescription($tool->getDescription());
-                $function->setActive($request->request->has('function_' . $tool->getName()));
-                $integration->addFunction($function);
-            }
-            
-            $em->persist($integration);
-            $em->flush();
-            
-            $auditLogService->log(
-                'integration.created',
+            $this->entityManager->persist($config);
+            $this->entityManager->flush();
+
+            $this->auditLogService->log(
+                'integration.updated',
                 $this->getUser(),
                 ['type' => $type, 'name' => $name]
             );
-            
-            $this->addFlash('success', 'integration.created.success');
+
+            $this->addFlash('success', 'Integration updated successfully');
             return $this->redirectToRoute('app_integrations');
         }
 
-        // Build available integrations list from registry (exclude system tools)
-        $availableIntegrations = [];
-
-        // Debug: Check what's in the registry
-        error_log('Registry has ' . count($integrationRegistry->all()) . ' integrations');
-        error_log('User integrations: ' . count($integrationRegistry->getUserIntegrations()));
-
-        foreach ($integrationRegistry->getUserIntegrations() as $integration) {
-            $availableIntegrations[$integration->getType()] = [
-                'name' => $integration->getName(),
-                'credentialFields' => array_map(
-                    fn($field) => $field->toArray(),
-                    $integration->getCredentialFields()
-                ),
-                'tools' => array_map(
-                    fn($tool) => $tool->toArray(),
-                    $integration->getTools()
-                )
-            ];
-        }
-
-        return $this->render('integration/new.html.twig', [
-            'integrations' => $availableIntegrations,
-        ]);
-    }
-
-    #[Route('/{id}/edit', name: 'app_integration_edit', methods: ['GET', 'POST'])]
-    public function edit(
-        Integration $integration,
-        Request $request,
-        EntityManagerInterface $em,
-        EncryptionService $encryptionService,
-        AuditLogService $auditLogService
-    ): Response {
-        if ($integration->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException();
-        }
-
-        if ($request->isMethod('POST')) {
-            $name = $request->request->get('name');
-            $active = $request->request->has('active');
-            
-            $integration->setName($name);
-            $integration->setActive($active);
-            
-            // Update credentials
-            $credentials = [];
-            if ($integration->getType() === Integration::TYPE_JIRA) {
-                $credentials = [
-                    'url' => $request->request->get('jira_url'),
-                    'username' => $request->request->get('jira_username'),
-                    'api_token' => $request->request->get('jira_api_token'),
-                ];
-            } elseif ($integration->getType() === Integration::TYPE_CONFLUENCE) {
-                $credentials = [
-                    'url' => $request->request->get('confluence_url'),
-                    'username' => $request->request->get('confluence_username'),
-                    'api_token' => $request->request->get('confluence_api_token'),
-                ];
-            } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
-                // SharePoint credentials cannot be edited manually (OAuth2)
-                $credentials = [];
-            }
-            
-            if (!empty($credentials)) {
-                $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
-            }
-            
-            foreach ($integration->getFunctions() as $function) {
-                $function->setActive($request->request->has('function_' . $function->getFunctionName()));
-            }
-            
-            $em->flush();
-            
-            $auditLogService->log(
-                'integration.updated',
-                $this->getUser(),
-                ['id' => $integration->getId(), 'name' => $name]
-            );
-            
-            $this->addFlash('success', 'integration.updated.success');
-            return $this->redirectToRoute('app_integrations');
-        }
-
-        // Sync any new functions that were added to the system but don't exist for this integration yet
-        $this->syncMissingFunctions($integration, $em);
-        
-        // Decrypt credentials for display
-        $decryptedCredentials = [];
-        if ($integration->getEncryptedCredentials()) {
-            try {
-                $decryptedCredentials = json_decode(
-                    $encryptionService->decrypt($integration->getEncryptedCredentials()),
-                    true
-                );
-            } catch (\Exception $e) {
-                // If decryption fails, log error but continue with empty credentials
-                $this->addFlash('warning', 'Could not decrypt credentials. Please re-enter them.');
-            }
-        }
+        // Prepare data for template
+        $integrationData = [
+            'type' => $type,
+            'name' => $integration->getName(),
+            'instanceName' => $config->getName(),
+            'tools' => array_map(fn($tool) => [
+                'name' => $tool->getName(),
+                'description' => $tool->getDescription(),
+                'enabled' => !$config->isToolDisabled($tool->getName())
+            ], $integration->getTools()),
+            'credentialFields' => $integration->requiresCredentials() ? $integration->getCredentialFields() : []
+        ];
 
         return $this->render('integration/edit.html.twig', [
-            'integration' => $integration,
-            'credentials' => $decryptedCredentials,
+            'integration' => $integrationData,
+            'config' => $config
         ]);
     }
 
-    #[Route('/{id}/delete', name: 'app_integration_delete', methods: ['POST'])]
-    public function delete(
-        Integration $integration,
-        EntityManagerInterface $em,
-        AuditLogService $auditLogService
-    ): Response {
-        if ($integration->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException();
-        }
-
-        $auditLogService->log(
-            'integration.deleted',
-            $this->getUser(),
-            ['id' => $integration->getId(), 'name' => $integration->getName()]
-        );
-        
-        $em->remove($integration);
-        $em->flush();
-        
-        $this->addFlash('success', 'integration.deleted.success');
-        return $this->redirectToRoute('app_integrations');
-    }
-
-    #[Route('/{id}/test', name: 'app_integration_test', methods: ['POST'])]
-    public function test(
-        Integration $integration,
-        EncryptionService $encryptionService,
-        JiraService $jiraService,
-        ConfluenceService $confluenceService,
-        SharePointService $sharePointService
-    ): JsonResponse {
-        if ($integration->getUser() !== $this->getUser()) {
-            throw $this->createAccessDeniedException();
-        }
-
-        $credentials = json_decode($encryptionService->decrypt($integration->getEncryptedCredentials()), true);
-        
-        try {
-            if ($integration->getType() === Integration::TYPE_JIRA) {
-                $result = $jiraService->testConnection($credentials);
-            } elseif ($integration->getType() === Integration::TYPE_CONFLUENCE) {
-                $result = $confluenceService->testConnection($credentials);
-            } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
-                $result = $sharePointService->testConnection($credentials);
-            } else {
-                throw new \Exception('Unknown integration type');
-            }
-            
-            return new JsonResponse(['success' => true, 'message' => 'Connection successful']);
-        } catch (\Exception $e) {
-            return new JsonResponse(['success' => false, 'message' => $e->getMessage()]);
-        }
-    }
-
-    #[Route('/sharepoint/auth/{integrationId}', name: 'connect_microsoft_start')]
-    public function connectMicrosoft(
-        int $integrationId,
-        ClientRegistry $clientRegistry,
-        SessionInterface $session
-    ): Response {
-        // Store integration ID in session for callback
-        $session->set('sharepoint_integration_id', $integrationId);
-        
-        return $clientRegistry
-            ->getClient('azure')
-            ->redirect([
-                'User.Read',
-                'offline_access',
-                'Sites.Read.All',
-                'Files.Read.All'
-            ], [
-                'prompt' => 'consent'  // Forces consent screen to appear
-            ]);
-    }
-
-    #[Route('/oauth/callback/microsoft', name: 'connect_microsoft_check')]
-    public function connectMicrosoftCheck(
-        Request $request,
-        ClientRegistry $clientRegistry,
-        SessionInterface $session,
-        IntegrationRepository $integrationRepository,
-        EncryptionService $encryptionService,
-        EntityManagerInterface $em,
-        AuditLogService $auditLogService
-    ): Response {
-        $integrationId = $session->get('sharepoint_integration_id');
-        if (!$integrationId) {
-            $this->addFlash('error', 'Invalid OAuth callback - no integration ID found');
-            return $this->redirectToRoute('app_integrations');
-        }
-        
-        $integration = $integrationRepository->find($integrationId);
-        if (!$integration || $integration->getUser() !== $this->getUser()) {
-            $this->addFlash('error', 'Integration not found or access denied');
-            return $this->redirectToRoute('app_integrations');
-        }
-        
-        try {
-            $client = $clientRegistry->getClient('azure');
-            $accessToken = $client->getAccessToken();
-
-            // Extract tenant_id from the access token
-            // Microsoft tokens have the tenant ID in the 'tid' claim
-            $tokenParts = explode('.', $accessToken->getToken());
-            $tenantId = null;
-
-            if (count($tokenParts) >= 2) {
-                try {
-                    // Decode the payload (second part of JWT)
-                    $payload = json_decode(base64_decode(strtr($tokenParts[1], '-_', '+/')), true);
-                    $tenantId = $payload['tid'] ?? null;
-
-                    if (!$tenantId) {
-                        // Fallback to issuer parsing if tid not present
-                        // Issuer format: https://login.microsoftonline.com/{tenant_id}/v2.0
-                        if (isset($payload['iss'])) {
-                            preg_match('/\/([a-f0-9-]+)\/v2\.0$/', $payload['iss'], $matches);
-                            $tenantId = $matches[1] ?? null;
-                        }
-                    }
-                } catch (\Exception $e) {
-                    // If decoding fails, fall back to configured tenant
-                    error_log('Failed to decode token for tenant ID: ' . $e->getMessage());
-                }
-            }
-
-            // Use extracted tenant_id or fall back to configured value
-            if (!$tenantId) {
-                $tenantId = $this->getParameter('azure_tenant_id');
-            }
-
-            // Store OAuth tokens with the correct tenant_id
-            $credentials = [
-                'access_token' => $accessToken->getToken(),
-                'refresh_token' => $accessToken->getRefreshToken(),
-                'expires_at' => $accessToken->getExpires(),
-                'tenant_id' => $tenantId,
-                'client_id' => $this->getParameter('azure_client_id'),
-                'client_secret' => $this->getParameter('azure_client_secret')
-            ];
-            
-            $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
-            $em->flush();
-            
-            $auditLogService->log(
-                'integration.sharepoint_connected',
-                $this->getUser(),
-                ['integration_id' => $integrationId]
-            );
-            
-            $this->addFlash('success', 'SharePoint integration connected successfully');
-        } catch (\Exception $e) {
-            $this->addFlash('error', 'Failed to connect SharePoint: ' . $e->getMessage());
-        }
-        
-        $session->remove('sharepoint_integration_id');
-        return $this->redirectToRoute('app_integrations');
-    }
-    
-    /**
-     * Sync functions for an integration
-     * This ensures that functions match what's defined in the code:
-     * - Adds any new functions as inactive
-     * - Removes functions that no longer exist in the code
-     */
-    private function syncMissingFunctions(Integration $integration, EntityManagerInterface $em): void
+    #[Route('/{type}/delete', name: 'app_integration_delete', methods: ['POST'])]
+    public function delete(string $type, Request $request): Response
     {
-        // Get all available functions for this integration type
-        $availableFunctions = [];
-        if ($integration->getType() === Integration::TYPE_JIRA) {
-            $availableFunctions = IntegrationFunction::getJiraFunctions();
-        } elseif ($integration->getType() === Integration::TYPE_CONFLUENCE) {
-            $availableFunctions = IntegrationFunction::getConfluenceFunctions();
-        } elseif ($integration->getType() === Integration::TYPE_SHAREPOINT) {
-            $availableFunctions = IntegrationFunction::getSharePointFunctions();
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->redirectToRoute('app_organisation_create');
         }
-        
-        $hasChanges = false;
-        
-        // Build a map of existing functions for easier lookup
-        $existingFunctions = [];
-        foreach ($integration->getFunctions() as $function) {
-            $existingFunctions[$function->getFunctionName()] = $function;
+
+        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
+
+        if ($config) {
+            $this->auditLogService->log(
+                'integration.deleted',
+                $this->getUser(),
+                ['type' => $type]
+            );
+
+            $this->entityManager->remove($config);
+            $this->entityManager->flush();
+
+            $this->addFlash('success', 'Integration removed successfully');
         }
-        
-        // Add any missing functions as inactive
-        foreach ($availableFunctions as $functionName => $description) {
-            if (!isset($existingFunctions[$functionName])) {
-                $newFunction = new IntegrationFunction();
-                $newFunction->setIntegration($integration);
-                $newFunction->setFunctionName($functionName);
-                $newFunction->setDescription($description);
-                $newFunction->setActive(false); // New functions are inactive by default
-                
-                $integration->addFunction($newFunction);
-                $em->persist($newFunction);
-                $hasChanges = true;
-            } else {
-                // Update description if it changed
-                if ($existingFunctions[$functionName]->getDescription() !== $description) {
-                    $existingFunctions[$functionName]->setDescription($description);
-                    $hasChanges = true;
-                }
-            }
-        }
-        
-        // Remove functions that no longer exist in the code
-        foreach ($existingFunctions as $functionName => $function) {
-            if (!array_key_exists($functionName, $availableFunctions)) {
-                $integration->removeFunction($function);
-                $em->remove($function);
-                $hasChanges = true;
-            }
-        }
-        
-        // Flush changes if any modifications were made
-        if ($hasChanges) {
-            $em->flush();
-        }
+
+        return $this->redirectToRoute('app_integrations');
     }
 
-    #[Route('/api/fields/{type}', name: 'app_integration_fields_api', methods: ['GET'])]
-    public function getIntegrationFields(
-        string $type,
-        IntegrationRegistry $integrationRegistry
-    ): JsonResponse {
-        $integration = $integrationRegistry->get($type);
+    #[Route('/{type}/test', name: 'app_integration_test', methods: ['POST'])]
+    public function testConnection(string $type, Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
-        if (!$integration) {
-            return new JsonResponse(['error' => 'Integration type not found'], 404);
+        if (!$organisation) {
+            return $this->json(['success' => false, 'message' => 'No organisation'], Response::HTTP_FORBIDDEN);
         }
 
-        return new JsonResponse([
-            'name' => $integration->getName(),
-            'credentialFields' => array_map(
-                fn($field) => $field->toArray(),
-                $integration->getCredentialFields()
-            ),
-            'tools' => array_map(
-                fn($tool) => $tool->toArray(),
-                $integration->getTools()
-            )
-        ]);
+        // Find integration in registry
+        $integration = $this->integrationRegistry->get($type);
+        if (!$integration) {
+            return $this->json(['success' => false, 'message' => 'Integration type not found']);
+        }
+
+        // System tools don't need connection test
+        if (!$integration->requiresCredentials()) {
+            return $this->json(['success' => true, 'message' => 'System integration is always available']);
+        }
+
+        // Get config
+        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
+
+        if (!$config || !$config->hasCredentials()) {
+            return $this->json(['success' => false, 'message' => 'No credentials configured']);
+        }
+
+        try {
+            // Decrypt credentials
+            $credentials = json_decode(
+                $this->encryptionService->decrypt($config->getEncryptedCredentials()),
+                true
+            );
+
+            // Validate credentials
+            if ($integration->validateCredentials($credentials)) {
+                return $this->json(['success' => true, 'message' => 'Connection successful']);
+            } else {
+                return $this->json(['success' => false, 'message' => 'Invalid credentials']);
+            }
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => 'Connection test failed: ' . $e->getMessage()]);
+        }
     }
 }

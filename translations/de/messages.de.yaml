@@ -1,3 +1,8 @@
+common:
+  save_changes: Änderungen speichern
+  cancel: Abbrechen
+  optional: optional
+
 nav:
   dashboard: Dashboard
   integrations: Integrationen
@@ -103,15 +108,32 @@ organisation:
 status:
   active: Aktiv
   inactive: Inaktiv
+  connected: Verbunden
+  not_connected: Nicht verbunden
+
+badge:
+  system: SYSTEM
+
+PLATFORM: PLATTFORM
 
 integration:
   name: Name
+  system_tools: System-Tools
+  system_tools_description: Eingebaute Tools, die allen Benutzern zur Verfügung stehen
+  external_integrations: Externe Integrationen
+  external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint
+  available_tools: Verfügbare Tools
+  setup: Einrichten
+  setup_description: Konfigurieren Sie Ihre %name% Integration
+  save_configuration: Konfiguration speichern
+  toggle_error: Einstellung konnte nicht aktualisiert werden
   type: Typ
   status: Status
   last_accessed: Letzter Zugriff
   title: Integrationen
   add_new: Neue Integration hinzufügen
-  no_integrations: Sie haben noch keine Integrationen konfiguriert.
+  no_integrations: Noch keine Integrationen konfiguriert
+  no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihrer ersten Integration, um externe Dienste zu verbinden'
   workflow_id: Workoflow ID
   functions: Funktionen
   active_of: aktiv von
@@ -122,12 +144,30 @@ integration:
   test_error: Ein Fehler ist aufgetreten
   basic_info: Grundinformationen
   select_type: Integrationstyp auswählen
-  name_placeholder: z.B. Mein Jira Workspace
+  name_placeholder: z.B. Your integration name (you can also use your applications URL)
   workflow_id_placeholder: z.B. user123
   workflow_id_help: Ermitteln Sie Ihre ID über den Workoflow Prompt "Wie ist meine ID?"
   credentials: Anmeldedaten
   available_functions: Verfügbare Funktionen
   save: Integration speichern
+  system_description: Plattform-Tools für alle Benutzer verfügbar
+  manage_tools: Tools verwalten
+  system_tools_always_active: System-Tools sind immer aktiv
+  credentials_update_note: Felder leer lassen, um bestehende Anmeldedaten beizubehalten
+  instance_name: Instanz-Name
+  instance_name_hint: 'Ein freundlicher Name zur Identifizierung dieser Integration (z.B. "Produktiv Jira", "Test SharePoint")'
+  instance_name_placeholder: z.B. Produktiv
+  workflow_user_id: Workflow Benutzer-ID
+  workflow_user_id_hint: 'Optional: Tools für bestimmte Workflow-Benutzer filtern'
+  workflow_user_id_placeholder: z.B. benutzer-123
+  existing_instances: Sie haben bereits %count% %name% Integration(en)
+  add_instance: Instanz hinzufügen
+  add_another: Weitere %name% hinzufügen
+  add_another_desc: Eine weitere Instanz dieser Integration verbinden
+  add_jira: Jira-Instanz hinzufügen
+  add_confluence: Confluence-Instanz hinzufügen
+  add_sharepoint: SharePoint-Instanz hinzufügen
+  edit: Bearbeiten
   created:
     success: Integration erfolgreich erstellt!
   updated:
@@ -154,7 +194,6 @@ integration:
     reconnect: SharePoint-Konto erneut verbinden
     token_expires: Token läuft ab
   connect_sharepoint: Mit SharePoint verbinden
-  edit: Integration bearbeiten
   active: Aktiv
   credentials_not_editable: Anmeldedaten können aus Sicherheitsgründen nicht bearbeitet werden.
 
@@ -206,8 +245,21 @@ profile:
   delete_account: Account löschen
   delete_account_warning: Das Löschen Ihres Accounts kann nicht rückgängig gemacht werden.
   delete_account_confirm: Sind Sie sicher, dass Sie Ihren Account löschen möchten?
-  delete_account_consequences: Diese Aktion wird:
+  delete_account_consequences: 'Diese Aktion wird:'
   delete_consequence_1: Alle Ihre Integrationen löschen
   delete_consequence_2: Ihren Zugang zur Organisation entfernen
   delete_consequence_3: Alle Ihre Daten unwiderruflich löschen
   confirm_delete: Ja, Account löschen
+
+footer:
+  rights: Alle Rechte vorbehalten.
+  legal_notice: Impressum
+  data_privacy: Datenschutzerklärung
+  open_source: Open Source
+  github:
+    hosting: Hosting
+    tests: Tests
+    bot: Bot
+    platform: Integrationsplattform
+    pptx: PPTX
+    rag: RAG

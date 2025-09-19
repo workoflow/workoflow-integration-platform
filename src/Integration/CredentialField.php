@@ -43,6 +43,11 @@ class CredentialField
         return $this->description;
     }
 
+    public function getHint(): ?string
+    {
+        return $this->description;
+    }
+
     public function toArray(): array
     {
         return [

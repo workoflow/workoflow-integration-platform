@@ -1,0 +1,249 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'integration.setup'|trans }} {{ integration.getName() }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="integrations-page">
+    {% include '_partials/header.html.twig' %}
+
+    <div class="setup-container">
+        <div class="setup-card">
+            <div class="setup-header">
+                <h1>{{ 'integration.setup'|trans }} {{ integration.getName() }}</h1>
+                <p class="setup-description">
+                    {{ 'integration.setup_description'|trans({'%name%': integration.getName()})|default('Configure your ' ~ integration.getName() ~ ' integration') }}
+                </p>
+            </div>
+
+            {% if existingInstances|length > 0 and not isEdit %}
+                <div class="existing-instances">
+                    <p class="instances-info">
+                        {{ 'integration.existing_instances'|trans|default('You already have %count% %name% integration(s)')|replace({'%count%': existingInstances|length, '%name%': integration.getName()}) }}
+                    </p>
+                    <ul class="instances-list">
+                        {% for instance in existingInstances %}
+                            <li>{{ instance.name }} {% if instance.active %}<span class="badge badge-success">Active</span>{% endif %}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form method="post" class="setup-form">
+                <div class="form-group">
+                    <label for="name">
+                        {{ 'integration.instance_name'|trans|default('Instance Name') }}
+                        <span class="required">*</span>
+                        <span class="field-hint">{{ 'integration.instance_name_hint'|trans|default('A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")') }}</span>
+                    </label>
+                    <input type="text"
+                           id="name"
+                           name="name"
+                           class="form-control"
+                           value="{{ config ? config.name : '' }}"
+                           required
+                           placeholder="{{ 'integration.instance_name_placeholder'|trans|default('e.g., Production ' ~ integration.getName()) }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="workflow_user_id">
+                        {{ 'integration.workflow_user_id'|trans|default('Workflow User ID') }}
+                        <span class="field-hint">{{ 'integration.workflow_user_id_hint'|trans|default('Optional: Filter tools for specific workflow users') }}</span>
+                    </label>
+                    <input type="text"
+                           id="workflow_user_id"
+                           name="workflow_user_id"
+                           class="form-control"
+                           value="{{ config ? config.workflowUserId : '' }}"
+                           placeholder="{{ 'integration.workflow_user_id_placeholder'|trans|default('e.g., user-123') }}">
+                </div>
+
+                <h3>{{ 'integration.credentials'|trans|default('Credentials') }}</h3>
+
+                {% for field in credentialFields %}
+                    <div class="form-group">
+                        <label for="{{ field.getName() }}">
+                            {{ field.getLabel() }}
+                            {% if field.isRequired() %}
+                                <span class="required">*</span>
+                            {% endif %}
+                            {% if field.getHint() %}
+                                <span class="field-hint">{{ field.getHint() }}</span>
+                            {% endif %}
+                        </label>
+                        <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
+                               id="{{ field.getName() }}"
+                               name="{{ field.getName() }}"
+                               class="form-control"
+                               {% if field.isRequired() %}required{% endif %}
+                               placeholder="{{ field.getPlaceholder() }}">
+                    </div>
+                {% endfor %}
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
+                    </button>
+                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                        {{ 'action.cancel'|trans }}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.setup-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.setup-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.setup-header {
+    margin-bottom: 2rem;
+}
+
+.setup-header h1 {
+    margin: 0 0 0.5rem 0;
+}
+
+.setup-description {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.setup-form h3 {
+    margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.field-hint {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: normal;
+    margin-top: 0.25rem;
+}
+
+.required {
+    color: var(--danger-color);
+    margin-left: 0.25rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--input-background);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-color-dark);
+}
+
+.btn-secondary {
+    background: var(--secondary-background);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-background-dark);
+}
+
+.existing-instances {
+    background: var(--info-background, #1a2332);
+    border: 1px solid var(--info-border, #3b82f6);
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.instances-info {
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+    color: var(--info-text, #93bbfc);
+}
+
+.instances-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.instances-list li {
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(59, 130, 246, 0.2);
+    color: var(--text-primary);
+}
+
+.instances-list li:first-child {
+    border-top: none;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: var(--success-color, #10b981);
+    color: white;
+}
+</style>
+{% endblock %}

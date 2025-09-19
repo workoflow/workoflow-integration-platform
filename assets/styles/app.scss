@@ -25,6 +25,20 @@
   --border-radius: 12px;
   --border-radius-lg: 16px;
   --border-radius-xl: 24px;
+
+  // Status/Info Colors for dark theme
+  --info-background: #1a2332;      // Dark blue background
+  --info-border: #3b82f6;          // Bright blue border
+  --info-text: #93bbfc;            // Light blue text
+  --success-color: #10b981;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+
+  // Additional component backgrounds
+  --card-background: #1a1a1a;
+  --input-background: #0f0f0f;
+  --secondary-background: #252525;
+  --secondary-background-dark: #1a1a1a;
   
   // Spacing
   --space-xs: 0.25rem;
@@ -145,14 +159,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-md) var(--space-xl);
+  padding: calc(var(--space-md) * 0.5) calc(var(--space-xl) * 0.5);
   border-radius: var(--border-radius);
   font-weight: 500;
   text-decoration: none;
   transition: var(--transition);
   cursor: pointer;
   border: none;
-  font-size: var(--text-base);
+  font-size: calc(var(--text-base) * 0.75);
   
   &.btn-primary {
     background: var(--color-primary);
@@ -1512,7 +1526,8 @@ body {
       }
       
       &.badge-inactive {
-        background: rgba(239, 68, 68, 0.2);
+        background: rgba(255, 107, 53, 0.2);
+        border: 1px solid rgba(255, 107, 53, 0.3);
         color: #ef4444;
       }
     }
@@ -1523,22 +1538,131 @@ body {
 .integrations-page {
   min-height: 100vh;
   background: var(--bg-primary);
-  
+
   .integrations-container {
     padding: var(--space-2xl) var(--space-xl);
     max-width: 1200px;
     margin: 0 auto;
   }
-  
+
   .integrations-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-2xl);
-    
+
     h1 {
       font-size: var(--text-3xl);
       margin: 0;
+    }
+  }
+
+  // New integration sections
+  .integration-section {
+    margin-bottom: var(--space-3xl);
+
+    h2 {
+      margin-bottom: var(--space-sm);
+      color: var(--text-primary);
+      font-size: var(--text-2xl);
+    }
+
+    .section-description {
+      color: var(--text-secondary);
+      margin-bottom: var(--space-xl);
+      font-size: var(--text-base);
+    }
+  }
+
+  // Tool toggle styles
+  .integration-tools {
+    margin: var(--space-lg) 0;
+
+    h4 {
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-md);
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+  }
+
+  .tool-item {
+    margin-bottom: var(--space-md);
+  }
+
+  .tool-toggle {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    gap: var(--space-md);
+
+    input[type="checkbox"] {
+      display: none;
+    }
+
+    .toggle-slider {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: var(--border-color);
+      border-radius: 12px;
+      transition: background 0.3s;
+      flex-shrink: 0;
+
+      &::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        background: white;
+        border-radius: 50%;
+        top: 3px;
+        left: 3px;
+        transition: transform 0.3s;
+      }
+    }
+
+    input:checked + .toggle-slider {
+      background: var(--color-primary);
+
+      &::after {
+        transform: translateX(20px);
+      }
+    }
+
+    .tool-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+
+      .tool-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: var(--text-sm);
+      }
+
+      .tool-description {
+        font-size: var(--text-xs);
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+    }
+  }
+
+  .integration-footer {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .integration-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    cursor: pointer;
+
+    input[type="checkbox"] {
+      display: none;
     }
   }
   
@@ -1561,12 +1685,13 @@ body {
     border-radius: var(--border-radius-lg);
     padding: var(--space-xl);
     transition: var(--transition);
-    
+
     &:hover {
       background: var(--bg-card-hover);
       border-color: var(--color-primary);
       transform: translateY(-2px);
     }
+
     
     .integration-content {
       display: flex;

@@ -1,3 +1,8 @@
+common:
+  save_changes: Save Changes
+  cancel: Cancel
+  optional: optional
+
 nav:
   dashboard: Dashboard
   integrations: Integrations
@@ -103,6 +108,13 @@ organisation:
 status:
   active: Active
   inactive: Inactive
+  connected: Connected
+  not_connected: Not Connected
+
+badge:
+  system: SYSTEM
+
+PLATFORM: PLATFORM
 
 integration:
   name: Name
@@ -111,7 +123,17 @@ integration:
   last_accessed: Last Accessed
   title: Integrations
   add_new: Add New Integration
-  no_integrations: You have no integrations configured yet.
+  no_integrations: No integrations configured yet
+  no_integrations_desc: 'Start by adding your first integration to connect external services'
+  system_tools: System Tools
+  system_tools_description: Built-in tools that are available to all users
+  external_integrations: External Integrations
+  external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint
+  available_tools: Available Tools
+  setup: Setup
+  setup_description: Configure your %name% integration
+  save_configuration: Save Configuration
+  toggle_error: Failed to update setting
   workflow_id: Workoflow ID
   functions: Functions
   active_of: active of
@@ -128,6 +150,24 @@ integration:
   credentials: Credentials
   available_functions: Available Functions
   save: Save Integration
+  system_description: Platform tools available to all users
+  manage_tools: Manage Tools
+  system_tools_always_active: System tools are always active
+  credentials_update_note: Leave fields empty to keep existing credentials
+  instance_name: Instance Name
+  instance_name_hint: 'A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")'
+  instance_name_placeholder: e.g., Production
+  workflow_user_id: Workflow User ID
+  workflow_user_id_hint: 'Optional: Filter tools for specific workflow users'
+  workflow_user_id_placeholder: e.g., user-123
+  existing_instances: You already have %count% %name% integration(s)
+  add_instance: Add Instance
+  add_another: Add Another %name%
+  add_another_desc: Connect another instance of this integration
+  add_jira: Add Jira Instance
+  add_confluence: Add Confluence Instance
+  add_sharepoint: Add SharePoint Instance
+  edit: Edit
   created:
     success: Integration created successfully!
   updated:
@@ -154,7 +194,6 @@ integration:
     reconnect: Reconnect SharePoint Account
     token_expires: Token expires
   connect_sharepoint: Connect to SharePoint
-  edit: Edit Integration
   active: Active
   credentials_not_editable: Credentials cannot be edited for security reasons.
 
@@ -204,8 +243,21 @@ profile:
   delete_account: Delete Account
   delete_account_warning: Deleting your account cannot be undone.
   delete_account_confirm: Are you sure you want to delete your account?
-  delete_account_consequences: "This action will:"
+  delete_account_consequences: 'This action will:'
   delete_consequence_1: Delete all your integrations
   delete_consequence_2: Remove your access to the organisation
   delete_consequence_3: Permanently delete all your data
   confirm_delete: Yes, delete account
+
+footer:
+  rights: All rights reserved.
+  legal_notice: Legal Notice
+  data_privacy: Data Protection Declaration
+  open_source: Open Source
+  github:
+    hosting: Hosting
+    tests: Tests
+    bot: Bot
+    platform: Integration Platform
+    pptx: PPTX
+    rag: RAG

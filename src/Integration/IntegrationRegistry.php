@@ -39,6 +39,15 @@ class IntegrationRegistry
     }
 
     /**
+     * Get all integrations (alias for all() method)
+     * @return IntegrationInterface[]
+     */
+    public function getAllIntegrations(): array
+    {
+        return $this->integrations;
+    }
+
+    /**
      * Get all integration types
      * @return string[]
      */

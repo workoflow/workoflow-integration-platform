@@ -2,325 +2,275 @@
 
 namespace App\Controller;
 
-use App\Repository\IntegrationRepository;
-use App\Repository\OrganisationRepository;
-use App\Repository\UserRepository;
-use App\Repository\UserOrganisationRepository;
-use App\Service\AuditLogService;
-use App\Service\EncryptionService;
-use App\Service\Integration\JiraService;
-use App\Service\Integration\ConfluenceService;
-use App\Service\Integration\SharePointService;
-use App\Service\ShareFileService;
+use App\Entity\IntegrationConfig;
+use App\Entity\Organisation;
 use App\Integration\IntegrationRegistry;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\IntegrationConfigRepository;
+use App\Repository\OrganisationRepository;
+use App\Service\EncryptionService;
+use App\Service\IntegrationAuditService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-#[Route('/api/integration/{orgUuid}')]
+#[Route('/api/integrations')]
 class IntegrationApiController extends AbstractController
 {
     public function __construct(
         private OrganisationRepository $organisationRepository,
-        private UserRepository $userRepository,
-        private UserOrganisationRepository $userOrganisationRepository,
-        private IntegrationRepository $integrationRepository,
-        private AuditLogService $auditLogService,
+        private IntegrationConfigRepository $integrationConfigRepository,
         private EncryptionService $encryptionService,
-        private JiraService $jiraService,
-        private ConfluenceService $confluenceService,
-        private SharePointService $sharePointService,
-        private ShareFileService $shareFileService,
-        private EntityManagerInterface $entityManager,
         private IntegrationRegistry $integrationRegistry,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
-        private string $mcpAuthUser,
-        private string $mcpAuthPassword
+        private string $apiAuthUser,
+        private string $apiAuthPassword
     ) {}
 
-    #[Route('/tools', name: 'api_integration_tools', methods: ['GET'])]
-    public function listTools(string $orgUuid, Request $request): JsonResponse
+    #[Route('/{organisationUuid}', name: 'api_integration_tools', methods: ['GET'])]
+    public function getTools(string $organisationUuid, Request $request): JsonResponse
     {
         // Validate Basic Auth
         if (!$this->validateBasicAuth($request)) {
-            return new JsonResponse(['error' => 'Unauthorized'], 401, [
-                'WWW-Authenticate' => 'Basic realm="Integration API"'
-            ]);
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Validate organisation
-        $organisation = $this->organisationRepository->findByUuid($orgUuid);
+        // Get organisation
+        $organisation = $this->organisationRepository->findOneBy(['uuid' => $organisationUuid]);
         if (!$organisation) {
-            return new JsonResponse(['error' => 'Organisation not found'], 404);
+            return $this->json(['error' => 'Organisation not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Get workflow user ID from query parameter
-        $workflowUserId = $request->query->get('id');
-        if (!$workflowUserId) {
-            return new JsonResponse(['error' => 'Missing workflow user ID parameter'], 400);
-        }
+        // Get parameters
+        $workflowUserId = $request->query->get('workflow_user_id');
+        $toolType = $request->query->get('tool_type');
 
-        // Get tool type filter from query parameter
-        $toolTypeFilter = $request->query->get('tool_type', 'all');
-        $requestedTypes = [];
-        $includeSystemTools = false;
+        // Get integration configs
+        $configs = $this->integrationConfigRepository->findByOrganisationAndWorkflowUser($organisation, $workflowUserId);
 
-        if ($toolTypeFilter !== 'all') {
-            // Support comma-separated values
-            $requestedTypes = array_map('trim', explode(',', $toolTypeFilter));
-
-            // Check if system tools are explicitly requested
-            $includeSystemTools = in_array('system', $requestedTypes);
-        }
-        // If 'all' is specified or no filter, system tools are excluded by default
-
-        $this->logger->info('API tools list request', [
-            'org_uuid' => $orgUuid,
-            'workflow_user_id' => $workflowUserId,
-            'tool_type_filter' => $toolTypeFilter,
-            'remote_addr' => $request->getClientIp()
-        ]);
-
-        // Find users with this workflow user ID in this organisation
-        $userOrganisations = $this->userOrganisationRepository->findByWorkflowUserId($workflowUserId);
-        $integrations = [];
-
-        foreach ($userOrganisations as $userOrg) {
-            // Only process if the user belongs to the requested organisation
-            if ($userOrg->getOrganisation()->getId() === $organisation->getId()) {
-                $user = $userOrg->getUser();
-                // Get all active integrations for this user in this organisation
-                $userIntegrations = $this->integrationRepository->findBy([
-                    'user' => $user,
-                    'organisation' => $organisation,
-                    'active' => true
-                ]);
-                $integrations = array_merge($integrations, $userIntegrations);
+        // Build config map for quick lookup (type => array of configs)
+        $configMap = [];
+        foreach ($configs as $config) {
+            $type = $config->getIntegrationType();
+            if (!isset($configMap[$type])) {
+                $configMap[$type] = [];
             }
+            $configMap[$type][] = $config;
         }
-        
-        // Build tools array
+
         $tools = [];
 
-        // Add system tools only if explicitly requested via tool_type=system
-        if ($includeSystemTools) {
-            foreach ($this->integrationRegistry->getSystemIntegrations() as $systemIntegration) {
-                foreach ($systemIntegration->getTools() as $toolDef) {
-                    $tools[] = [
-                        'id' => $toolDef->getName(),
-                        'name' => $toolDef->getName(),
-                        'description' => $toolDef->getDescription(),
-                        'integration_id' => null,
-                        'integration_name' => $systemIntegration->getName(),
-                        'integration_type' => 'system',
-                        'parameters' => $toolDef->getParameters()
-                    ];
+        // Get all integrations from registry (code-defined)
+        $allIntegrations = $this->integrationRegistry->getAllIntegrations();
+
+        foreach ($allIntegrations as $integration) {
+            $type = $integration->getType();
+            $integrationConfigs = $configMap[$type] ?? [];
+
+            // Filter by tool_type if specified
+            if ($toolType) {
+                // Special case: 'system' matches all system integrations
+                if ($toolType === 'system' && str_starts_with($type, 'system.')) {
+                    // Continue processing this system integration
+                } elseif ($toolType !== $type) {
+                    continue;
                 }
             }
-        }
 
-        foreach ($integrations as $integration) {
-            if (!$integration->isActive()) {
-                continue;
-            }
+            // Handle system integrations (no credentials required)
+            if (!$integration->requiresCredentials()) {
+                // Use first config if exists (for disabled tools tracking)
+                $config = $integrationConfigs[0] ?? null;
 
-            // Skip this integration if it doesn't match the filter
-            if (!empty($requestedTypes) && !in_array($integration->getType(), $requestedTypes)) {
-                continue;
-            }
+                // Skip if explicitly disabled
+                if ($config && !$config->isActive()) {
+                    continue;
+                }
 
-            foreach ($integration->getActiveFunctions() as $function) {
-                $tool = [
-                    'id' => $function->getFunctionName() . '_' . $integration->getId(),
-                    'name' => $function->getFunctionName(),
-                    'description' => $function->getDescription(),
-                    'integration_id' => $integration->getId(),
-                    'integration_name' => $integration->getName(),
-                    'integration_type' => $integration->getType(),
-                    'parameters' => $this->getParametersForFunction($function->getFunctionName())
-                ];
+                // Add tools that aren't disabled
+                $disabledTools = $config ? $config->getDisabledTools() : [];
+                foreach ($integration->getTools() as $tool) {
+                    if (!in_array($tool->getName(), $disabledTools)) {
+                        $tools[] = [
+                            'type' => 'function',
+                            'function' => [
+                                'name' => $tool->getName(),
+                                'description' => $tool->getDescription(),
+                                'parameters' => $this->formatParameters($tool->getParameters())
+                            ]
+                        ];
+                    }
+                }
+            } else {
+                // Handle user integrations (require credentials) - may have multiple instances
+                foreach ($integrationConfigs as $config) {
+                    // Skip if inactive or no credentials
+                    if (!$config->isActive() || !$config->hasCredentials()) {
+                        continue;
+                    }
 
-                $tools[] = $tool;
-            }
-        }
+                    // Add tools for this instance that aren't disabled
+                    $disabledTools = $config->getDisabledTools();
+                    foreach ($integration->getTools() as $tool) {
+                        if (!in_array($tool->getName(), $disabledTools)) {
+                            // Generate unique ID with instance ID suffix
+                            $toolId = $tool->getName() . '_' . $config->getId();
 
-        return new JsonResponse([
-            'tools' => $tools,
-            'count' => count($tools)
-        ]);
-    }
+                            // Include instance name in description for clarity
+                            $description = $tool->getDescription();
+                            if ($config->getName()) {
+                                $description .= ' (' . $config->getName() . ')';
+                            }
 
-    #[Route('/execute', name: 'api_integration_execute', methods: ['POST'])]
-    public function executeTool(string $orgUuid, Request $request): JsonResponse
-    {
-        // Validate Basic Auth
-        if (!$this->validateBasicAuth($request)) {
-            return new JsonResponse(['error' => 'Unauthorized'], 401, [
-                'WWW-Authenticate' => 'Basic realm="Integration API"'
-            ]);
-        }
-
-        // Validate organisation
-        $organisation = $this->organisationRepository->findByUuid($orgUuid);
-        if (!$organisation) {
-            return new JsonResponse(['error' => 'Organisation not found'], 404);
-        }
-
-        // Get workflow user ID from query parameter
-        $workflowUserId = $request->query->get('id');
-        if (!$workflowUserId) {
-            return new JsonResponse(['error' => 'Missing workflow user ID parameter'], 400);
-        }
-
-        // Parse request body
-        $data = json_decode($request->getContent(), true);
-        if (!$data) {
-            return new JsonResponse(['error' => 'Invalid JSON body'], 400);
-        }
-
-        // Validate required fields
-        if (!isset($data['tool_id']) || !isset($data['parameters'])) {
-            return new JsonResponse(['error' => 'Missing required fields: tool_id, parameters'], 400);
-        }
-
-        $toolId = $data['tool_id'];
-        $parameters = $data['parameters'];
-
-        // Check if it's a system tool (no integration suffix)
-        $isSystemTool = !str_contains($toolId, '_');
-
-        if ($isSystemTool) {
-            // Find the system integration that handles this tool
-            foreach ($this->integrationRegistry->getSystemIntegrations() as $systemIntegration) {
-                foreach ($systemIntegration->getTools() as $toolDef) {
-                    if ($toolDef->getName() === $toolId) {
-                        try {
-                            // Add organisation context for system tools
-                            $parameters['organisationId'] = $organisation->getId();
-                            $parameters['workflowUserId'] = $workflowUserId;
-
-                            $result = $systemIntegration->executeTool($toolId, $parameters);
-
-                            // Log the access
-                            $this->auditLogService->log(
-                                'api.tool.execute',
-                                null,
-                                [
-                                    'tool_id' => $toolId,
-                                    'org_uuid' => $orgUuid,
-                                    'integration_type' => 'system'
+                            $tools[] = [
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => $toolId,
+                                    'description' => $description,
+                                    'parameters' => $this->formatParameters($tool->getParameters())
                                 ]
-                            );
-
-                            return new JsonResponse([
-                                'success' => true,
-                                'result' => $result
-                            ]);
-                        } catch (\Exception $e) {
-                            $this->logger->error('System tool execution failed', [
-                                'tool_id' => $toolId,
-                                'error' => $e->getMessage()
-                            ]);
-
-                            return new JsonResponse([
-                                'success' => false,
-                                'error' => $e->getMessage()
-                            ], 500);
+                            ];
                         }
                     }
                 }
             }
-
-            return new JsonResponse(['error' => 'System tool not found'], 404);
         }
 
-        // Extract integration ID from tool ID (format: functionName_integrationId)
-        $parts = explode('_', $toolId);
-        if (count($parts) < 2) {
-            return new JsonResponse(['error' => 'Invalid tool_id format'], 400);
+        return $this->json([
+            'tools' => $tools
+        ]);
+    }
+
+    #[Route('/{organisationUuid}/execute', name: 'api_integration_execute', methods: ['POST'])]
+    public function executeTool(string $organisationUuid, Request $request): JsonResponse
+    {
+        // Validate Basic Auth
+        if (!$this->validateBasicAuth($request)) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
-        $integrationId = end($parts);
-        $functionName = implode('_', array_slice($parts, 0, -1));
+        // Get organisation
+        $organisation = $this->organisationRepository->findOneBy(['uuid' => $organisationUuid]);
+        if (!$organisation) {
+            return $this->json(['error' => 'Organisation not found'], Response::HTTP_NOT_FOUND);
+        }
 
-        $this->logger->info('API tool execution request', [
-            'org_uuid' => $orgUuid,
+        // Get request data
+        $data = json_decode($request->getContent(), true);
+        $toolId = $data['tool_id'] ?? null;
+        $parameters = $data['parameters'] ?? [];
+        $workflowUserId = $data['workflow_user_id'] ?? null;
+
+        if (!$toolId) {
+            return $this->json(['error' => 'Tool ID is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->logger->info('API Tool execution requested', [
+            'organisation' => $organisation->getName(),
             'tool_id' => $toolId,
-            'function_name' => $functionName,
-            'integration_id' => $integrationId,
-            'remote_addr' => $request->getClientIp()
+            'workflow_user_id' => $workflowUserId
         ]);
 
-        // Find integration
-        $integration = $this->integrationRepository->find($integrationId);
-        if (!$integration || !$integration->isActive()) {
-            return new JsonResponse(['error' => 'Integration not found or inactive'], 404);
+        // Parse tool ID (might have _configId suffix for user integrations)
+        $parts = explode('_', $toolId);
+        $configId = null;
+        $toolName = $toolId;
+
+        // Check if this is a user integration tool with config ID
+        if (count($parts) > 1 && is_numeric(end($parts))) {
+            $configId = (int) array_pop($parts);
+            $toolName = implode('_', $parts);
         }
 
-        // Verify integration belongs to a user in this organisation with the correct workflow ID
-        $integrationUser = $integration->getUser();
-        if (!$integrationUser || $integration->getOrganisation()->getId() !== $organisation->getId()) {
-            return new JsonResponse(['error' => 'Integration not found in this organisation'], 403);
-        }
-
-        // Verify workflow user ID matches via the user_organisation table
-        $userOrg = $this->userOrganisationRepository->findOneByUserAndOrganisation($integrationUser, $organisation);
-        if (!$userOrg || $userOrg->getWorkflowUserId() !== $workflowUserId) {
-            return new JsonResponse(['error' => 'Integration not found for this workflow user'], 403);
-        }
-
-        // Check if function is enabled
-        $functionEnabled = false;
-        foreach ($integration->getActiveFunctions() as $function) {
-            if ($function->getFunctionName() === $functionName) {
-                $functionEnabled = true;
-                break;
-            }
-        }
-
-        if (!$functionEnabled) {
-            return new JsonResponse(['error' => 'Function not enabled for this integration'], 403);
-        }
-
-        // Update last accessed time
-        $this->integrationRepository->updateLastAccessed($integration);
-
-        // Log the access
-        $this->auditLogService->log(
-            'api.tool.execute',
-            $integration->getUser(),
-            [
-                'tool_id' => $toolId,
-                'integration_id' => $integrationId,
-                'function_name' => $functionName
-            ]
-        );
-
-        // Execute the tool
         try {
-            $result = $this->executeToolFunction($integration, $functionName, $parameters);
-            
-            return new JsonResponse([
+            // Find the integration that handles this tool
+            $targetIntegration = null;
+            $targetTool = null;
+
+            foreach ($this->integrationRegistry->getAllIntegrations() as $integration) {
+                foreach ($integration->getTools() as $tool) {
+                    if ($tool->getName() === $toolName) {
+                        $targetIntegration = $integration;
+                        $targetTool = $tool;
+                        break 2;
+                    }
+                }
+            }
+
+            if (!$targetIntegration || !$targetTool) {
+                return $this->json(['error' => 'Tool not found'], Response::HTTP_NOT_FOUND);
+            }
+
+            // Get credentials if needed
+            $credentials = null;
+            if ($targetIntegration->requiresCredentials()) {
+                if (!$configId) {
+                    return $this->json(['error' => 'Configuration ID required for user integration tools'], Response::HTTP_BAD_REQUEST);
+                }
+
+                $config = $this->integrationConfigRepository->find($configId);
+                if (!$config || $config->getOrganisation() !== $organisation) {
+                    return $this->json(['error' => 'Configuration not found'], Response::HTTP_NOT_FOUND);
+                }
+
+                if (!$config->isActive() || $config->isToolDisabled($toolName)) {
+                    return $this->json(['error' => 'Tool is disabled'], Response::HTTP_FORBIDDEN);
+                }
+
+                // Decrypt credentials
+                $encryptedCreds = $config->getEncryptedCredentials();
+                if ($encryptedCreds) {
+                    $credentials = json_decode($this->encryptionService->decrypt($encryptedCreds), true);
+                }
+
+                // Update last accessed
+                $this->integrationConfigRepository->updateLastAccessed($config);
+            } else {
+                // For system tools, check if disabled (if config exists)
+                $config = $this->integrationConfigRepository->findOneByOrganisationAndType(
+                    $organisation,
+                    $targetIntegration->getType(),
+                    $workflowUserId
+                );
+
+                if ($config && (!$config->isActive() || $config->isToolDisabled($toolName))) {
+                    return $this->json(['error' => 'Tool is disabled'], Response::HTTP_FORBIDDEN);
+                }
+            }
+
+            // Add organisation context to parameters
+            $parameters['organisationId'] = $organisation->getId();
+            $parameters['workflowUserId'] = $workflowUserId;
+
+            // Execute the tool
+            $result = $targetIntegration->executeTool($toolName, $parameters, $credentials);
+
+            $this->logger->info('API Tool executed successfully', [
+                'organisation' => $organisation->getName(),
+                'tool_id' => $toolId,
+                'integration_type' => $targetIntegration->getType()
+            ]);
+
+            return $this->json([
                 'success' => true,
                 'result' => $result
             ]);
+
         } catch (\Exception $e) {
-            $this->logger->error('API tool execution failed', [
+            $this->logger->error('API Tool execution failed', [
+                'organisation' => $organisation->getName(),
                 'tool_id' => $toolId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
-            return new JsonResponse([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->json([
+                'error' => 'Tool execution failed',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -333,301 +283,29 @@ class IntegrationApiController extends AbstractController
 
         $encoded = substr($authHeader, 6);
         $decoded = base64_decode($encoded);
-        
         if ($decoded === false) {
             return false;
         }
 
         [$username, $password] = explode(':', $decoded, 2);
-        
-        return $username === $this->mcpAuthUser && $password === $this->mcpAuthPassword;
+
+        return $username === $this->apiAuthUser && $password === $this->apiAuthPassword;
     }
 
-    private function getParametersForFunction(string $functionName): array
+    private function formatParameters(array $parameters): array
     {
-        $parameters = [
-            'jira_search' => [
-                [
-                    'name' => 'jql',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'JQL query string'
-                ],
-                [
-                    'name' => 'maxResults',
-                    'type' => 'integer',
-                    'required' => false,
-                    'default' => 50,
-                    'description' => 'Maximum number of results'
-                ]
-            ],
-            'jira_get_issue' => [
-                [
-                    'name' => 'issueKey',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Issue key (e.g. PROJECT-123)'
-                ]
-            ],
-            'jira_get_sprints_from_board' => [
-                [
-                    'name' => 'boardId',
-                    'type' => 'integer',
-                    'required' => true,
-                    'description' => 'Board ID'
-                ]
-            ],
-            'jira_get_sprint_issues' => [
-                [
-                    'name' => 'sprintId',
-                    'type' => 'integer',
-                    'required' => true,
-                    'description' => 'Sprint ID'
-                ]
-            ],
-            'confluence_search' => [
-                [
-                    'name' => 'query',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'CQL query string'
-                ],
-                [
-                    'name' => 'limit',
-                    'type' => 'integer',
-                    'required' => false,
-                    'default' => 25,
-                    'description' => 'Maximum number of results'
-                ]
-            ],
-            'confluence_get_page' => [
-                [
-                    'name' => 'pageId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Page ID'
-                ]
-            ],
-            'confluence_get_comments' => [
-                [
-                    'name' => 'pageId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Page ID'
-                ]
-            ],
-            'share_file' => [
-                [
-                    'name' => 'binaryData',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Base64 encoded file content'
-                ],
-                [
-                    'name' => 'contentType',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'MIME type of the file (e.g. application/pdf, image/png)'
-                ]
-            ],
-            'sharepoint_search_documents' => [
-                [
-                    'name' => 'query',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Search query string'
-                ],
-                [
-                    'name' => 'limit',
-                    'type' => 'integer',
-                    'required' => false,
-                    'default' => 25,
-                    'description' => 'Maximum number of results'
-                ]
-            ],
-            'sharepoint_search_pages' => [
-                [
-                    'name' => 'query',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'Search query string for SharePoint pages'
-                ],
-                [
-                    'name' => 'limit',
-                    'type' => 'integer',
-                    'required' => false,
-                    'default' => 25,
-                    'description' => 'Maximum number of pages to return'
-                ]
-            ],
-            'sharepoint_read_page' => [
-                [
-                    'name' => 'siteId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint site ID'
-                ],
-                [
-                    'name' => 'pageId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint page ID'
-                ]
-            ],
-            'sharepoint_list_files' => [
-                [
-                    'name' => 'siteId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint site ID'
-                ],
-                [
-                    'name' => 'path',
-                    'type' => 'string',
-                    'required' => false,
-                    'default' => '',
-                    'description' => 'Path within the document library'
-                ]
-            ],
-            'sharepoint_download_file' => [
-                [
-                    'name' => 'siteId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint site ID'
-                ],
-                [
-                    'name' => 'itemId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'File item ID'
-                ]
-            ],
-            'sharepoint_get_list_items' => [
-                [
-                    'name' => 'siteId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint site ID'
-                ],
-                [
-                    'name' => 'listId',
-                    'type' => 'string',
-                    'required' => true,
-                    'description' => 'SharePoint list ID'
-                ],
-                [
-                    'name' => 'filter',
-                    'type' => 'string',
-                    'required' => false,
-                    'description' => 'OData filter expression'
-                ],
-                [
-                    'name' => 'orderby',
-                    'type' => 'string',
-                    'required' => false,
-                    'description' => 'OData orderby expression'
-                ]
-            ]
+        return [
+            'type' => 'object',
+            'properties' => array_reduce($parameters, function ($props, $param) {
+                $props[$param['name']] = [
+                    'type' => $param['type'] ?? 'string',
+                    'description' => $param['description'] ?? ''
+                ];
+                return $props;
+            }, []),
+            'required' => array_values(array_filter(array_map(function ($param) {
+                return $param['required'] ?? false ? $param['name'] : null;
+            }, $parameters)))
         ];
-        
-        return $parameters[$functionName] ?? [];
-    }
-
-    private function executeToolFunction($integration, string $functionName, array $parameters): array
-    {
-        // Handle empty credentials for SharePoint
-        if ($integration->getType() === 'sharepoint' && 
-            ($integration->getEncryptedCredentials() === null || $integration->getEncryptedCredentials() === '')) {
-            throw new \Exception('SharePoint integration is not connected. Please connect via OAuth2 first.');
-        }
-        
-        $credentials = json_decode(
-            $this->encryptionService->decrypt($integration->getEncryptedCredentials()),
-            true
-        );
-        
-        // Check if SharePoint has valid credentials
-        if ($integration->getType() === 'sharepoint') {
-            if (!isset($credentials['access_token'])) {
-                throw new \Exception('SharePoint integration is not connected. Please connect via OAuth2 first.');
-            }
-        }
-        
-        // Check if SharePoint token needs refresh
-        if ($integration->getType() === 'sharepoint' && isset($credentials['expires_at'])) {
-            if (time() >= $credentials['expires_at']) {
-                // Refresh the token
-                $newTokens = $this->sharePointService->refreshToken(
-                    $credentials['refresh_token'],
-                    $credentials['client_id'],
-                    $credentials['client_secret'],
-                    $credentials['tenant_id']
-                );
-                
-                // Update stored credentials
-                $credentials['access_token'] = $newTokens['access_token'];
-                $credentials['refresh_token'] = $newTokens['refresh_token'];
-                $credentials['expires_at'] = $newTokens['expires_at'];
-                
-                $integration->setEncryptedCredentials(
-                    $this->encryptionService->encrypt(json_encode($credentials))
-                );
-                
-                // Save the updated tokens
-                $this->entityManager->flush();
-            }
-        }
-        
-        switch ($functionName) {
-            case 'jira_search':
-                return $this->jiraService->search($credentials, $parameters['jql'], $parameters['maxResults'] ?? 50);
-                
-            case 'jira_get_issue':
-                return $this->jiraService->getIssue($credentials, $parameters['issueKey']);
-                
-            case 'jira_get_sprints_from_board':
-                return $this->jiraService->getSprintsFromBoard($credentials, $parameters['boardId']);
-                
-            case 'jira_get_sprint_issues':
-                return $this->jiraService->getSprintIssues($credentials, $parameters['sprintId']);
-                
-            case 'confluence_search':
-                return $this->confluenceService->search($credentials, $parameters['query'], $parameters['limit'] ?? 25);
-                
-            case 'confluence_get_page':
-                return $this->confluenceService->getPage($credentials, $parameters['pageId']);
-                
-            case 'confluence_get_comments':
-                return $this->confluenceService->getComments($credentials, $parameters['pageId']);
-                
-            case 'sharepoint_search_documents':
-                return $this->sharePointService->searchDocuments($credentials, $parameters['query'], $parameters['limit'] ?? 25);
-                
-            case 'sharepoint_search_pages':
-                return $this->sharePointService->searchPages($credentials, $parameters['query'], $parameters['limit'] ?? 25);
-                
-            case 'sharepoint_read_page':
-                return $this->sharePointService->readPage($credentials, $parameters['siteId'], $parameters['pageId']);
-                
-            case 'sharepoint_list_files':
-                return $this->sharePointService->listFiles($credentials, $parameters['siteId'], $parameters['path'] ?? '');
-                
-            case 'sharepoint_download_file':
-                return $this->sharePointService->downloadFile($credentials, $parameters['siteId'], $parameters['itemId']);
-                
-            case 'sharepoint_get_list_items':
-                $filters = [];
-                if (isset($parameters['filter'])) {
-                    $filters['filter'] = $parameters['filter'];
-                }
-                if (isset($parameters['orderby'])) {
-                    $filters['orderby'] = $parameters['orderby'];
-                }
-                return $this->sharePointService->getListItems($credentials, $parameters['siteId'], $parameters['listId'], $filters);
-                
-            default:
-                throw new \Exception('Unknown function: ' . $functionName);
-        }
     }
 }

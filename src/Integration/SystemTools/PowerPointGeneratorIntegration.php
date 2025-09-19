@@ -5,48 +5,49 @@ namespace App\Integration\SystemTools;
 use App\Integration\IntegrationInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
-use App\Service\ShareFileService;
 
-class ShareFileIntegration implements IntegrationInterface
+class PowerPointGeneratorIntegration implements IntegrationInterface
 {
-    public function __construct(
-        private ShareFileService $shareFileService
-    ) {}
-
     public function getType(): string
     {
-        return 'system.share_file';
+        return 'system.generate_pptx';
     }
 
     public function getName(): string
     {
-        return 'Standard';
+        return 'PowerPoint Generator';
     }
 
     public function getTools(): array
     {
         return [
             new ToolDefinition(
-                'share_file',
-                'Upload and share a file. Returns a signed URL that can be used to access the file.',
+                'generate_pptx',
+                'Use this tool to prepare text content as a PowerPoint presentation. You must provide the data basis, for which the tool will then create a presentation.',
                 [
                     [
-                        'name' => 'binaryData',
+                        'name' => 'input',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Base64 encoded file content'
+                        'description' => 'A collection of content that should be prepared in the slide deck'
                     ],
                     [
-                        'name' => 'fileName',
+                        'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Original file name'
+                        'description' => 'A summary of the request that the user has made. Will be used as context when generating the slides'
                     ],
                     [
-                        'name' => 'contentType',
+                        'name' => 'user_id',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'MIME type of the file'
+                        'description' => 'The AAD Object ID of the user'
+                    ],
+                    [
+                        'name' => 'tenant_id',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'The tenant ID'
                     ]
                 ]
             )
@@ -55,15 +56,15 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function executeTool(string $toolName, array $parameters, ?array $credentials = null): array
     {
-        if ($toolName !== 'share_file') {
+        if ($toolName !== 'generate_pptx') {
             throw new \InvalidArgumentException("Unknown tool: $toolName");
         }
 
-        return $this->shareFileService->shareFile(
-            $parameters['organisationId'],
-            $parameters['workflowUserId'],
-            $parameters
-        );
+        // Stub implementation - no actual logic
+        return [
+            'success' => true,
+            'message' => 'Tool execution simulated - generate_pptx'
+        ];
     }
 
     public function requiresCredentials(): bool
@@ -73,7 +74,7 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return true; // No external credentials needed (API Basic Auth still required)
+        return true; // No external credentials needed
     }
 
     public function getCredentialFields(): array

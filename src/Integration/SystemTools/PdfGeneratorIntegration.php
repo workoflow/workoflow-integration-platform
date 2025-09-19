@@ -5,48 +5,43 @@ namespace App\Integration\SystemTools;
 use App\Integration\IntegrationInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
-use App\Service\ShareFileService;
 
-class ShareFileIntegration implements IntegrationInterface
+class PdfGeneratorIntegration implements IntegrationInterface
 {
-    public function __construct(
-        private ShareFileService $shareFileService
-    ) {}
-
     public function getType(): string
     {
-        return 'system.share_file';
+        return 'system.generate_and_upload_pdf';
     }
 
     public function getName(): string
     {
-        return 'Standard';
+        return 'PDF Generator';
     }
 
     public function getTools(): array
     {
         return [
             new ToolDefinition(
-                'share_file',
-                'Upload and share a file. Returns a signed URL that can be used to access the file.',
+                'generate_and_upload_pdf',
+                'Call this tool when user asking you to generate a PDF file. On success, you will get back a URL to the uploaded file that you can return in webhook response.',
                 [
                     [
-                        'name' => 'binaryData',
+                        'name' => 'data',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Base64 encoded file content'
+                        'description' => 'Here you pass the data you want to generate into a PDF in a text form (pass the data as markdown)'
                     ],
                     [
-                        'name' => 'fileName',
-                        'type' => 'string',
-                        'required' => true,
-                        'description' => 'Original file name'
-                    ],
-                    [
-                        'name' => 'contentType',
+                        'name' => 'userID',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'MIME type of the file'
+                        'description' => 'The AAD Object ID of the user'
+                    ],
+                    [
+                        'name' => 'tenantID',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'The tenant ID'
                     ]
                 ]
             )
@@ -55,15 +50,15 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function executeTool(string $toolName, array $parameters, ?array $credentials = null): array
     {
-        if ($toolName !== 'share_file') {
+        if ($toolName !== 'generate_and_upload_pdf') {
             throw new \InvalidArgumentException("Unknown tool: $toolName");
         }
 
-        return $this->shareFileService->shareFile(
-            $parameters['organisationId'],
-            $parameters['workflowUserId'],
-            $parameters
-        );
+        // Stub implementation - no actual logic
+        return [
+            'success' => true,
+            'message' => 'Tool execution simulated - generate_and_upload_pdf'
+        ];
     }
 
     public function requiresCredentials(): bool
@@ -73,7 +68,7 @@ class ShareFileIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return true; // No external credentials needed (API Basic Auth still required)
+        return true; // No external credentials needed
     }
 
     public function getCredentialFields(): array
