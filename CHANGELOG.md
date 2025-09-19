@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-09-19
+
+### Fixed
+- Improved styling for OAuth authentication sections in integration forms to match dark theme
+- Fixed visual consistency issues with credential input areas for SharePoint and other OAuth-based integrations
+
+### Added
+- Plugin-based integration system for easier management
+- System tools filtering - platform-internal tools now excluded from API by default
+- Dynamic integration management UI - new integrations automatically appear in web interface
+- Central integration registry for better organization
+
+### Changed
+- Integrations now use flexible plugin architecture
+- Web forms for adding integrations are now generated automatically
+- API tools can be filtered by type - use `tool_type=system` to include internal tools
+
+### Fixed
+- Integration creation dropdown now properly displays available integration types (Jira, Confluence, SharePoint)
+- Fixed service configuration to correctly register and tag integration services
+
+### Improved
+- Better separation between platform tools and external service integrations
+- Clearer documentation about tool types and authentication requirements
+- More maintainable code structure following design principles
+
 ## 2025-09-18
 
 ### Added

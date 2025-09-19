@@ -32,16 +32,32 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
 - **Storage**: MinIO (S3-compatible)
 - **Container**: Docker & Docker Compose
 
+### Design Principles
+- **SOLID**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **KISS**: Keep It Simple, Stupid - prioritize simplicity and clarity
+
 ### Directory Structure
 ```
 workoflow-promopage-v2/
 ├── config/           # Symfony Configuration
+│   └── services/    # Service definitions
+│       └── integrations.yaml # Integration registry config
 ├── migrations/       # Doctrine Migrations
 ├── public/          # Web Root
 ├── src/
 │   ├── Command/     # Console Commands
 │   ├── Controller/  # HTTP Controllers
 │   ├── Entity/      # Doctrine Entities
+│   ├── Integration/ # Plugin-based Integration System
+│   │   ├── IntegrationInterface.php      # Core contract
+│   │   ├── IntegrationRegistry.php       # Central registry
+│   │   ├── ToolDefinition.php            # Tool metadata
+│   │   ├── SystemTools/                  # Platform-internal tools (no external credentials needed)
+│   │   │   └── ShareFileIntegration.php  # File sharing
+│   │   └── UserIntegrations/             # External service integrations (require API keys/tokens)
+│   │       ├── JiraIntegration.php
+│   │       ├── ConfluenceIntegration.php
+│   │       └── SharePointIntegration.php
 │   ├── Repository/  # Entity Repositories
 │   ├── Security/    # Auth & Security
 │   └── Service/     # Business Logic
@@ -80,6 +96,50 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 ### Access
 - **Application**: http://localhost:3979
 - **MinIO Console**: http://localhost:9001 (admin/workoflow123)
+
+## Integration System
+
+### Plugin Architecture
+All integrations (user & system) follow a unified plugin-based architecture:
+
+1. **Add new integration**:
+   - Create class implementing `IntegrationInterface` in `src/Integration/`
+   - Place in `SystemTools/` (platform-internal) or `UserIntegrations/` (external services)
+   - Auto-tagged via `config/services/integrations.yaml`
+
+2. **Key Components**:
+   - `IntegrationInterface`: Define type, tools, execution logic
+   - `ToolDefinition`: Tool metadata (name, description, parameters)
+   - `IntegrationRegistry`: Central DI-managed registry
+
+3. **System Tools**:
+   - Platform-internal functionality (file sharing, data processing, etc.)
+   - Don't require external service credentials (Jira tokens, API keys, etc.)
+   - Still protected by API Basic Auth authentication
+   - Excluded by default from API, included with `tool_type=system`
+   - Example: `ShareFileIntegration`
+
+4. **User Integrations**:
+   - Connect to external services (Jira, Confluence, SharePoint)
+   - Require user-specific external credentials (stored encrypted in DB)
+   - Credentials managed per user/organization
+   - Example: Jira, Confluence, SharePoint
+
+### Adding New Tools
+```php
+// 1. Create integration class
+class MyIntegration implements IntegrationInterface {
+    public function getType(): string { return 'mytype'; }
+    public function getTools(): array { /* return ToolDefinition[] */ }
+    public function executeTool($name, $params, $creds): array { /* logic */ }
+    public function requiresCredentials(): bool { return false; } // true for user integrations
+}
+
+// 2. Register in config/services/integrations.yaml
+App\Integration\SystemTools\MyIntegration:
+    autowire: true
+    tags: ['app.integration']
+```
 
 ## API Reference
 

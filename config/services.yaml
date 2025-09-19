@@ -16,6 +16,9 @@ parameters:
     azure_client_secret: '%env(AZURE_CLIENT_SECRET)%'
     azure_tenant_id: '%env(AZURE_TENANT_ID)%'
 
+imports:
+    - { resource: services/integrations.yaml }
+
 services:
     _defaults:
         autowire: true
@@ -27,6 +30,8 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            - '../src/Integration/SystemTools/'
+            - '../src/Integration/UserIntegrations/'
 
     App\Controller\:
         resource: '../src/Controller/'

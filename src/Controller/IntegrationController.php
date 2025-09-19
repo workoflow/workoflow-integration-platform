@@ -10,6 +10,7 @@ use App\Service\EncryptionService;
 use App\Service\Integration\JiraService;
 use App\Service\Integration\ConfluenceService;
 use App\Service\Integration\SharePointService;
+use App\Integration\IntegrationRegistry;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,7 +51,8 @@ class IntegrationController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         EncryptionService $encryptionService,
-        AuditLogService $auditLogService
+        AuditLogService $auditLogService,
+        IntegrationRegistry $integrationRegistry
     ): Response {
         if ($request->isMethod('POST')) {
             $type = $request->request->get('type');
@@ -71,37 +73,40 @@ class IntegrationController extends AbstractController
             $integration->setType($type);
             $integration->setName($name);
             
+            // Get integration definition from registry
+            $integrationDef = $integrationRegistry->get($type);
+            if (!$integrationDef) {
+                $this->addFlash('error', 'Unknown integration type');
+                return $this->redirectToRoute('app_integrations');
+            }
+
+            // Collect credentials based on integration's field definitions
             $credentials = [];
-            if ($type === Integration::TYPE_JIRA) {
-                $credentials = [
-                    'url' => $request->request->get('jira_url'),
-                    'username' => $request->request->get('jira_username'),
-                    'api_token' => $request->request->get('jira_api_token'),
-                ];
-                
-                $functions = IntegrationFunction::getJiraFunctions();
-            } elseif ($type === Integration::TYPE_CONFLUENCE) {
-                $credentials = [
-                    'url' => $request->request->get('confluence_url'),
-                    'username' => $request->request->get('confluence_username'),
-                    'api_token' => $request->request->get('confluence_api_token'),
-                ];
-                
-                $functions = IntegrationFunction::getConfluenceFunctions();
-            } elseif ($type === Integration::TYPE_SHAREPOINT) {
-                // SharePoint uses OAuth2, so credentials will be set after OAuth flow
-                $functions = IntegrationFunction::getSharePointFunctions();
+            foreach ($integrationDef->getCredentialFields() as $field) {
+                if ($field->getType() !== 'oauth') {
+                    $fieldName = $field->getName();
+                    $value = $request->request->get($type . '_' . $fieldName);
+                    if ($value !== null) {
+                        $credentials[$fieldName] = $value;
+                    }
+                }
+            }
+
+            // Special handling for OAuth integrations
+            if ($type === 'sharepoint') {
+                // SharePoint uses OAuth2, credentials will be set after OAuth flow
                 $credentials = [];
             }
             
             $integration->setEncryptedCredentials($encryptionService->encrypt(json_encode($credentials)));
             $integration->setConfig([]);
-            
-            foreach ($functions as $functionName => $description) {
+
+            // Add functions from the integration definition
+            foreach ($integrationDef->getTools() as $tool) {
                 $function = new IntegrationFunction();
-                $function->setFunctionName($functionName);
-                $function->setDescription($description);
-                $function->setActive($request->request->has('function_' . $functionName));
+                $function->setFunctionName($tool->getName());
+                $function->setDescription($tool->getDescription());
+                $function->setActive($request->request->has('function_' . $tool->getName()));
                 $integration->addFunction($function);
             }
             
@@ -118,11 +123,29 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_integrations');
         }
 
+        // Build available integrations list from registry (exclude system tools)
+        $availableIntegrations = [];
+
+        // Debug: Check what's in the registry
+        error_log('Registry has ' . count($integrationRegistry->all()) . ' integrations');
+        error_log('User integrations: ' . count($integrationRegistry->getUserIntegrations()));
+
+        foreach ($integrationRegistry->getUserIntegrations() as $integration) {
+            $availableIntegrations[$integration->getType()] = [
+                'name' => $integration->getName(),
+                'credentialFields' => array_map(
+                    fn($field) => $field->toArray(),
+                    $integration->getCredentialFields()
+                ),
+                'tools' => array_map(
+                    fn($tool) => $tool->toArray(),
+                    $integration->getTools()
+                )
+            ];
+        }
+
         return $this->render('integration/new.html.twig', [
-            'types' => Integration::getAvailableTypes(),
-            'jira_functions' => IntegrationFunction::getJiraFunctions(),
-            'confluence_functions' => IntegrationFunction::getConfluenceFunctions(),
-            'sharepoint_functions' => IntegrationFunction::getSharePointFunctions(),
+            'integrations' => $availableIntegrations,
         ]);
     }
 
@@ -426,5 +449,29 @@ class IntegrationController extends AbstractController
         if ($hasChanges) {
             $em->flush();
         }
+    }
+
+    #[Route('/api/fields/{type}', name: 'app_integration_fields_api', methods: ['GET'])]
+    public function getIntegrationFields(
+        string $type,
+        IntegrationRegistry $integrationRegistry
+    ): JsonResponse {
+        $integration = $integrationRegistry->get($type);
+
+        if (!$integration) {
+            return new JsonResponse(['error' => 'Integration type not found'], 404);
+        }
+
+        return new JsonResponse([
+            'name' => $integration->getName(),
+            'credentialFields' => array_map(
+                fn($field) => $field->toArray(),
+                $integration->getCredentialFields()
+            ),
+            'tools' => array_map(
+                fn($tool) => $tool->toArray(),
+                $integration->getTools()
+            )
+        ]);
     }
 }

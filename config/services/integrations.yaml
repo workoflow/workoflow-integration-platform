@@ -1,0 +1,26 @@
+services:
+    # Auto-tag all integration implementations
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # Central registry for all integrations
+    App\Integration\IntegrationRegistry:
+        public: true
+        arguments:
+            $integrations: !tagged_iterator 'app.integration'
+
+    # System Tools - Don't require user-specific external credentials (e.g., Jira tokens)
+    # Still protected by API Basic Auth
+    App\Integration\SystemTools\ShareFileIntegration:
+        tags: ['app.integration']
+
+    # User Integrations - Require user-specific external service credentials
+    App\Integration\UserIntegrations\JiraIntegration:
+        tags: ['app.integration']
+
+    App\Integration\UserIntegrations\ConfluenceIntegration:
+        tags: ['app.integration']
+
+    App\Integration\UserIntegrations\SharePointIntegration:
+        tags: ['app.integration']

@@ -12,6 +12,7 @@ use App\Service\Integration\JiraService;
 use App\Service\Integration\ConfluenceService;
 use App\Service\Integration\SharePointService;
 use App\Service\ShareFileService;
+use App\Integration\IntegrationRegistry;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -36,6 +37,7 @@ class IntegrationApiController extends AbstractController
         private SharePointService $sharePointService,
         private ShareFileService $shareFileService,
         private EntityManagerInterface $entityManager,
+        private IntegrationRegistry $integrationRegistry,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $mcpAuthUser,
@@ -67,22 +69,16 @@ class IntegrationApiController extends AbstractController
         // Get tool type filter from query parameter
         $toolTypeFilter = $request->query->get('tool_type', 'all');
         $requestedTypes = [];
+        $includeSystemTools = false;
 
         if ($toolTypeFilter !== 'all') {
             // Support comma-separated values
             $requestedTypes = array_map('trim', explode(',', $toolTypeFilter));
 
-            // Validate requested types
-            $validTypes = ['jira', 'confluence', 'sharepoint', 'system'];
-            $invalidTypes = array_diff($requestedTypes, $validTypes);
-
-            if (!empty($invalidTypes)) {
-                return new JsonResponse([
-                    'error' => 'Invalid tool type(s): ' . implode(', ', $invalidTypes),
-                    'valid_types' => $validTypes
-                ], 400);
-            }
+            // Check if system tools are explicitly requested
+            $includeSystemTools = in_array('system', $requestedTypes);
         }
+        // If 'all' is specified or no filter, system tools are excluded by default
 
         $this->logger->info('API tools list request', [
             'org_uuid' => $orgUuid,
@@ -112,17 +108,21 @@ class IntegrationApiController extends AbstractController
         // Build tools array
         $tools = [];
 
-        // Add static share_file tool (only if system type is requested or no filter)
-        if (empty($requestedTypes) || in_array('system', $requestedTypes)) {
-            $tools[] = [
-                'id' => 'share_file',
-                'name' => 'share_file',
-                'description' => 'Upload and share a file. Returns a signed URL that can be used to access the file.',
-                'integration_id' => null,
-                'integration_name' => 'File Sharing',
-                'integration_type' => 'system',
-                'parameters' => $this->getParametersForFunction('share_file')
-            ];
+        // Add system tools only if explicitly requested via tool_type=system
+        if ($includeSystemTools) {
+            foreach ($this->integrationRegistry->getSystemIntegrations() as $systemIntegration) {
+                foreach ($systemIntegration->getTools() as $toolDef) {
+                    $tools[] = [
+                        'id' => $toolDef->getName(),
+                        'name' => $toolDef->getName(),
+                        'description' => $toolDef->getDescription(),
+                        'integration_id' => null,
+                        'integration_name' => $systemIntegration->getName(),
+                        'integration_type' => 'system',
+                        'parameters' => $toolDef->getParameters()
+                    ];
+                }
+            }
         }
 
         foreach ($integrations as $integration) {
@@ -192,41 +192,52 @@ class IntegrationApiController extends AbstractController
         $toolId = $data['tool_id'];
         $parameters = $data['parameters'];
 
-        // Handle static share_file tool
-        if ($toolId === 'share_file') {
-            try {
-                $result = $this->shareFileService->shareFile(
-                    $parameters['binaryData'],
-                    $parameters['contentType'],
-                    $orgUuid
-                );
-                
-                // Log the access
-                $this->auditLogService->log(
-                    'api.tool.execute',
-                    null,
-                    [
-                        'tool_id' => $toolId,
-                        'org_uuid' => $orgUuid,
-                        'content_type' => $parameters['contentType']
-                    ]
-                );
-                
-                return new JsonResponse([
-                    'success' => true,
-                    'result' => $result
-                ]);
-            } catch (\Exception $e) {
-                $this->logger->error('File sharing failed', [
-                    'tool_id' => $toolId,
-                    'error' => $e->getMessage()
-                ]);
-                
-                return new JsonResponse([
-                    'success' => false,
-                    'error' => $e->getMessage()
-                ], 500);
+        // Check if it's a system tool (no integration suffix)
+        $isSystemTool = !str_contains($toolId, '_');
+
+        if ($isSystemTool) {
+            // Find the system integration that handles this tool
+            foreach ($this->integrationRegistry->getSystemIntegrations() as $systemIntegration) {
+                foreach ($systemIntegration->getTools() as $toolDef) {
+                    if ($toolDef->getName() === $toolId) {
+                        try {
+                            // Add organisation context for system tools
+                            $parameters['organisationId'] = $organisation->getId();
+                            $parameters['workflowUserId'] = $workflowUserId;
+
+                            $result = $systemIntegration->executeTool($toolId, $parameters);
+
+                            // Log the access
+                            $this->auditLogService->log(
+                                'api.tool.execute',
+                                null,
+                                [
+                                    'tool_id' => $toolId,
+                                    'org_uuid' => $orgUuid,
+                                    'integration_type' => 'system'
+                                ]
+                            );
+
+                            return new JsonResponse([
+                                'success' => true,
+                                'result' => $result
+                            ]);
+                        } catch (\Exception $e) {
+                            $this->logger->error('System tool execution failed', [
+                                'tool_id' => $toolId,
+                                'error' => $e->getMessage()
+                            ]);
+
+                            return new JsonResponse([
+                                'success' => false,
+                                'error' => $e->getMessage()
+                            ], 500);
+                        }
+                    }
+                }
             }
+
+            return new JsonResponse(['error' => 'System tool not found'], 404);
         }
 
         // Extract integration ID from tool ID (format: functionName_integrationId)

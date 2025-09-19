@@ -5,7 +5,7 @@
 {% block body %}
 <div class="dashboard-page">
     {% include '_partials/header.html.twig' %}
-    
+
     <div class="dashboard-container">
         <h1 class="dashboard-title">{{ 'integration.add_new'|trans }}</h1>
 
@@ -13,20 +13,20 @@
             <form method="post" id="integrationForm" class="integration-form">
                 <div class="form-section">
                     <h2 class="section-title">{{ 'integration.basic_info'|trans }}</h2>
-                    
+
                     <div class="form-group">
                         <label for="type" class="form-label">{{ 'integration.type'|trans }}</label>
                         <select class="form-control" id="type" name="type" required>
                             <option value="">{{ 'integration.select_type'|trans }}</option>
-                            {% for key, label in types %}
-                                <option value="{{ key }}">{{ label }}</option>
+                            {% for type, details in integrations %}
+                                <option value="{{ type }}">{{ details.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="name" class="form-label">{{ 'integration.name'|trans }}</label>
-                        <input type="text" class="form-control" id="name" name="name" required 
+                        <input type="text" class="form-control" id="name" name="name" required
                                placeholder="{{ 'integration.name_placeholder'|trans }}">
                     </div>
 
@@ -34,140 +34,242 @@
 
                 <div class="form-section" id="credentialsCard" style="display: none;">
                     <h2 class="section-title">{{ 'integration.credentials'|trans }}</h2>
-                    
-                    <div id="jiraCredentials" style="display: none;">
-                        <div class="form-group">
-                            <label for="jira_url" class="form-label">{{ 'integration.jira.url'|trans }}</label>
-                            <input type="url" class="form-control" id="jira_url" name="jira_url" 
-                                   placeholder="https://your-domain.atlassian.net">
-                        </div>
-                        <div class="form-group">
-                            <label for="jira_username" class="form-label">{{ 'integration.jira.username'|trans }}</label>
-                            <input type="email" class="form-control" id="jira_username" name="jira_username" 
-                                   placeholder="your-email@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="jira_api_token" class="form-label">{{ 'integration.jira.api_token'|trans }}</label>
-                            <input type="password" class="form-control" id="jira_api_token" name="jira_api_token">
-                            <div class="form-help">{{ 'integration.jira.api_token_help'|trans|raw }}</div>
-                        </div>
-                    </div>
-
-                    <div id="confluenceCredentials" style="display: none;">
-                        <div class="form-group">
-                            <label for="confluence_url" class="form-label">{{ 'integration.confluence.url'|trans }}</label>
-                            <input type="url" class="form-control" id="confluence_url" name="confluence_url" 
-                                   placeholder="https://your-domain.atlassian.net/wiki">
-                        </div>
-                        <div class="form-group">
-                            <label for="confluence_username" class="form-label">{{ 'integration.confluence.username'|trans }}</label>
-                            <input type="email" class="form-control" id="confluence_username" name="confluence_username" 
-                                   placeholder="your-email@example.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="confluence_api_token" class="form-label">{{ 'integration.confluence.api_token'|trans }}</label>
-                            <input type="password" class="form-control" id="confluence_api_token" name="confluence_api_token">
-                            <div class="form-help">{{ 'integration.confluence.api_token_help'|trans|raw }}</div>
-                        </div>
-                    </div>
-
-                    <div id="sharepointCredentials" style="display: none;">
-                        <div class="alert alert-info">
-                            <h4>{{ 'integration.sharepoint.oauth_info'|trans|default('SharePoint OAuth2 Authentication') }}</h4>
-                            <p>{{ 'integration.sharepoint.oauth_description'|trans|default('SharePoint integration uses OAuth2 authentication. After saving this integration, you will be able to connect your SharePoint account.') }}</p>
-                        </div>
-                        <div class="form-help">{{ 'integration.sharepoint.oauth_help'|trans|default('No manual credentials required. Authentication will be handled via Microsoft login.') }}</div>
+                    <div id="credentialFields">
+                        <!-- Dynamic credential fields will be loaded here -->
                     </div>
                 </div>
 
                 <div class="form-section" id="functionsCard" style="display: none;">
                     <h2 class="section-title">{{ 'integration.available_functions'|trans }}</h2>
-                    
-                    <div id="jiraFunctions" style="display: none;">
-                        {% for function, description in jira_functions %}
-                            <div class="function-checkbox">
-                                <input type="checkbox" id="function_{{ function }}" 
-                                       name="function_{{ function }}" checked>
-                                <label for="function_{{ function }}">
-                                    <strong>{{ function }}</strong>
-                                    <span class="function-description">{{ description }}</span>
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-                    <div id="confluenceFunctions" style="display: none;">
-                        {% for function, description in confluence_functions %}
-                            <div class="function-checkbox">
-                                <input type="checkbox" id="function_{{ function }}" 
-                                       name="function_{{ function }}" checked>
-                                <label for="function_{{ function }}">
-                                    <strong>{{ function }}</strong>
-                                    <span class="function-description">{{ description }}</span>
-                                </label>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-                    <div id="sharepointFunctions" style="display: none;">
-                        {% for function, description in sharepoint_functions %}
-                            <div class="function-checkbox">
-                                <input type="checkbox" id="function_{{ function }}" 
-                                       name="function_{{ function }}" checked>
-                                <label for="function_{{ function }}">
-                                    <strong>{{ function }}</strong>
-                                    <span class="function-description">{{ description }}</span>
-                                </label>
-                            </div>
-                        {% endfor %}
+                    <div id="functionsList">
+                        <!-- Dynamic functions will be loaded here -->
                     </div>
                 </div>
 
-                <div class="form-actions">
-                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
-                        {{ 'action.cancel'|trans }}
-                    </a>
+                <div class="form-section">
                     <button type="submit" class="btn btn-primary">
-                        {{ 'integration.save'|trans }}
+                        {{ 'integration.create'|trans }}
                     </button>
+                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                        {{ 'common.cancel'|trans }}
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-document.getElementById('type').addEventListener('change', function() {
-    const type = this.value;
+<script type="text/javascript">
+// Store integration data from Twig
+const integrationData = {{ integrations | json_encode | raw }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('type');
     const credentialsCard = document.getElementById('credentialsCard');
     const functionsCard = document.getElementById('functionsCard');
-    
-    // Hide all sections first
-    document.getElementById('jiraCredentials').style.display = 'none';
-    document.getElementById('confluenceCredentials').style.display = 'none';
-    document.getElementById('sharepointCredentials').style.display = 'none';
-    document.getElementById('jiraFunctions').style.display = 'none';
-    document.getElementById('confluenceFunctions').style.display = 'none';
-    document.getElementById('sharepointFunctions').style.display = 'none';
-    
-    if (type) {
-        credentialsCard.style.display = 'block';
-        functionsCard.style.display = 'block';
-        
-        if (type === 'jira') {
-            document.getElementById('jiraCredentials').style.display = 'block';
-            document.getElementById('jiraFunctions').style.display = 'block';
-        } else if (type === 'confluence') {
-            document.getElementById('confluenceCredentials').style.display = 'block';
-            document.getElementById('confluenceFunctions').style.display = 'block';
-        } else if (type === 'sharepoint') {
-            document.getElementById('sharepointCredentials').style.display = 'block';
-            document.getElementById('sharepointFunctions').style.display = 'block';
+    const credentialFields = document.getElementById('credentialFields');
+    const functionsList = document.getElementById('functionsList');
+
+    typeSelect.addEventListener('change', function() {
+        const selectedType = this.value;
+
+        // Clear existing content
+        credentialFields.innerHTML = '';
+        functionsList.innerHTML = '';
+
+        if (!selectedType) {
+            credentialsCard.style.display = 'none';
+            functionsCard.style.display = 'none';
+            return;
         }
-    } else {
-        credentialsCard.style.display = 'none';
-        functionsCard.style.display = 'none';
-    }
+
+        const integration = integrationData[selectedType];
+        if (!integration) {
+            console.error('Integration data not found for type:', selectedType);
+            return;
+        }
+
+        // Handle credential fields
+        if (integration.credentialFields && integration.credentialFields.length > 0) {
+            credentialsCard.style.display = 'block';
+
+            integration.credentialFields.forEach(field => {
+                if (field.type === 'oauth') {
+                    // Special handling for OAuth fields
+                    const fieldHtml = `
+                        <div class="form-group">
+                            <div class="oauth-notice">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>${field.description || 'OAuth authentication will be configured after creation'}</span>
+                                <button type="button" class="oauth-button" disabled>
+                                    <i class="fab fa-microsoft"></i> Connect
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    credentialFields.insertAdjacentHTML('beforeend', fieldHtml);
+                } else {
+                    // Regular input fields
+                    const inputType = field.type === 'password' ? 'password' : field.type;
+                    const fieldHtml = `
+                        <div class="form-group">
+                            <label for="${selectedType}_${field.name}" class="form-label">
+                                ${field.label}
+                                ${!field.required ? '<span class="optional">(optional)</span>' : ''}
+                            </label>
+                            <input type="${inputType}"
+                                   class="form-control"
+                                   id="${selectedType}_${field.name}"
+                                   name="${selectedType}_${field.name}"
+                                   ${field.placeholder ? `placeholder="${field.placeholder}"` : ''}
+                                   ${field.required ? 'required' : ''}>
+                            ${field.description ? `<small class="form-text text-muted">${field.description}</small>` : ''}
+                        </div>
+                    `;
+                    credentialFields.insertAdjacentHTML('beforeend', fieldHtml);
+                }
+            });
+        } else {
+            credentialsCard.style.display = 'none';
+        }
+
+        // Handle functions/tools
+        if (integration.tools && integration.tools.length > 0) {
+            functionsCard.style.display = 'block';
+
+            integration.tools.forEach(tool => {
+                const toolHtml = `
+                    <div class="function-checkbox">
+                        <input type="checkbox"
+                               id="function_${tool.name}"
+                               name="function_${tool.name}"
+                               checked>
+                        <label for="function_${tool.name}">
+                            <strong>${tool.name}</strong>
+                            <br>
+                            <small class="text-muted">${tool.description}</small>
+                        </label>
+                    </div>
+                `;
+                functionsList.insertAdjacentHTML('beforeend', toolHtml);
+            });
+        } else {
+            functionsCard.style.display = 'none';
+        }
+    });
 });
 </script>
+
+<style>
+.oauth-notice {
+    background: var(--bg-secondary);
+    padding: var(--space-lg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    transition: var(--transition);
+    margin-bottom: var(--space-md);
+}
+
+.oauth-notice:hover {
+    background: var(--bg-primary);
+    border-color: rgba(255, 107, 53, 0.3);
+}
+
+.oauth-notice i {
+    color: var(--color-primary);
+    font-size: var(--text-lg);
+}
+
+.oauth-notice span {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.4;
+}
+
+.oauth-notice .oauth-button {
+    margin-left: auto;
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.oauth-notice .oauth-button:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+.oauth-notice .oauth-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.function-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+}
+
+.function-checkbox:hover {
+    background: var(--bg-primary);
+    border-color: rgba(255, 107, 53, 0.2);
+}
+
+.function-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.function-checkbox label {
+    flex: 1;
+    cursor: pointer;
+}
+
+.function-checkbox label strong {
+    display: block;
+    font-weight: 600;
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-xs);
+    color: var(--text-primary);
+}
+
+.function-checkbox label small {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.form-text.text-muted {
+    font-size: var(--text-xs);
+    margin-top: var(--space-xs);
+    color: var(--text-muted);
+}
+
+.optional {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    font-weight: normal;
+    margin-left: var(--space-xs);
+}
+</style>
 {% endblock %}
