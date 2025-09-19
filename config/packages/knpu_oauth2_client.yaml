@@ -10,7 +10,7 @@ knpu_oauth2_client:
             type: azure
             client_id: '%env(AZURE_CLIENT_ID)%'
             client_secret: '%env(AZURE_CLIENT_SECRET)%'
-            redirect_route: connect_microsoft_check
+            redirect_route: app_integration_oauth_microsoft_callback
             redirect_params: {}
             tenant: '%env(AZURE_TENANT_ID)%'
             api_version: 'v2.0'

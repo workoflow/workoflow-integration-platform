@@ -30,9 +30,6 @@ class IntegrationConfig
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $workflowUserId = null;
-
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $encryptedCredentials = null;
 
@@ -103,17 +100,6 @@ class IntegrationConfig
     public function setName(string $name): static
     {
         $this->name = $name;
-        return $this;
-    }
-
-    public function getWorkflowUserId(): ?string
-    {
-        return $this->workflowUserId;
-    }
-
-    public function setWorkflowUserId(?string $workflowUserId): static
-    {
-        $this->workflowUserId = $workflowUserId;
         return $this;
     }
 

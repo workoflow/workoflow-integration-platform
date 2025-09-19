@@ -126,6 +126,10 @@ integration:
   setup: Einrichten
   setup_description: Konfigurieren Sie Ihre %name% Integration
   save_configuration: Konfiguration speichern
+  connect_microsoft: Mit Microsoft verbinden
+  oauth_required: Microsoft-Autorisierung ist erforderlich. Klicken Sie unten auf "Mit Microsoft verbinden", um fortzufahren.
+  oauth_reconnect_confirm: Dies ersetzt Ihre bestehende Verbindung. Fortfahren?
+  reconnect_microsoft: Erneut mit Microsoft verbinden
   toggle_error: Einstellung konnte nicht aktualisiert werden
   type: Typ
   status: Status

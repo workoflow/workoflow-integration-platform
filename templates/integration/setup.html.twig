@@ -46,30 +46,78 @@
 
                 <h3>{{ 'integration.credentials'|trans|default('Credentials') }}</h3>
 
+                {% set hasOAuthField = false %}
                 {% for field in credentialFields %}
-                    <div class="form-group">
-                        <label for="{{ field.getName() }}">
-                            {{ field.getLabel() }}
-                            {% if field.isRequired() %}
-                                <span class="required">*</span>
-                            {% endif %}
-                            {% if field.getHint() %}
-                                <span class="field-hint">{{ field.getHint() }}</span>
-                            {% endif %}
-                        </label>
-                        <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
-                               id="{{ field.getName() }}"
-                               name="{{ field.getName() }}"
-                               class="form-control"
-                               {% if field.isRequired() %}required{% endif %}
-                               placeholder="{{ field.getPlaceholder() }}">
-                    </div>
+                    {% if field.getType() == 'oauth' %}
+                        {% set hasOAuthField = true %}
+                        {% if config and config.id %}
+                            {# Show OAuth connection button only after initial save #}
+                            <div class="oauth-section">
+                                <div class="alert alert-info">
+                                    <h4>{{ field.getLabel() }}</h4>
+                                    <p>{{ field.getHint() }}</p>
+                                </div>
+                                {% if config.encryptedCredentials %}
+                                    <div class="oauth-status connected">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
+                                    </div>
+                                    <a href="{{ path('app_integration_oauth_microsoft_start', {configId: config.id}) }}"
+                                       class="btn btn-secondary"
+                                       onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                        <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
+                                    </a>
+                                {% else %}
+                                    <div class="oauth-status disconnected">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span>{{ 'status.not_connected'|trans|default('Not connected') }}</span>
+                                    </div>
+                                    <a href="{{ path('app_integration_oauth_microsoft_start', {configId: config.id}) }}"
+                                       class="btn btn-primary">
+                                        <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            {# Show info message for new configs #}
+                            <div class="alert alert-info">
+                                <h4>{{ field.getLabel() }}</h4>
+                                <p>{{ field.getHint() }}</p>
+                                <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="form-group">
+                            <label for="{{ field.getName() }}">
+                                {{ field.getLabel() }}
+                                {% if field.isRequired() %}
+                                    <span class="required">*</span>
+                                {% endif %}
+                                {% if field.getHint() %}
+                                    <span class="field-hint">{{ field.getHint() }}</span>
+                                {% endif %}
+                            </label>
+                            <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
+                                   id="{{ field.getName() }}"
+                                   name="{{ field.getName() }}"
+                                   class="form-control"
+                                   {% if field.isRequired() %}required{% endif %}
+                                   placeholder="{{ field.getPlaceholder() }}">
+                        </div>
+                    {% endif %}
                 {% endfor %}
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
-                    </button>
+                    {% if hasOAuthField and not config %}
+                        {# For new OAuth integrations, change the button to "Connect with Microsoft" #}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
+                        </button>
+                    {% else %}
+                        <button type="submit" class="btn btn-primary">
+                            {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
+                        </button>
+                    {% endif %}
                     <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
                         {{ 'action.cancel'|trans }}
                     </a>
@@ -231,6 +279,61 @@
 .badge-success {
     background: var(--success-color, #10b981);
     color: white;
+}
+
+.oauth-section {
+    margin: 1.5rem 0;
+}
+
+.oauth-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+.oauth-status.connected {
+    background: var(--success-background, rgba(16, 185, 129, 0.1));
+    color: var(--success-color, #10b981);
+    border: 1px solid var(--success-color, #10b981);
+}
+
+.oauth-status.disconnected {
+    background: var(--warning-background, rgba(251, 191, 36, 0.1));
+    color: var(--warning-color, #fbbf24);
+    border: 1px solid var(--warning-color, #fbbf24);
+}
+
+.oauth-status i {
+    font-size: 1.25rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.alert-info {
+    background: var(--info-background, #1a2332);
+    border: 1px solid var(--info-border, #3b82f6);
+    color: var(--info-text, #93bbfc);
+}
+
+.alert-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--info-text, #93bbfc);
+}
+
+.alert-info p {
+    margin: 0.5rem 0 0 0;
+}
+
+.alert-info p:last-child {
+    margin-bottom: 0;
 }
 </style>
 {% endblock %}

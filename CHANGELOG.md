@@ -4,11 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-09-19 (Latest)
 
+### Changed
+- Improved integration configuration to use organization-based workflow user IDs for better access control
+- Integration configurations no longer store workflow user IDs directly - now properly linked through user organization relationships
+
 ### Fixed
+- Integration status badge now correctly shows "Inactive" (yellow) when integration is disabled, instead of always showing "Connected" (green)
+- Disabled integrations no longer provide tools through the API - all tools are hidden when integration is deactivated
+- Fixed integration toggle to work with individual integration instances, not just integration types
+- SharePoint tools now correctly appear in API responses when filtered by tool type
+- Fixed tool toggle functionality for user integrations - now properly updates existing configurations instead of creating duplicates
+- Tool enable/disable toggles now persist correctly and are properly filtered in API responses
 - Fixed integration configuration creation to properly track the user who created each configuration
 - Fixed workflow user filtering in the API to use the workflow_user_id from user organization relationships
 - Fixed organization members page error by correcting database query associations
 - Removed workflow user ID field from integration setup forms - now automatically uses the organization's assigned workflow user ID
+- Restored SharePoint integration Microsoft authentication functionality
+- Fixed edit and delete buttons to work with multiple integration instances
+
+### Changed
+- SharePoint and OAuth-based integrations now require immediate authentication - clicking save redirects directly to Microsoft login
+- OAuth authentication is now mandatory for OAuth-based integrations - configurations cannot be saved without acquiring access token
+- Improved OAuth cancellation handling - temporary configs are automatically cleaned up if user cancels authorization
 
 ## 2025-09-19
 

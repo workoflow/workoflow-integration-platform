@@ -133,6 +133,10 @@ integration:
   setup: Setup
   setup_description: Configure your %name% integration
   save_configuration: Save Configuration
+  connect_microsoft: Connect with Microsoft
+  oauth_required: Microsoft authorization is required. Click "Connect with Microsoft" below to continue.
+  oauth_reconnect_confirm: This will replace your existing connection. Continue?
+  reconnect_microsoft: Reconnect with Microsoft
   toggle_error: Failed to update setting
   workflow_id: Workoflow ID
   functions: Functions

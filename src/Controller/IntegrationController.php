@@ -197,8 +197,15 @@ class IntegrationController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name', '');
-            // Get workflow_user_id from the user's organization
-            $workflowUserId = $userOrganisation->getWorkflowUserId();
+            // Get workflow_user_id from the user's organization relationship
+            $userOrg = null;
+            foreach ($user->getUserOrganisations() as $userOrganisation) {
+                if ($userOrganisation->getOrganisation() === $organisation) {
+                    $userOrg = $userOrganisation;
+                    break;
+                }
+            }
+            $workflowUserId = $userOrg ? $userOrg->getWorkflowUserId() : null;
 
             // Validate name is provided and unique
             if (empty($name)) {
@@ -218,15 +225,54 @@ class IntegrationController extends AbstractController
                 } else {
                     // Get credentials from form
                     $credentials = [];
+                    $hasOAuthField = false;
                     foreach ($integration->getCredentialFields() as $field) {
+                        if ($field->getType() === 'oauth') {
+                            $hasOAuthField = true;
+                            continue; // Skip OAuth fields, they'll be handled separately
+                        }
                         $value = $request->request->get($field->getName());
                         if ($value) {
                             $credentials[$field->getName()] = $value;
                         }
                     }
 
-                    // Validate credentials
-                    if (!empty($credentials) && $integration->validateCredentials($credentials)) {
+                    // For OAuth integrations, start OAuth flow immediately
+                    if ($hasOAuthField && !$config) {
+                        // Create temporary config to get ID for OAuth flow
+                        $tempConfig = new IntegrationConfig();
+                        $tempConfig->setOrganisation($organisation);
+                        $tempConfig->setIntegrationType($type);
+                        $tempConfig->setUser($user);
+                        $tempConfig->setName($name);
+                        $tempConfig->setActive(false); // Not active until OAuth completes
+
+                        $this->entityManager->persist($tempConfig);
+                        $this->entityManager->flush();
+
+                        // Store in session that we're in OAuth flow
+                        $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
+
+                        // Redirect to OAuth authorization
+                        return $this->redirectToRoute('app_integration_oauth_microsoft_start', [
+                            'configId' => $tempConfig->getId()
+                        ]);
+                    }
+
+                    // For non-OAuth integrations or editing existing OAuth configs
+                    $shouldSave = false;
+                    if ($hasOAuthField && $config && $config->hasCredentials()) {
+                        // Existing OAuth config with credentials can be updated
+                        $shouldSave = true;
+                    } elseif (!$hasOAuthField && !empty($credentials) && $integration->validateCredentials($credentials)) {
+                        // Non-OAuth with valid credentials
+                        $shouldSave = true;
+                    } elseif (!$integration->requiresCredentials()) {
+                        // System integrations without credentials
+                        $shouldSave = true;
+                    }
+
+                    if ($shouldSave) {
                         // Create or update config
                         if (!$config) {
                             $config = new IntegrationConfig();
@@ -236,7 +282,6 @@ class IntegrationController extends AbstractController
                         }
 
                         $config->setName($name);
-                        $config->setWorkflowUserId($workflowUserId);
                         $config->setEncryptedCredentials(
                             $this->encryptionService->encrypt(json_encode($credentials))
                         );
@@ -285,15 +330,15 @@ class IntegrationController extends AbstractController
         $enabled = $request->request->get('enabled') === 'true';
         $instanceId = $request->request->get('instance');
 
-        // Get specific instance or system config
-        if ($instanceId) {
-            $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-            if (!$config || $config->getOrganisation() !== $organisation) {
-                return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
-            }
-        } else {
-            // For system tools without instances
-            $config = $this->integrationConfigRepository->getOrCreate($organisation, $type, null, ucfirst($type), $user);
+        // Validate instanceId is provided and valid
+        if (!$instanceId || $instanceId === 'null' || $instanceId === '') {
+            return $this->json(['error' => 'Instance ID is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Get specific instance
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
+        if (!$config || $config->getOrganisation() !== $organisation) {
+            return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
         }
 
         // Update tool state
@@ -327,9 +372,24 @@ class IntegrationController extends AbstractController
         }
 
         $active = $request->request->get('active') === 'true';
+        $instanceId = $request->request->get('instance');
 
-        // Get or create config
-        $config = $this->integrationConfigRepository->getOrCreate($organisation, $type);
+        // If instance ID is provided, find the specific integration instance
+        if ($instanceId) {
+            $config = $this->integrationConfigRepository->findOneBy([
+                'id' => $instanceId,
+                'organisation' => $organisation,
+                'integrationType' => $type
+            ]);
+
+            if (!$config) {
+                return $this->json(['error' => 'Integration instance not found'], Response::HTTP_NOT_FOUND);
+            }
+        } else {
+            // Fallback to the old behavior for backward compatibility
+            $config = $this->integrationConfigRepository->getOrCreate($organisation, $type);
+        }
+
         $config->setActive($active);
 
         $this->entityManager->persist($config);
@@ -338,14 +398,19 @@ class IntegrationController extends AbstractController
         $this->auditLogService->log(
             $active ? 'integration.activated' : 'integration.deactivated',
             $this->getUser(),
-            ['type' => $type]
+            [
+                'type' => $type,
+                'instance' => $config->getId(),
+                'name' => $config->getName()
+            ]
         );
 
         return $this->json(['success' => true]);
     }
 
-    #[Route('/{type}/edit', name: 'app_integration_edit', methods: ['GET', 'POST'])]
-    public function edit(string $type, Request $request): Response
+
+    #[Route('/delete/{instanceId}', name: 'app_integration_delete', methods: ['POST'])]
+    public function delete(int $instanceId, Request $request): Response
     {
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
@@ -355,107 +420,21 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_organisation_create');
         }
 
-        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
-        if (!$config) {
-            $this->addFlash('error', 'Integration not found');
-            return $this->redirectToRoute('app_integrations');
-        }
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
 
-        $integration = $this->integrationRegistry->get($type);
-        if (!$integration) {
-            $this->addFlash('error', 'Integration type not found');
-            return $this->redirectToRoute('app_integrations');
-        }
-
-        if ($request->isMethod('POST')) {
-            // Update name
-            $name = $request->request->get('name');
-            if ($name) {
-                $config->setName($name);
-            }
-
-            // Update credentials if provided
-            if ($integration->requiresCredentials()) {
-                $credentials = [];
-                foreach ($request->request->all() as $key => $value) {
-                    if (strpos($key, $type . '_') === 0 && !empty($value)) {
-                        $fieldName = str_replace($type . '_', '', $key);
-                        $credentials[$fieldName] = $value;
-                    }
-                }
-
-                if (!empty($credentials)) {
-                    $encryptedCredentials = $this->encryptionService->encrypt($credentials);
-                    $config->setEncryptedCredentials($encryptedCredentials);
-                }
-            }
-
-            // Update enabled tools
-            foreach ($integration->getTools() as $tool) {
-                $toolEnabled = $request->request->get('function_' . $tool->getName()) === 'on';
-                if ($toolEnabled) {
-                    $config->enableTool($tool->getName());
-                } else {
-                    $config->disableTool($tool->getName());
-                }
-            }
-
-            $this->entityManager->persist($config);
-            $this->entityManager->flush();
-
-            $this->auditLogService->log(
-                'integration.updated',
-                $this->getUser(),
-                ['type' => $type, 'name' => $name]
-            );
-
-            $this->addFlash('success', 'Integration updated successfully');
-            return $this->redirectToRoute('app_integrations');
-        }
-
-        // Prepare data for template
-        $integrationData = [
-            'type' => $type,
-            'name' => $integration->getName(),
-            'instanceName' => $config->getName(),
-            'tools' => array_map(fn($tool) => [
-                'name' => $tool->getName(),
-                'description' => $tool->getDescription(),
-                'enabled' => !$config->isToolDisabled($tool->getName())
-            ], $integration->getTools()),
-            'credentialFields' => $integration->requiresCredentials() ? $integration->getCredentialFields() : []
-        ];
-
-        return $this->render('integration/edit.html.twig', [
-            'integration' => $integrationData,
-            'config' => $config
-        ]);
-    }
-
-    #[Route('/{type}/delete', name: 'app_integration_delete', methods: ['POST'])]
-    public function delete(string $type, Request $request): Response
-    {
-        $user = $this->getUser();
-        $sessionOrgId = $request->getSession()->get('current_organisation_id');
-        $organisation = $user->getCurrentOrganisation($sessionOrgId);
-
-        if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
-        }
-
-        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
-
-        if ($config) {
+        if ($config && $config->getOrganisation() === $organisation) {
             $this->auditLogService->log(
                 'integration.deleted',
                 $this->getUser(),
-                ['type' => $type]
+                ['type' => $config->getIntegrationType(), 'name' => $config->getName()]
             );
 
             $this->entityManager->remove($config);
             $this->entityManager->flush();
 
             $this->addFlash('success', 'Integration removed successfully');
+        } else {
+            $this->addFlash('error', 'Integration not found');
         }
 
         return $this->redirectToRoute('app_integrations');

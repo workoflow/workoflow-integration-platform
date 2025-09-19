@@ -45,8 +45,7 @@ class IntegrationConfigRepository extends ServiceEntityRepository
 
         if ($workflowUserId !== null) {
             // Filter by workflow_user_id from UserOrganisation or configs without a user (system configs)
-            // Also keep configs with explicit workflowUserId for backward compatibility
-            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.workflowUserId = :workflowUserId OR (ic.workflowUserId IS NULL AND ic.user IS NULL)')
+            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
                 ->setParameter('workflowUserId', $workflowUserId);
         }
 
@@ -65,6 +64,8 @@ class IntegrationConfigRepository extends ServiceEntityRepository
         ?string $name = null
     ): ?IntegrationConfig {
         $qb = $this->createQueryBuilder('ic')
+            ->leftJoin('ic.user', 'u')
+            ->leftJoin('u.userOrganisations', 'uo')
             ->andWhere('ic.organisation = :organisation')
             ->andWhere('ic.integrationType = :type')
             ->setParameter('organisation', $organisation)
@@ -76,10 +77,10 @@ class IntegrationConfigRepository extends ServiceEntityRepository
         }
 
         if ($workflowUserId !== null) {
-            $qb->andWhere('ic.workflowUserId = :workflowUserId')
+            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
                 ->setParameter('workflowUserId', $workflowUserId);
         } else {
-            $qb->andWhere('ic.workflowUserId IS NULL');
+            $qb->andWhere('ic.user IS NULL');
         }
 
         return $qb->setMaxResults(1)
@@ -103,7 +104,6 @@ class IntegrationConfigRepository extends ServiceEntityRepository
             $config = new IntegrationConfig();
             $config->setOrganisation($organisation);
             $config->setIntegrationType($integrationType);
-            $config->setWorkflowUserId($workflowUserId);
             $config->setUser($user);
 
             // Generate default name if not provided
