@@ -20,6 +20,10 @@ class IntegrationConfig
     #[ORM\JoinColumn(nullable: false)]
     private ?Organisation $organisation = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $user = null;
+
     #[ORM\Column(length: 100)]
     private ?string $integrationType = null;
 
@@ -66,6 +70,17 @@ class IntegrationConfig
     public function setOrganisation(?Organisation $organisation): static
     {
         $this->organisation = $organisation;
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
         return $this;
     }
 

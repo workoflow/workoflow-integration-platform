@@ -38,11 +38,15 @@ class IntegrationConfigRepository extends ServiceEntityRepository
     public function findByOrganisationAndWorkflowUser(Organisation $organisation, ?string $workflowUserId): array
     {
         $qb = $this->createQueryBuilder('ic')
+            ->leftJoin('ic.user', 'u')
+            ->leftJoin('u.userOrganisations', 'uo')
             ->andWhere('ic.organisation = :organisation')
             ->setParameter('organisation', $organisation);
 
         if ($workflowUserId !== null) {
-            $qb->andWhere('ic.workflowUserId = :workflowUserId OR ic.workflowUserId IS NULL')
+            // Filter by workflow_user_id from UserOrganisation or configs without a user (system configs)
+            // Also keep configs with explicit workflowUserId for backward compatibility
+            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.workflowUserId = :workflowUserId OR (ic.workflowUserId IS NULL AND ic.user IS NULL)')
                 ->setParameter('workflowUserId', $workflowUserId);
         }
 
@@ -90,7 +94,8 @@ class IntegrationConfigRepository extends ServiceEntityRepository
         Organisation $organisation,
         string $integrationType,
         ?string $workflowUserId = null,
-        ?string $name = null
+        ?string $name = null,
+        ?\App\Entity\User $user = null
     ): IntegrationConfig {
         $config = $this->findOneByOrganisationAndType($organisation, $integrationType, $workflowUserId, $name);
 
@@ -99,6 +104,7 @@ class IntegrationConfigRepository extends ServiceEntityRepository
             $config->setOrganisation($organisation);
             $config->setIntegrationType($integrationType);
             $config->setWorkflowUserId($workflowUserId);
+            $config->setUser($user);
 
             // Generate default name if not provided
             if ($name === null) {

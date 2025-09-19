@@ -231,6 +231,7 @@ class IntegrationController extends AbstractController
                             $config = new IntegrationConfig();
                             $config->setOrganisation($organisation);
                             $config->setIntegrationType($type);
+                            $config->setUser($user);
                         }
 
                         $config->setName($name);
@@ -291,7 +292,7 @@ class IntegrationController extends AbstractController
             }
         } else {
             // For system tools without instances
-            $config = $this->integrationConfigRepository->getOrCreate($organisation, $type, null, ucfirst($type));
+            $config = $this->integrationConfigRepository->getOrCreate($organisation, $type, null, ucfirst($type), $user);
         }
 
         // Update tool state

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-09-19 (Latest)
 
+### Fixed
+- Fixed integration configuration creation to properly track the user who created each configuration
+- Fixed workflow user filtering in the API to use the workflow_user_id from user organization relationships
+
+## 2025-09-19
+
 ### Changed
 - Reduced button sizes by 50% on the integrations page for a more compact interface
 - System tools now grouped into a single full-width card for better organization

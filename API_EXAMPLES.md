@@ -7,93 +7,162 @@ All requests require Basic Authentication:
 
 ## Base URL
 ```
-https://your-domain.com/api/integration/{orgUuid}
+https://your-domain.com/api/integrations/{orgUuid}
 ```
 
 Replace `{orgUuid}` with your organization's UUID (visible in Organization Settings).
 
 ## 1. List Available Tools
 
-**Endpoint:** `GET /api/integration/{orgUuid}/tools?id={workflow-user-id}`
+**Endpoint:** `GET /api/integrations/{orgUuid}/?workflow_user_id={workflow-user-id}`
+
+### Get All Tools (Default)
 
 **Example Request:**
 ```bash
 curl -X GET \
-  'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/tools?id=user123' \
-  -H 'Authorization: Basic xxxx==' \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
   -H 'Accept: application/json'
 ```
+
+### Filter by Integration Type
+
+**Get only Jira tools:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=jira' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Get only Confluence tools:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=confluence' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Get all system tools:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=system' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Get specific system integration tools (e.g., file sharing):**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=system.share_file' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Note:** When filtering by `tool_type`, the API returns only tools from that specific integration. If you get an empty array:
+- The integration might be disabled
+- Individual tools within the integration might be disabled
+- The workflow_user_id might not have access to that integration
+- The tool_type might not match any configured integration (check exact spelling)
 
 **Example Response:**
 ```json
 {
   "tools": [
     {
-      "id": "jira_search_1",
-      "name": "jira_search",
-      "description": "Search for Jira issues using JQL",
-      "integration_id": 1,
-      "integration_name": "My Jira Workspace",
-      "integration_type": "jira",
-      "parameters": [
-        {
-          "name": "jql",
-          "type": "string",
-          "required": true,
-          "description": "JQL query string"
-        },
-        {
-          "name": "maxResults",
-          "type": "integer",
-          "required": false,
-          "default": 50,
-          "description": "Maximum number of results"
+      "type": "function",
+      "function": {
+        "name": "jira_search_123",
+        "description": "Search for Jira issues using JQL (My Jira Workspace)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "jql": {
+              "type": "string",
+              "description": "JQL query string"
+            },
+            "maxResults": {
+              "type": "integer",
+              "description": "Maximum number of results",
+              "default": 50
+            }
+          },
+          "required": ["jql"]
         }
-      ]
+      }
     },
     {
-      "id": "confluence_search_2",
-      "name": "confluence_search",
-      "description": "Search Confluence pages using CQL",
-      "integration_id": 2,
-      "integration_name": "My Confluence Space",
-      "integration_type": "confluence",
-      "parameters": [
-        {
-          "name": "query",
-          "type": "string",
-          "required": true,
-          "description": "CQL query string"
-        },
-        {
-          "name": "limit",
-          "type": "integer",
-          "required": false,
-          "default": 25,
-          "description": "Maximum number of results"
+      "type": "function",
+      "function": {
+        "name": "confluence_search_456",
+        "description": "Search Confluence pages using CQL (My Confluence Space)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "CQL query string"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of results",
+              "default": 25
+            }
+          },
+          "required": ["query"]
         }
-      ]
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "share_file",
+        "description": "Share a file and get a download URL",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": "string",
+              "description": "Name of the file to share"
+            },
+            "content": {
+              "type": "string",
+              "description": "Base64 encoded file content"
+            },
+            "mime_type": {
+              "type": "string",
+              "description": "MIME type of the file"
+            },
+            "expires_in": {
+              "type": "integer",
+              "description": "Expiration time in seconds (max 86400)",
+              "default": 3600
+            }
+          },
+          "required": ["filename", "content"]
+        }
+      }
     }
-  ],
-  "count": 2
+  ]
 }
 ```
 
 ## 2. Execute a Tool
 
-**Endpoint:** `POST /api/integration/{orgUuid}/execute?id={workflow-user-id}`
+**Endpoint:** `POST /api/integrations/{orgUuid}/execute?workflow_user_id={workflow-user-id}`
 
 ### Example 1: Jira Search
 
 **Request:**
 ```bash
 curl -X POST \
-  'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic xxxxx==' \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute?workflow_user_id=user123' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{
-    "tool_id": "jira_search_1",
+    "tool": "jira_search_123",
     "parameters": {
       "jql": "project = PROJ AND status = Open",
       "maxResults": 10
@@ -124,12 +193,12 @@ curl -X POST \
 **Request:**
 ```bash
 curl -X POST \
-  'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic xxxx==' \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute?workflow_user_id=user123' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{
-    "tool_id": "confluence_search_2",
+    "tool": "confluence_search_456",
     "parameters": {
       "query": "type=page AND text ~ \"documentation\"",
       "limit": 5
@@ -137,17 +206,48 @@ curl -X POST \
   }'
 ```
 
-### Example 3: Get Jira Issue Details
+### Example 3: Share File (System Tool)
 
 **Request:**
 ```bash
 curl -X POST \
-  'http://localhost:3979/api/integration/550e8400-e29b-41d4-a716-446655440000/execute?id=user123' \
-  -H 'Authorization: Basic xxxx==' \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute?workflow_user_id=user123' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d '{
-    "tool_id": "jira_get_issue_1",
+    "tool": "share_file",
+    "parameters": {
+      "filename": "report.pdf",
+      "content": "base64_encoded_file_content_here",
+      "mime_type": "application/pdf",
+      "expires_in": 7200
+    }
+  }'
+```
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "url": "https://your-domain.com/files/download/abc123def456",
+    "expires_at": "2024-07-03T14:30:00Z"
+  }
+}
+```
+
+### Example 4: Get Jira Issue Details
+
+**Request:**
+```bash
+curl -X POST \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute?workflow_user_id=user123' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+    "tool": "jira_get_issue_123",
     "parameters": {
       "issueKey": "PROJ-123"
     }
@@ -202,7 +302,7 @@ HTTP Status: 500
 In n8n, you can use the HTTP Request node with these settings:
 
 1. **Method**: GET or POST
-2. **URL**: `https://your-domain.com/api/integration/{orgUuid}/tools?id={workflow-user-id}`
+2. **URL**: `https://your-domain.com/api/integrations/{orgUuid}/?workflow_user_id={workflow-user-id}`
 3. **Authentication**: Basic Auth
    - Username: `workoflow`
    - Password: `workoflow`
