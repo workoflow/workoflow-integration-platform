@@ -44,19 +44,6 @@
                            placeholder="{{ 'integration.instance_name_placeholder'|trans|default('e.g., Production ' ~ integration.getName()) }}">
                 </div>
 
-                <div class="form-group">
-                    <label for="workflow_user_id">
-                        {{ 'integration.workflow_user_id'|trans|default('Workflow User ID') }}
-                        <span class="field-hint">{{ 'integration.workflow_user_id_hint'|trans|default('Optional: Filter tools for specific workflow users') }}</span>
-                    </label>
-                    <input type="text"
-                           id="workflow_user_id"
-                           name="workflow_user_id"
-                           class="form-control"
-                           value="{{ config ? config.workflowUserId : '' }}"
-                           placeholder="{{ 'integration.workflow_user_id_placeholder'|trans|default('e.g., user-123') }}">
-                </div>
-
                 <h3>{{ 'integration.credentials'|trans|default('Credentials') }}</h3>
 
                 {% for field in credentialFields %}

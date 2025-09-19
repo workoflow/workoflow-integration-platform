@@ -197,7 +197,8 @@ class IntegrationController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name', '');
-            $workflowUserId = $request->request->get('workflow_user_id');
+            // Get workflow_user_id from the user's organization
+            $workflowUserId = $userOrganisation->getWorkflowUserId();
 
             // Validate name is provided and unique
             if (empty($name)) {

@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Fixed integration configuration creation to properly track the user who created each configuration
 - Fixed workflow user filtering in the API to use the workflow_user_id from user organization relationships
 - Fixed organization members page error by correcting database query associations
+- Removed workflow user ID field from integration setup forms - now automatically uses the organization's assigned workflow user ID
 
 ## 2025-09-19
 
