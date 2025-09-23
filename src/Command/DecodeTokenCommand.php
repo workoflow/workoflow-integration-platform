@@ -2,7 +2,7 @@
 
 namespace App\Command;
 
-use App\Repository\IntegrationRepository;
+use App\Repository\IntegrationConfigRepository;
 use App\Service\EncryptionService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,7 +18,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class DecodeTokenCommand extends Command
 {
     public function __construct(
-        private IntegrationRepository $integrationRepository,
+        private IntegrationConfigRepository $integrationConfigRepository,
         private EncryptionService $encryptionService
     ) {
         parent::__construct();
@@ -27,22 +27,32 @@ class DecodeTokenCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('id', InputArgument::REQUIRED, 'Integration ID');
+            ->addArgument('id', InputArgument::REQUIRED, 'Integration Config ID');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $integrationId = $input->getArgument('id');
+        $configId = $input->getArgument('id');
 
-        $integration = $this->integrationRepository->find($integrationId);
+        $config = $this->integrationConfigRepository->find($configId);
 
-        if (!$integration || $integration->getType() !== 'sharepoint') {
-            $io->error('SharePoint integration not found');
+        if (!$config || $config->getIntegrationType() !== 'sharepoint') {
+            $io->error('SharePoint integration config not found');
             return Command::FAILURE;
         }
 
-        $credentials = json_decode($this->encryptionService->decrypt($integration->getEncryptedCredentials()), true);
+        if (!$config->getEncryptedCredentials()) {
+            $io->error('No credentials stored for this integration');
+            return Command::FAILURE;
+        }
+
+        $credentials = json_decode($this->encryptionService->decrypt($config->getEncryptedCredentials()), true);
+
+        if (!isset($credentials['access_token'])) {
+            $io->error('No access token found in credentials');
+            return Command::FAILURE;
+        }
 
         $io->title('SharePoint Token Analysis');
         

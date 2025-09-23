@@ -2,7 +2,7 @@
 
 namespace App\Command;
 
-use App\Repository\IntegrationRepository;
+use App\Repository\IntegrationConfigRepository;
 use App\Service\EncryptionService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -13,12 +13,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:integration:get',
-    description: 'Get integration details by ID',
+    description: 'Get integration config details by ID',
 )]
 class GetIntegrationCommand extends Command
 {
     public function __construct(
-        private IntegrationRepository $integrationRepository,
+        private IntegrationConfigRepository $integrationConfigRepository,
         private EncryptionService $encryptionService
     ) {
         parent::__construct();
@@ -27,47 +27,47 @@ class GetIntegrationCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('id', InputArgument::REQUIRED, 'Integration ID');
+            ->addArgument('id', InputArgument::REQUIRED, 'Integration Config ID');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $integrationId = $input->getArgument('id');
+        $configId = $input->getArgument('id');
 
-        $integration = $this->integrationRepository->find($integrationId);
+        $config = $this->integrationConfigRepository->find($configId);
 
-        if (!$integration) {
-            $io->error(sprintf('Integration with ID %s not found', $integrationId));
+        if (!$config) {
+            $io->error(sprintf('Integration config with ID %s not found', $configId));
             return Command::FAILURE;
         }
 
-        $io->title(sprintf('Integration #%d Details', $integration->getId()));
+        $io->title(sprintf('Integration Config #%d Details', $config->getId()));
 
         $io->table(['Field', 'Value'], [
-            ['ID', $integration->getId()],
-            ['Name', $integration->getName()],
-            ['Type', $integration->getType()],
-            ['Active', $integration->isActive() ? 'Yes' : 'No'],
-            ['User', $integration->getUser()->getEmail()],
-            ['Organisation', $integration->getOrganisation() ? $integration->getOrganisation()->getName() : 'Not set'],
-            ['Organisation UUID', $integration->getOrganisation() ? $integration->getOrganisation()->getUuid() : 'Not set'],
-            ['Created At', $integration->getCreatedAt()->format('Y-m-d H:i:s')],
-            ['Updated At', $integration->getUpdatedAt()->format('Y-m-d H:i:s')],
-            ['Last Accessed', $integration->getLastAccessedAt() ? $integration->getLastAccessedAt()->format('Y-m-d H:i:s') : 'Never'],
+            ['ID', $config->getId()],
+            ['Name', $config->getName()],
+            ['Type', $config->getIntegrationType()],
+            ['Active', $config->isActive() ? 'Yes' : 'No'],
+            ['User', $config->getUser() ? $config->getUser()->getEmail() : 'System/Shared'],
+            ['Organisation', $config->getOrganisation() ? $config->getOrganisation()->getName() : 'Not set'],
+            ['Organisation UUID', $config->getOrganisation() ? $config->getOrganisation()->getUuid() : 'Not set'],
+            ['Created At', $config->getCreatedAt() ? $config->getCreatedAt()->format('Y-m-d H:i:s') : 'Not set'],
+            ['Updated At', $config->getUpdatedAt() ? $config->getUpdatedAt()->format('Y-m-d H:i:s') : 'Not set'],
+            ['Last Accessed', $config->getLastAccessedAt() ? $config->getLastAccessedAt()->format('Y-m-d H:i:s') : 'Never'],
         ]);
 
         // Show credentials status
         $io->section('Credentials Status');
-        
-        $encryptedCreds = $integration->getEncryptedCredentials();
+
+        $encryptedCreds = $config->getEncryptedCredentials();
         if (!$encryptedCreds) {
             $io->warning('No credentials stored');
         } else {
             try {
                 $credentials = json_decode($this->encryptionService->decrypt($encryptedCreds), true);
-                
-                if ($integration->getType() === 'sharepoint') {
+
+                if ($config->getIntegrationType() === 'sharepoint') {
                     $io->table(['Credential Field', 'Status'], [
                         ['Access Token', isset($credentials['access_token']) ? 'Present' : 'Missing'],
                         ['Refresh Token', isset($credentials['refresh_token']) ? 'Present' : 'Missing'],
@@ -83,7 +83,7 @@ class GetIntegrationCommand extends Command
                         $tokenPreview = substr($credentials['access_token'], 0, 20) . '...';
                         $io->text('Access Token Preview: ' . $tokenPreview);
                     }
-                } elseif ($integration->getType() === 'jira' || $integration->getType() === 'confluence') {
+                } elseif ($config->getIntegrationType() === 'jira' || $config->getIntegrationType() === 'confluence') {
                     $io->table(['Credential Field', 'Value'], [
                         ['URL', $credentials['url'] ?? 'Not set'],
                         ['Username', $credentials['username'] ?? 'Not set'],
@@ -95,46 +95,41 @@ class GetIntegrationCommand extends Command
             }
         }
 
-        // Show functions
-        $io->section('Functions');
-        $functions = $integration->getFunctions();
-        
-        if ($functions->isEmpty()) {
-            $io->warning('No functions configured');
+        // Show disabled tools
+        $io->section('Tools Status');
+        $disabledTools = $config->getDisabledTools();
+
+        if (empty($disabledTools)) {
+            $io->success('All tools are enabled');
         } else {
-            $functionData = [];
-            foreach ($functions as $function) {
-                $functionData[] = [
-                    $function->getFunctionName(),
-                    $function->isActive() ? 'Active' : 'Inactive',
-                    substr($function->getDescription(), 0, 50) . '...'
-                ];
+            $io->warning('Disabled tools:');
+            foreach ($disabledTools as $tool) {
+                $io->text('  - ' . $tool);
             }
-            $io->table(['Function Name', 'Status', 'Description'], $functionData);
         }
 
         // Show API usage example
         $io->section('API Usage Example');
 
-        $orgUuid = $integration->getOrganisation() ? $integration->getOrganisation()->getUuid() : 'YOUR_ORG_UUID';
+        $orgUuid = $config->getOrganisation() ? $config->getOrganisation()->getUuid() : 'YOUR_ORG_UUID';
 
         $io->text('List tools:');
         $io->text(sprintf(
-            'curl -X GET "http://localhost:3979/api/integration/%s/tools?id=YOUR_WORKFLOW_USER_ID" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw=="',
+            'curl -X GET "http://localhost:3979/api/integrations/%s?workflow_user_id=YOUR_WORKFLOW_USER_ID" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw=="',
             $orgUuid
         ));
 
-        if ($integration->getType() === 'sharepoint') {
+        if ($config->getIntegrationType() === 'sharepoint') {
             $io->text("\nExecute SharePoint search:");
             $io->text(sprintf(
-                'curl -X POST "http://localhost:3979/api/integration/%s/execute?id=YOUR_WORKFLOW_USER_ID" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==" -H "Content-Type: application/json" -d \'{"tool_id": "sharepoint_search_documents_%d", "parameters": {"query": "test", "limit": 10}}\'',
+                'curl -X POST "http://localhost:3979/api/integrations/%s/execute" -H "Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==" -H "Content-Type: application/json" -d \'{"tool_id": "sharepoint_search_documents_%d", "workflow_user_id": "YOUR_WORKFLOW_USER_ID", "parameters": {"query": "test", "limit": 10}}\'',
                 $orgUuid,
-                $integration->getId()
+                $config->getId()
             ));
-            
+
             if (!$encryptedCreds || !isset($credentials['access_token'])) {
                 $io->warning('SharePoint integration needs to be connected via OAuth2:');
-                $io->text(sprintf('http://localhost:3979/integrations/sharepoint/auth/%d', $integration->getId()));
+                $io->text(sprintf('http://localhost:3979/integrations/sharepoint/auth/%d', $config->getId()));
             }
         }
 

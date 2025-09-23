@@ -60,15 +60,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
-    #[ORM\OneToMany(targetEntity: Integration::class, mappedBy: 'user', cascade: ['remove'])]
-    private Collection $integrations;
+
+    #[ORM\OneToMany(targetEntity: IntegrationConfig::class, mappedBy: 'user')]
+    private Collection $integrationConfigs;
 
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'user')]
     private Collection $auditLogs;
 
     public function __construct()
     {
-        $this->integrations = new ArrayCollection();
+        $this->integrationConfigs = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
         $this->userOrganisations = new ArrayCollection();
         $this->organisations = new ArrayCollection();
@@ -344,25 +345,26 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->updatedAt = new \DateTime();
     }
 
-    public function getIntegrations(): Collection
+
+    public function getIntegrationConfigs(): Collection
     {
-        return $this->integrations;
+        return $this->integrationConfigs;
     }
 
-    public function addIntegration(Integration $integration): static
+    public function addIntegrationConfig(IntegrationConfig $integrationConfig): static
     {
-        if (!$this->integrations->contains($integration)) {
-            $this->integrations->add($integration);
-            $integration->setUser($this);
+        if (!$this->integrationConfigs->contains($integrationConfig)) {
+            $this->integrationConfigs->add($integrationConfig);
+            $integrationConfig->setUser($this);
         }
         return $this;
     }
 
-    public function removeIntegration(Integration $integration): static
+    public function removeIntegrationConfig(IntegrationConfig $integrationConfig): static
     {
-        if ($this->integrations->removeElement($integration)) {
-            if ($integration->getUser() === $this) {
-                $integration->setUser(null);
+        if ($this->integrationConfigs->removeElement($integrationConfig)) {
+            if ($integrationConfig->getUser() === $this) {
+                $integrationConfig->setUser(null);
             }
         }
         return $this;

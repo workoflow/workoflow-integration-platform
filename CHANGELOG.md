@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-09-19 (Latest)
+## 2025-09-23 (Latest)
+
+### Fixed
+- Removed deprecated Integration entity system and migrated fully to IntegrationConfig
+- Fixed SharePoint authentication by properly using the new IntegrationConfig system
+- Resolved database relationship errors preventing user authentication
+
+### Changed
+- Consolidated integration management to use single IntegrationConfig system instead of dual Integration/IntegrationConfig
+- Updated all commands and controllers to use the new IntegrationConfig repository
+
+## 2025-09-19
 
 ### Changed
 - Improved integration configuration to use organization-based workflow user IDs for better access control

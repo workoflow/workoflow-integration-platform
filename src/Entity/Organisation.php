@@ -42,15 +42,16 @@ class Organisation
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'organisation')]
     private Collection $auditLogs;
 
-    #[ORM\OneToMany(targetEntity: Integration::class, mappedBy: 'organisation')]
-    private Collection $integrations;
+    #[ORM\OneToMany(targetEntity: IntegrationConfig::class, mappedBy: 'organisation')]
+    private Collection $integrationConfigs;
+
 
     public function __construct()
     {
         $this->userOrganisations = new ArrayCollection();
         $this->users = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
-        $this->integrations = new ArrayCollection();
+        $this->integrationConfigs = new ArrayCollection();
         $this->uuid = Uuid::v4()->toRfc4122();
     }
 
@@ -185,25 +186,26 @@ class Organisation
         return $this->auditLogs;
     }
 
-    public function getIntegrations(): Collection
+
+    public function getIntegrationConfigs(): Collection
     {
-        return $this->integrations;
+        return $this->integrationConfigs;
     }
 
-    public function addIntegration(Integration $integration): static
+    public function addIntegrationConfig(IntegrationConfig $integrationConfig): static
     {
-        if (!$this->integrations->contains($integration)) {
-            $this->integrations->add($integration);
-            $integration->setOrganisation($this);
+        if (!$this->integrationConfigs->contains($integrationConfig)) {
+            $this->integrationConfigs->add($integrationConfig);
+            $integrationConfig->setOrganisation($this);
         }
         return $this;
     }
 
-    public function removeIntegration(Integration $integration): static
+    public function removeIntegrationConfig(IntegrationConfig $integrationConfig): static
     {
-        if ($this->integrations->removeElement($integration)) {
-            if ($integration->getOrganisation() === $this) {
-                $integration->setOrganisation(null);
+        if ($this->integrationConfigs->removeElement($integrationConfig)) {
+            if ($integrationConfig->getOrganisation() === $this) {
+                $integrationConfig->setOrganisation(null);
             }
         }
         return $this;

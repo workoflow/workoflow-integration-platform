@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Organisation;
-use App\Repository\IntegrationRepository;
+use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -17,7 +17,7 @@ class DashboardController extends AbstractController
 {
     #[Route('/dashboard', name: 'app_dashboard')]
     #[IsGranted('ROLE_USER')]
-    public function index(Request $request, IntegrationRepository $integrationRepository): Response
+    public function index(Request $request, IntegrationConfigRepository $integrationConfigRepository): Response
     {
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
@@ -37,7 +37,9 @@ class DashboardController extends AbstractController
             }
         }
 
-        $integrations = $integrationRepository->findByUser($user, $organisation);
+        // Get workflow user ID if available
+        $workflowUserId = $userOrganisation ? $userOrganisation->getWorkflowUserId() : null;
+        $integrations = $integrationConfigRepository->findByOrganisationAndWorkflowUser($organisation, $workflowUserId);
 
         return $this->render('dashboard/index.html.twig', [
             'user' => $user,
