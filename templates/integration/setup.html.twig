@@ -94,7 +94,7 @@
                                     <span class="required">*</span>
                                 {% endif %}
                                 {% if field.getHint() %}
-                                    <span class="field-hint">{{ field.getHint() }}</span>
+                                    <span class="field-hint">{{ field.getHint()|raw }}</span>
                                 {% endif %}
                             </label>
                             <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
@@ -176,6 +176,16 @@
     color: var(--text-secondary);
     font-weight: normal;
     margin-top: 0.25rem;
+}
+
+.field-hint a {
+    color: var(--primary-color, #3b82f6);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.field-hint a:hover {
+    text-decoration: underline;
 }
 
 .required {

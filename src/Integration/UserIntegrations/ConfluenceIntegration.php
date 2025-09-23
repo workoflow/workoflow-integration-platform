@@ -132,7 +132,7 @@ class ConfluenceIntegration implements IntegrationInterface
                 'API Token',
                 null,
                 true,
-                'Your Confluence API token (not your password)'
+                'Your Confluence API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
             ),
         ];
     }
