@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - SharePoint document reading now correctly identifies and uses site information from search results
 - AI agents can now successfully read SharePoint documents after finding them through search
 - Improved site identification when reading documents stored in different SharePoint locations
+- Personal OneDrive documents can now be accessed and read by AI agents - previously failed with "site not found" errors
 
 ## 2025-09-24
 

@@ -154,7 +154,9 @@ class SharePointService
                                 'name' => $item['name'] ?? '',
                                 'webUrl' => $item['webUrl'] ?? '',
                                 'size' => $item['size'] ?? 0,
-                                'lastModified' => $item['lastModifiedDateTime'] ?? ''
+                                'lastModified' => $item['lastModifiedDateTime'] ?? '',
+                                'siteId' => 'me',  // Personal OneDrive files use 'me' as siteId
+                                'siteName' => 'Personal OneDrive'
                             ];
                         }
                     }
@@ -681,50 +683,60 @@ class SharePointService
         try {
             error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
 
-            // Check if siteId needs to be resolved (if it's a site name rather than ID)
-            // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
-            if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
-                error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
+            // Check if this is a personal OneDrive file (siteId is "me" or empty)
+            $isPersonalDrive = empty($siteId) || $siteId === 'me' || $siteId === 'personal';
 
-                // Try to resolve the site name to a proper site ID
-                try {
-                    $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                        'auth_bearer' => $credentials['access_token'],
-                        'query' => [
-                            'search' => $siteId,
-                            '$top' => 5
-                        ]
-                    ]);
+            if ($isPersonalDrive) {
+                error_log('Accessing personal OneDrive file');
+                $driveEndpoint = '/me/drive';
+            } else {
+                // Check if siteId needs to be resolved (if it's a site name rather than ID)
+                // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
+                if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
+                    error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
 
-                    $sites = $sitesResponse->toArray();
+                    // Try to resolve the site name to a proper site ID
+                    try {
+                        $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
+                            'auth_bearer' => $credentials['access_token'],
+                            'query' => [
+                                'search' => $siteId,
+                                '$top' => 5
+                            ]
+                        ]);
 
-                    if (isset($sites['value']) && count($sites['value']) > 0) {
-                        // Try to find exact match first
-                        foreach ($sites['value'] as $site) {
-                            if ((isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
-                                (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)) {
-                                $siteId = $site['id'];
-                                error_log('Resolved site name to ID: ' . $siteId);
-                                break;
+                        $sites = $sitesResponse->toArray();
+
+                        if (isset($sites['value']) && count($sites['value']) > 0) {
+                            // Try to find exact match first
+                            foreach ($sites['value'] as $site) {
+                                if ((isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
+                                    (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)) {
+                                    $siteId = $site['id'];
+                                    error_log('Resolved site name to ID: ' . $siteId);
+                                    break;
+                                }
                             }
-                        }
 
-                        // If no exact match, use the first result as fallback
-                        if (!str_contains($siteId, ',')) {
-                            $siteId = $sites['value'][0]['id'];
-                            error_log('Using first matching site ID: ' . $siteId);
+                            // If no exact match, use the first result as fallback
+                            if (!str_contains($siteId, ',')) {
+                                $siteId = $sites['value'][0]['id'];
+                                error_log('Using first matching site ID: ' . $siteId);
+                            }
+                        } else {
+                            error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
                         }
-                    } else {
-                        error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
+                    } catch (\Exception $e) {
+                        error_log('Failed to resolve site name: ' . $e->getMessage());
+                        // Continue with the original siteId
                     }
-                } catch (\Exception $e) {
-                    error_log('Failed to resolve site name: ' . $e->getMessage());
-                    // Continue with the original siteId
                 }
+
+                $driveEndpoint = "/sites/{$siteId}/drive";
             }
 
             // First get file metadata to understand what we're dealing with
-            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [
+            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}", [
                 'auth_bearer' => $credentials['access_token'],
             ]);
 
@@ -740,7 +752,7 @@ class SharePointService
                 return [
                     'warning' => 'Document is very large (' . round($size / 1048576, 1) . ' MB). Content extraction limited to first part of document.',
                     'metadata' => $metadata,
-                    'content' => $this->extractFirstPartOfLargeDocument($credentials, $siteId, $itemId, $maxLength),
+                    'content' => $this->extractFirstPartOfLargeDocument($credentials, $driveEndpoint, $itemId, $maxLength),
                     'contentLength' => $maxLength,
                     'truncated' => true,
                     'fullSize' => $size
@@ -781,7 +793,7 @@ class SharePointService
 
             // For text files, we can get content directly
             if (str_contains($mimeType, 'text/')) {
-                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}/content", [
                     'auth_bearer' => $credentials['access_token'],
                 ]);
 
@@ -807,7 +819,7 @@ class SharePointService
             // since Microsoft Graph doesn't support direct text extraction for all formats
             try {
                 // Download the file content
-                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}/content", [
                     'auth_bearer' => $credentials['access_token'],
                 ]);
 
@@ -999,12 +1011,12 @@ class SharePointService
      * @param int $maxLength Maximum characters to extract
      * @return string|null Extracted content or null if extraction fails
      */
-    private function extractFirstPartOfLargeDocument(array $credentials, string $siteId, string $itemId, int $maxLength): ?string
+    private function extractFirstPartOfLargeDocument(array $credentials, string $driveEndpoint, string $itemId, int $maxLength): ?string
     {
         try {
             // For large files, we can try to get just the first part using Range headers
             // This is a best-effort approach - not all file types support partial content extraction
-            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}/content", [
                 'auth_bearer' => $credentials['access_token'],
                 'headers' => [
                     'Range' => 'bytes=0-524288', // Get first 512KB only
