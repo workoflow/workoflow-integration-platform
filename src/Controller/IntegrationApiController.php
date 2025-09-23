@@ -71,18 +71,12 @@ class IntegrationApiController extends AbstractController
             $type = $integration->getType();
             $integrationConfigs = $configMap[$type] ?? [];
 
-            // Filter by tool_type if specified
-            if ($toolType) {
-                // Special case: 'system' matches all system integrations
-                if ($toolType === 'system' && str_starts_with($type, 'system.')) {
-                    // Continue processing this system integration
-                } elseif ($toolType !== $type) {
-                    continue;
-                }
-            }
-
             // Handle system integrations (no credentials required)
             if (!$integration->requiresCredentials()) {
+                // Skip system tools unless explicitly requested via tool_type=system
+                if ($toolType !== 'system') {
+                    continue;
+                }
                 // Use first config if exists (for disabled tools tracking)
                 $config = $integrationConfigs[0] ?? null;
 
@@ -107,6 +101,10 @@ class IntegrationApiController extends AbstractController
                 }
             } else {
                 // Handle user integrations (require credentials) - may have multiple instances
+                // Filter by tool_type if specified (for non-system integrations)
+                if ($toolType && $toolType !== $type && $toolType !== 'system') {
+                    continue;
+                }
                 foreach ($integrationConfigs as $config) {
                     // Skip if inactive or no credentials
                     if (!$config->isActive() || !$config->hasCredentials()) {
