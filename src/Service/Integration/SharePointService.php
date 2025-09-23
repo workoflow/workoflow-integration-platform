@@ -225,8 +225,39 @@ class SharePointService
                                 error_log('Resource fields: ' . json_encode(array_keys($resource)));
                                 
                                 // More flexible filtering - include any SharePoint content
+                                // Determine the type based on @odata.type
+                                $odataType = $resource['@odata.type'] ?? 'unknown';
+                                $resultType = 'page'; // default
+
+                                if (str_contains($odataType, 'driveItem')) {
+                                    $resultType = 'document';
+                                } elseif (str_contains($odataType, 'site')) {
+                                    $resultType = 'site';
+                                } elseif (str_contains($odataType, 'listItem')) {
+                                    $resultType = 'page';
+                                }
+
+                                // Extract siteId properly based on the resource type
+                                $extractedSiteId = $resource['siteId'] ?? '';
+
+                                // For driveItems, try to extract siteId from parentReference if not directly available
+                                if (empty($extractedSiteId) && isset($resource['parentReference']['siteId'])) {
+                                    $extractedSiteId = $resource['parentReference']['siteId'];
+                                }
+
+                                // If still no siteId and we have a webUrl, try to extract it
+                                if (empty($extractedSiteId) && !empty($resource['webUrl'])) {
+                                    // Try to extract site ID from the webUrl
+                                    // SharePoint URLs typically follow: https://domain.sharepoint.com/sites/sitename/...
+                                    if (preg_match('/https:\/\/[^\/]+\.sharepoint\.com\/sites\/([^\/]+)/', $resource['webUrl'], $matches)) {
+                                        // We have the site name, but need to note this for the user
+                                        $extractedSiteId = $matches[1]; // This is actually a site name, not ID
+                                        error_log('Warning: Using site name "' . $extractedSiteId . '" extracted from URL as siteId placeholder');
+                                    }
+                                }
+
                                 $results[] = [
-                                    'type' => 'page',
+                                    'type' => $resultType,
                                     'id' => $resource['id'] ?? '',
                                     'title' => $resource['title'] ?? $resource['name'] ?? $hit['summary'] ?? '',
                                     'name' => $resource['name'] ?? '',
@@ -234,11 +265,12 @@ class SharePointService
                                     'description' => $resource['description'] ?? $hit['summary'] ?? '',
                                     'createdDateTime' => $resource['createdDateTime'] ?? '',
                                     'lastModifiedDateTime' => $resource['lastModifiedDateTime'] ?? '',
-                                    'siteId' => $resource['siteId'] ?? '',
+                                    'siteId' => $extractedSiteId,
                                     'siteName' => $resource['displayName'] ?? '',
                                     'siteUrl' => $resource['webUrl'] ?? '',
                                     'summary' => $hit['summary'] ?? '',
-                                    'resourceType' => $resource['@odata.type'] ?? 'unknown'
+                                    'resourceType' => $odataType,
+                                    'parentReference' => $resource['parentReference'] ?? null
                                 ];
                             }
                         }
@@ -645,6 +677,48 @@ class SharePointService
     {
         try {
             error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
+
+            // Check if siteId needs to be resolved (if it's a site name rather than ID)
+            // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
+            if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
+                error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
+
+                // Try to resolve the site name to a proper site ID
+                try {
+                    $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
+                        'auth_bearer' => $credentials['access_token'],
+                        'query' => [
+                            'search' => $siteId,
+                            '$top' => 5
+                        ]
+                    ]);
+
+                    $sites = $sitesResponse->toArray();
+
+                    if (isset($sites['value']) && count($sites['value']) > 0) {
+                        // Try to find exact match first
+                        foreach ($sites['value'] as $site) {
+                            if ((isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
+                                (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)) {
+                                $siteId = $site['id'];
+                                error_log('Resolved site name to ID: ' . $siteId);
+                                break;
+                            }
+                        }
+
+                        // If no exact match, use the first result as fallback
+                        if (!str_contains($siteId, ',')) {
+                            $siteId = $sites['value'][0]['id'];
+                            error_log('Using first matching site ID: ' . $siteId);
+                        }
+                    } else {
+                        error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
+                    }
+                } catch (\Exception $e) {
+                    error_log('Failed to resolve site name: ' . $e->getMessage());
+                    // Continue with the original siteId
+                }
+            }
 
             // First get file metadata to understand what we're dealing with
             $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [

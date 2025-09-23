@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-09-24 (Latest)
 
+### Fixed
+- SharePoint document reading now correctly identifies and uses site information from search results
+- AI agents can now successfully read SharePoint documents after finding them through search
+- Improved site identification when reading documents stored in different SharePoint locations
+
+## 2025-09-24
+
 ### Added
 - New document reading capability for SharePoint integration - AI agents can now extract and understand content from Word documents, Excel files, PowerPoint presentations, and PDFs
 - Smart handling of large documents - automatically extracts the most relevant portions when files exceed size limits

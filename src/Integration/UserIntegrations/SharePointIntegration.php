@@ -74,13 +74,13 @@ class SharePointIntegration implements IntegrationInterface
                         'name' => 'siteId',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Site ID where the document is stored'
+                        'description' => 'Site ID where the document is stored (from search result\'s siteId field, or site name if ID not available)'
                     ],
                     [
                         'name' => 'itemId',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Document item ID from search results'
+                        'description' => 'Document item ID from search results (use the id field from search results)'
                     ],
                     [
                         'name' => 'maxLength',
