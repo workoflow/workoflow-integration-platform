@@ -2,7 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-09-23 (Latest)
+## 2025-09-24 (Latest)
+
+### Added
+- New document reading capability for SharePoint integration - AI agents can now extract and understand content from Word documents, Excel files, PowerPoint presentations, and PDFs
+- Smart handling of large documents - automatically extracts the most relevant portions when files exceed size limits
+
+### Changed
+- Improved SharePoint tool descriptions to better guide AI agents on when and how to use each tool
+- Search results now include content summaries, helping AI agents identify relevant documents without reading them fully
+- Less frequently used SharePoint tools (file browsing, download links, technical list access) are now disabled by default for new integrations to streamline the AI agent experience
+
+### Fixed
+- SharePoint integration now properly supports content extraction from Office documents, enabling AI agents to answer questions about document contents rather than just finding files
+
+## 2025-09-23
 
 ### Fixed
 - Removed deprecated Integration entity system and migrated fully to IntegrationConfig

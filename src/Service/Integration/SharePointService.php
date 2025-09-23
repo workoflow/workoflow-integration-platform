@@ -632,8 +632,179 @@ class SharePointService
     }
 
     /**
+     * Read document content from SharePoint
+     * Extracts text from Office documents (Word, Excel, PowerPoint) and PDFs
+     *
+     * @param array $credentials Authentication credentials
+     * @param string $siteId Site ID
+     * @param string $itemId Document item ID
+     * @param int $maxLength Maximum content length to return (default 5000)
+     * @return array Document content and metadata
+     */
+    public function readDocument(array $credentials, string $siteId, string $itemId, int $maxLength = 5000): array
+    {
+        try {
+            error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
+
+            // First get file metadata to understand what we're dealing with
+            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [
+                'auth_bearer' => $credentials['access_token'],
+            ]);
+
+            $metadata = $metadataResponse->toArray();
+            $fileName = $metadata['name'] ?? 'unknown';
+            $mimeType = $metadata['file']['mimeType'] ?? 'unknown';
+            $size = $metadata['size'] ?? 0;
+
+            error_log('Document details: ' . $fileName . ' (' . $mimeType . ', ' . $size . ' bytes)');
+
+            // For very large files, provide metadata only with size warning
+            if ($size > 10485760) { // 10MB
+                return [
+                    'warning' => 'Document is very large (' . round($size / 1048576, 1) . ' MB). Content extraction limited to first part of document.',
+                    'metadata' => $metadata,
+                    'content' => $this->extractFirstPartOfLargeDocument($credentials, $siteId, $itemId, $maxLength),
+                    'contentLength' => $maxLength,
+                    'truncated' => true,
+                    'fullSize' => $size
+                ];
+            }
+
+            // Determine if we can extract text based on mime type
+            $supportedTypes = [
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+                'application/pdf', // .pdf
+                'text/plain', // .txt
+                'text/csv', // .csv
+                'application/msword', // .doc (legacy)
+                'application/vnd.ms-excel', // .xls (legacy)
+                'application/vnd.ms-powerpoint', // .ppt (legacy)
+            ];
+
+            $canExtractText = false;
+            foreach ($supportedTypes as $type) {
+                if (str_contains($mimeType, $type) || str_contains($mimeType, 'text/')) {
+                    $canExtractText = true;
+                    break;
+                }
+            }
+
+            if (!$canExtractText) {
+                return [
+                    'error' => 'File type does not support text extraction',
+                    'metadata' => $metadata,
+                    'mimeType' => $mimeType,
+                    'content' => null,
+                    'contentLength' => 0,
+                    'truncated' => false
+                ];
+            }
+
+            // For text files, we can get content directly
+            if (str_contains($mimeType, 'text/')) {
+                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                    'auth_bearer' => $credentials['access_token'],
+                ]);
+
+                $content = $contentResponse->getContent();
+
+                // Truncate if needed
+                $truncated = false;
+                if (strlen($content) > $maxLength) {
+                    $content = substr($content, 0, $maxLength);
+                    $truncated = true;
+                }
+
+                return [
+                    'metadata' => $metadata,
+                    'content' => $content,
+                    'contentLength' => strlen($content),
+                    'truncated' => $truncated,
+                    'mimeType' => $mimeType
+                ];
+            }
+
+            // For Office documents and PDFs, try to get converted content
+            // Microsoft Graph can convert these to text format on the fly
+            try {
+                // Use the content endpoint with format parameter for conversion
+                // Note: This requires the file to be in SharePoint/OneDrive (not external storage)
+                $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                    'auth_bearer' => $credentials['access_token'],
+                    'query' => [
+                        'format' => 'text' // Request text conversion
+                    ],
+                    'headers' => [
+                        'Accept' => 'text/plain' // Request plain text response
+                    ]
+                ]);
+
+                $content = $contentResponse->getContent();
+
+                // If we get HTML back instead of text, try to extract text from it
+                if (str_contains($content, '<html') || str_contains($content, '<body')) {
+                    $content = strip_tags($content);
+                    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+
+                // Clean up the content
+                $content = preg_replace('/\s+/', ' ', trim($content));
+
+                // Truncate if needed
+                $truncated = false;
+                if (strlen($content) > $maxLength) {
+                    $content = substr($content, 0, $maxLength);
+                    $truncated = true;
+                }
+
+                error_log('Document content extracted successfully (length: ' . strlen($content) . ')');
+
+                return [
+                    'metadata' => $metadata,
+                    'content' => $content,
+                    'contentLength' => strlen($content),
+                    'truncated' => $truncated,
+                    'mimeType' => $mimeType
+                ];
+
+            } catch (\Exception $conversionError) {
+                // If text conversion fails, we might still be able to get raw content
+                error_log('Text conversion failed, attempting raw content: ' . $conversionError->getMessage());
+
+                // As a fallback, download the raw file content
+                // This won't be text, but we return the error gracefully
+                return [
+                    'error' => 'Could not extract text from document. Document may be encrypted, corrupted, or in an unsupported format.',
+                    'metadata' => $metadata,
+                    'mimeType' => $mimeType,
+                    'content' => null,
+                    'contentLength' => 0,
+                    'truncated' => false
+                ];
+            }
+
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            $errorContent = $e->getResponse()->getContent(false);
+            error_log('SharePoint Read Document Client Error (' . $statusCode . '): ' . $errorContent);
+
+            $errorData = json_decode($errorContent, true);
+            if (isset($errorData['error']['message'])) {
+                throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
+            }
+            throw new \Exception('Failed to read SharePoint document (HTTP ' . $statusCode . ')');
+
+        } catch (\Exception $e) {
+            error_log('SharePoint Read Document Error: ' . $e->getMessage());
+            throw new \Exception('Failed to read document: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Extract readable content from SharePoint page canvasLayout
-     * 
+     *
      * @param array $pageData The page data with expanded canvasLayout
      * @param int $maxLength Maximum length of content to return (default 1000)
      * @return string|null The extracted content or null if no content found
@@ -707,5 +878,51 @@ class SharePointService
         }
         
         return $content;
+    }
+
+    /**
+     * Extract first part of content from large documents
+     * Uses byte range requests to avoid downloading entire file
+     *
+     * @param array $credentials Authentication credentials
+     * @param string $siteId Site ID
+     * @param string $itemId Document item ID
+     * @param int $maxLength Maximum characters to extract
+     * @return string|null Extracted content or null if extraction fails
+     */
+    private function extractFirstPartOfLargeDocument(array $credentials, string $siteId, string $itemId, int $maxLength): ?string
+    {
+        try {
+            // For large files, we can try to get just the first part using Range headers
+            // This is a best-effort approach - not all file types support partial content extraction
+            $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                'auth_bearer' => $credentials['access_token'],
+                'headers' => [
+                    'Range' => 'bytes=0-524288', // Get first 512KB only
+                    'Accept' => 'text/plain'
+                ],
+                'timeout' => 30 // Limit timeout for large files
+            ]);
+
+            $partialContent = $response->getContent();
+
+            // Try to extract text from the partial content
+            if (str_contains($partialContent, '<html') || str_contains($partialContent, '<body')) {
+                $partialContent = strip_tags($partialContent);
+                $partialContent = html_entity_decode($partialContent, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+
+            // Clean and truncate
+            $partialContent = preg_replace('/\s+/', ' ', trim($partialContent));
+            if (strlen($partialContent) > $maxLength) {
+                $partialContent = substr($partialContent, 0, $maxLength);
+            }
+
+            return $partialContent ?: 'Unable to extract content from large document';
+
+        } catch (\Exception $e) {
+            error_log('Failed to extract content from large document: ' . $e->getMessage());
+            return 'Unable to extract content from large document (size limit exceeded)';
+        }
     }
 }

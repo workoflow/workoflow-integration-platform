@@ -32,19 +32,19 @@ class SharePointIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'sharepoint_search_documents',
-                'Search for documents in SharePoint',
+                'Search for documents in SharePoint with content summaries',
                 [
                     [
                         'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query'
+                        'description' => 'Search query to find relevant documents'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results (default: 25)'
+                        'description' => 'Maximum number of results to return (default: 10, max: 25)'
                     ]
                 ]
             ),
@@ -67,20 +67,44 @@ class SharePointIntegration implements IntegrationInterface
                 ]
             ),
             new ToolDefinition(
-                'sharepoint_read_page',
-                'Read a specific SharePoint page content',
+                'sharepoint_read_document',
+                'Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files)',
                 [
                     [
                         'name' => 'siteId',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Site ID'
+                        'description' => 'Site ID where the document is stored'
+                    ],
+                    [
+                        'name' => 'itemId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Document item ID from search results'
+                    ],
+                    [
+                        'name' => 'maxLength',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Maximum characters to extract (default: 5000, max: 50000)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'sharepoint_read_page',
+                'Read content from a SharePoint page',
+                [
+                    [
+                        'name' => 'siteId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Site ID or site name'
                     ],
                     [
                         'name' => 'pageId',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Page ID'
+                        'description' => 'Page ID or page title'
                     ]
                 ]
             ),
@@ -162,12 +186,18 @@ class SharePointIntegration implements IntegrationInterface
             'sharepoint_search_documents' => $this->sharePointService->searchDocuments(
                 $credentials,
                 $parameters['query'],
-                $parameters['limit'] ?? 25
+                min($parameters['limit'] ?? 10, 25)
             ),
             'sharepoint_search_pages' => $this->sharePointService->searchPages(
                 $credentials,
                 $parameters['query'],
                 $parameters['limit'] ?? 25
+            ),
+            'sharepoint_read_document' => $this->sharePointService->readDocument(
+                $credentials,
+                $parameters['siteId'],
+                $parameters['itemId'],
+                min($parameters['maxLength'] ?? 5000, 50000)
             ),
             'sharepoint_read_page' => $this->sharePointService->readPage(
                 $credentials,

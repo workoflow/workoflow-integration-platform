@@ -287,6 +287,22 @@ class IntegrationController extends AbstractController
                         );
                         $config->setActive(true);
 
+                        // Auto-disable less useful tools for SharePoint
+                        if ($type === 'sharepoint' && !$instanceId) {
+                            // These tools are less useful for AI agents, disable by default
+                            $toolsToDisable = [
+                                'sharepoint_list_files',      // Agents should search, not browse
+                                'sharepoint_download_file',    // Only returns URL, agent can't fetch it
+                                'sharepoint_get_list_items'    // Too technical for most use cases
+                            ];
+
+                            foreach ($toolsToDisable as $toolName) {
+                                $config->disableTool($toolName);
+                            }
+
+                            error_log('Auto-disabled less useful SharePoint tools for new integration: ' . implode(', ', $toolsToDisable));
+                        }
+
                         $this->entityManager->persist($config);
                         $this->entityManager->flush();
 
