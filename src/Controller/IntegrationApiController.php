@@ -73,8 +73,24 @@ class IntegrationApiController extends AbstractController
 
             // Handle system integrations (no credentials required)
             if (!$integration->requiresCredentials()) {
-                // Skip system tools unless explicitly requested via tool_type=system
-                if ($toolType !== 'system') {
+                // Skip system tools unless explicitly requested via tool_type
+                // If tool_type is specified, it must either:
+                // - Equal "system" (show all system integrations)
+                // - Start with "system." (show specific system integration)
+                // - Match the exact type (e.g., "system.share_file")
+                if ($toolType) {
+                    if ($toolType === 'system') {
+                        // Show all system integrations
+                        // Continue processing this integration
+                    } elseif ($toolType === $type) {
+                        // Show this specific system integration
+                        // Continue processing this integration
+                    } else {
+                        // Skip this integration
+                        continue;
+                    }
+                } else {
+                    // No tool_type specified, skip system integrations by default
                     continue;
                 }
                 // Use first config if exists (for disabled tools tracking)
@@ -101,8 +117,12 @@ class IntegrationApiController extends AbstractController
                 }
             } else {
                 // Handle user integrations (require credentials) - may have multiple instances
-                // Filter by tool_type if specified (for non-system integrations)
-                if ($toolType && $toolType !== $type && $toolType !== 'system') {
+                // Skip user integrations if tool_type starts with 'system'
+                if ($toolType && str_starts_with($toolType, 'system')) {
+                    continue;
+                }
+                // Filter by tool_type if specified for specific user integrations
+                if ($toolType && $toolType !== $type) {
                     continue;
                 }
                 foreach ($integrationConfigs as $config) {
