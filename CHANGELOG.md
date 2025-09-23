@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-09-24 (Latest)
 
+### Improved
+- SharePoint document reading now works with PDF, Word, and Excel files stored in SharePoint
+- AI agents can now extract and understand text content from PDF documents, eliminating previous "cannot extract text" errors
+- Excel spreadsheet content is now fully readable by AI agents, including all sheets and cell data
+- Word document content extraction now works properly, allowing AI agents to analyze document text
+- Documents that previously failed with "unsupported format" errors can now be processed successfully
+
 ### Fixed
 - SharePoint document reading now correctly identifies and uses site information from search results
 - AI agents can now successfully read SharePoint documents after finding them through search

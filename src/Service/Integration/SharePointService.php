@@ -4,6 +4,9 @@ namespace App\Service\Integration;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Component\HttpFoundation\Response;
+use Smalot\PdfParser\Parser as PdfParser;
+use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIOFactory;
+use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 
 class SharePointService
 {
@@ -800,27 +803,61 @@ class SharePointService
                 ];
             }
 
-            // For Office documents and PDFs, try to get converted content
-            // Microsoft Graph can convert these to text format on the fly
+            // For Office documents and PDFs, we need to download and process locally
+            // since Microsoft Graph doesn't support direct text extraction for all formats
             try {
-                // Use the content endpoint with format parameter for conversion
-                // Note: This requires the file to be in SharePoint/OneDrive (not external storage)
+                // Download the file content
                 $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
                     'auth_bearer' => $credentials['access_token'],
-                    'query' => [
-                        'format' => 'text' // Request text conversion
-                    ],
-                    'headers' => [
-                        'Accept' => 'text/plain' // Request plain text response
-                    ]
                 ]);
 
-                $content = $contentResponse->getContent();
+                $binaryContent = $contentResponse->getContent();
+                $content = null;
 
-                // If we get HTML back instead of text, try to extract text from it
-                if (str_contains($content, '<html') || str_contains($content, '<body')) {
-                    $content = strip_tags($content);
-                    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                // Process based on mime type
+                if (str_contains($mimeType, 'application/pdf')) {
+                    // Extract text from PDF
+                    $content = $this->extractTextFromPdf($binaryContent, $maxLength);
+                } elseif (str_contains($mimeType, 'spreadsheetml.sheet') || str_contains($mimeType, 'application/vnd.ms-excel')) {
+                    // Extract text from XLSX/XLS
+                    $content = $this->extractTextFromSpreadsheet($binaryContent, $maxLength);
+                } elseif (str_contains($mimeType, 'wordprocessingml.document') || str_contains($mimeType, 'application/msword')) {
+                    // Extract text from DOCX/DOC
+                    $content = $this->extractTextFromWord($binaryContent, $maxLength);
+                } else {
+                    // Try the old format=text approach for other Office formats
+                    try {
+                        $contentResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
+                            'auth_bearer' => $credentials['access_token'],
+                            'query' => [
+                                'format' => 'text'
+                            ],
+                            'headers' => [
+                                'Accept' => 'text/plain'
+                            ]
+                        ]);
+                        $content = $contentResponse->getContent();
+
+                        // Clean up if HTML
+                        if (str_contains($content, '<html') || str_contains($content, '<body')) {
+                            $content = strip_tags($content);
+                            $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        }
+                    } catch (\Exception $e) {
+                        error_log('Format conversion not supported for mime type: ' . $mimeType);
+                        $content = null;
+                    }
+                }
+
+                if ($content === null) {
+                    return [
+                        'error' => 'Could not extract text from document. Document type may not be supported for text extraction.',
+                        'metadata' => $metadata,
+                        'mimeType' => $mimeType,
+                        'content' => null,
+                        'contentLength' => 0,
+                        'truncated' => false
+                    ];
                 }
 
                 // Clean up the content
@@ -843,19 +880,17 @@ class SharePointService
                     'mimeType' => $mimeType
                 ];
 
-            } catch (\Exception $conversionError) {
-                // If text conversion fails, we might still be able to get raw content
-                error_log('Text conversion failed, attempting raw content: ' . $conversionError->getMessage());
+            } catch (\Exception $e) {
+                error_log('Document extraction failed: ' . $e->getMessage());
 
-                // As a fallback, download the raw file content
-                // This won't be text, but we return the error gracefully
                 return [
                     'error' => 'Could not extract text from document. Document may be encrypted, corrupted, or in an unsupported format.',
                     'metadata' => $metadata,
                     'mimeType' => $mimeType,
                     'content' => null,
                     'contentLength' => 0,
-                    'truncated' => false
+                    'truncated' => false,
+                    'exception' => $e->getMessage()
                 ];
             }
 
@@ -998,5 +1033,215 @@ class SharePointService
             error_log('Failed to extract content from large document: ' . $e->getMessage());
             return 'Unable to extract content from large document (size limit exceeded)';
         }
+    }
+
+    /**
+     * Extract text from PDF binary content
+     *
+     * @param string $binaryContent Binary PDF content
+     * @param int $maxLength Maximum length of text to extract
+     * @return string|null Extracted text or null on failure
+     */
+    private function extractTextFromPdf(string $binaryContent, int $maxLength): ?string
+    {
+        try {
+            error_log('Extracting text from PDF (size: ' . strlen($binaryContent) . ' bytes)');
+
+            $parser = new PdfParser();
+            $pdf = $parser->parseContent($binaryContent);
+
+            // Extract text from all pages
+            $text = $pdf->getText();
+
+            if (empty($text)) {
+                error_log('No text extracted from PDF - might be a scanned document');
+                return null;
+            }
+
+            // Clean up the text
+            $text = preg_replace('/\s+/', ' ', trim($text));
+
+            error_log('Successfully extracted ' . strlen($text) . ' characters from PDF');
+
+            return $text;
+
+        } catch (\Exception $e) {
+            error_log('PDF extraction failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extract text from Excel/spreadsheet binary content
+     *
+     * @param string $binaryContent Binary spreadsheet content
+     * @param int $maxLength Maximum length of text to extract
+     * @return string|null Extracted text or null on failure
+     */
+    private function extractTextFromSpreadsheet(string $binaryContent, int $maxLength): ?string
+    {
+        try {
+            error_log('Extracting text from spreadsheet (size: ' . strlen($binaryContent) . ' bytes)');
+
+            // Save to temporary file (PHPSpreadsheet requires file path)
+            $tempFile = tempnam(sys_get_temp_dir(), 'xlsx_');
+            file_put_contents($tempFile, $binaryContent);
+
+            try {
+                // Load the spreadsheet
+                $reader = SpreadsheetIOFactory::createReaderForFile($tempFile);
+                $reader->setReadDataOnly(true);
+                $reader->setReadEmptyCells(false);
+                $spreadsheet = $reader->load($tempFile);
+
+                $text = '';
+                $charCount = 0;
+
+                // Extract text from all worksheets
+                foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
+                    if ($charCount >= $maxLength) break;
+
+                    $worksheetTitle = $worksheet->getTitle();
+                    $text .= "Sheet: $worksheetTitle\n";
+
+                    $highestRow = $worksheet->getHighestRow();
+                    $highestColumn = $worksheet->getHighestColumn();
+
+                    for ($row = 1; $row <= $highestRow; $row++) {
+                        if ($charCount >= $maxLength) break;
+
+                        $rowData = $worksheet->rangeToArray(
+                            "A$row:$highestColumn$row",
+                            null,
+                            true,
+                            false
+                        )[0];
+
+                        // Filter out empty cells and join with tabs
+                        $rowText = implode("\t", array_filter($rowData, function($cell) {
+                            return $cell !== null && $cell !== '';
+                        }));
+
+                        if (!empty($rowText)) {
+                            $text .= $rowText . "\n";
+                            $charCount = strlen($text);
+                        }
+                    }
+
+                    $text .= "\n";
+                }
+
+                error_log('Successfully extracted ' . strlen($text) . ' characters from spreadsheet');
+
+                return $text;
+
+            } finally {
+                // Clean up temp file
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
+
+        } catch (\Exception $e) {
+            error_log('Spreadsheet extraction failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extract text from Word document binary content
+     *
+     * @param string $binaryContent Binary Word document content
+     * @param int $maxLength Maximum length of text to extract
+     * @return string|null Extracted text or null on failure
+     */
+    private function extractTextFromWord(string $binaryContent, int $maxLength): ?string
+    {
+        try {
+            error_log('Extracting text from Word document (size: ' . strlen($binaryContent) . ' bytes)');
+
+            // Save to temporary file (PHPWord requires file path)
+            $tempFile = tempnam(sys_get_temp_dir(), 'docx_');
+            file_put_contents($tempFile, $binaryContent);
+
+            try {
+                // Load the Word document
+                $phpWord = WordIOFactory::load($tempFile, 'Word2007');
+
+                $text = '';
+
+                // Extract text from all sections
+                foreach ($phpWord->getSections() as $section) {
+                    // Extract text from elements
+                    foreach ($section->getElements() as $element) {
+                        $text .= $this->extractTextFromWordElement($element) . "\n";
+
+                        if (strlen($text) >= $maxLength) {
+                            break 2; // Break both loops
+                        }
+                    }
+                }
+
+                if (empty($text)) {
+                    error_log('No text extracted from Word document');
+                    return null;
+                }
+
+                error_log('Successfully extracted ' . strlen($text) . ' characters from Word document');
+
+                return $text;
+
+            } finally {
+                // Clean up temp file
+                if (file_exists($tempFile)) {
+                    unlink($tempFile);
+                }
+            }
+
+        } catch (\Exception $e) {
+            error_log('Word document extraction failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Helper method to extract text from Word document elements
+     *
+     * @param mixed $element The Word document element
+     * @return string Extracted text
+     */
+    private function extractTextFromWordElement($element): string
+    {
+        $text = '';
+
+        // Handle different element types
+        if (method_exists($element, 'getText')) {
+            $text = $element->getText();
+        } elseif (method_exists($element, 'getElements')) {
+            // For containers, recursively extract from child elements
+            foreach ($element->getElements() as $childElement) {
+                $text .= $this->extractTextFromWordElement($childElement) . ' ';
+            }
+        } elseif ($element instanceof \PhpOffice\PhpWord\Element\Text) {
+            $text = $element->getText();
+        } elseif ($element instanceof \PhpOffice\PhpWord\Element\TextRun) {
+            foreach ($element->getElements() as $textElement) {
+                if ($textElement instanceof \PhpOffice\PhpWord\Element\Text) {
+                    $text .= $textElement->getText() . ' ';
+                }
+            }
+        } elseif ($element instanceof \PhpOffice\PhpWord\Element\Table) {
+            // Extract text from table cells
+            foreach ($element->getRows() as $row) {
+                foreach ($row->getCells() as $cell) {
+                    foreach ($cell->getElements() as $cellElement) {
+                        $text .= $this->extractTextFromWordElement($cellElement) . ' ';
+                    }
+                }
+                $text .= "\n";
+            }
+        }
+
+        return trim($text);
     }
 }
