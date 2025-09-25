@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-09-24 (Latest)
+## 2025-09-25 (Latest)
+
+### Fixed
+- Fixed duplicate slashes in Jira and Confluence API URLs that caused 404 errors
+- Jira and Confluence integrations now properly validate and format URLs before making API calls
+- Added helpful error messages when integration URLs are incorrectly formatted
+
+## 2025-09-24
 
 ### Improved
 - SharePoint document reading now works with PDF, Word, and Excel files stored in SharePoint
