@@ -34,7 +34,7 @@ class ConfluenceIntegration implements IntegrationInterface
                         'name' => 'cql',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'CQL query string'
+                        'description' => 'CQL query string. Examples: id=123456 (by page ID), title~"Meeting notes" (by title), space=AT AND text~"search term" (in space with text), type=page AND lastModified>=2024-01-01 (pages modified after date). Note: url= is not a valid CQL field.'
                     ],
                     [
                         'name' => 'maxResults',
