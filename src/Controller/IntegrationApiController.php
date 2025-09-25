@@ -262,6 +262,7 @@ class IntegrationApiController extends AbstractController
 
             // Add organisation context to parameters
             $parameters['organisationId'] = $organisation->getId();
+            $parameters['organisationUuid'] = $organisation->getUuid();
             $parameters['workflowUserId'] = $workflowUserId;
 
             // Execute the tool

@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 - Fixed duplicate slashes in Jira and Confluence API URLs that caused 404 errors
 - Jira and Confluence integrations now properly validate and format URLs before making API calls
 - Added helpful error messages when integration URLs are incorrectly formatted
+- Fixed file sharing tool that was failing when uploading files - now properly handles base64 encoded files
+- File uploads now work correctly with PDF and other document formats
 
 ## 2025-09-24
 

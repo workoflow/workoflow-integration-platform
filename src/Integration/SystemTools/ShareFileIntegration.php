@@ -39,8 +39,8 @@ class ShareFileIntegration implements IntegrationInterface
                     [
                         'name' => 'fileName',
                         'type' => 'string',
-                        'required' => true,
-                        'description' => 'Original file name'
+                        'required' => false,
+                        'description' => 'Original file name (optional, for reference only)'
                     ],
                     [
                         'name' => 'contentType',
@@ -59,10 +59,19 @@ class ShareFileIntegration implements IntegrationInterface
             throw new \InvalidArgumentException("Unknown tool: $toolName");
         }
 
+        // Extract the actual file parameters
+        $binaryData = $parameters['binaryData'] ?? null;
+        $contentType = $parameters['contentType'] ?? 'application/octet-stream';
+        $orgUuid = $parameters['organisationUuid'] ?? '';
+
+        if (!$binaryData) {
+            throw new \InvalidArgumentException('binaryData parameter is required');
+        }
+
         return $this->shareFileService->shareFile(
-            $parameters['organisationId'],
-            $parameters['workflowUserId'],
-            $parameters
+            $binaryData,
+            $contentType,
+            $orgUuid
         );
     }
 
