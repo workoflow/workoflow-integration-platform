@@ -19,6 +19,7 @@ class DashboardController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function index(Request $request, IntegrationConfigRepository $integrationConfigRepository): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -55,8 +56,9 @@ class DashboardController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
-        
+
         // Check if user already has any organisations
         if (!$user->getOrganisations()->isEmpty()) {
             return $this->redirectToRoute('app_dashboard');
@@ -64,26 +66,26 @@ class DashboardController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name');
-            
+
             if ($name) {
                 $organisation = new Organisation();
                 $organisation->setName($name);
-                
+
                 $user->addOrganisation($organisation);
                 $user->setRoles([User::ROLE_USER, User::ROLE_ADMIN]);
-                
+
                 // Set this as the current organisation in session
                 $request->getSession()->set('current_organisation_id', $organisation->getId());
-                
+
                 $em->persist($organisation);
                 $em->flush();
-                
+
                 $auditLogService->log(
                     'organisation.created',
                     $user,
                     ['name' => $name]
                 );
-                
+
                 $this->addFlash('success', 'organisation.created.success');
                 return $this->redirectToRoute('app_dashboard');
             }

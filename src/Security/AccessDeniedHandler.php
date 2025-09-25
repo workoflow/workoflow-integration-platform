@@ -13,7 +13,8 @@ class AccessDeniedHandler implements AccessDeniedHandlerInterface
 {
     public function __construct(
         private UrlGeneratorInterface $urlGenerator
-    ) {}
+    ) {
+    }
 
     public function handle(Request $request, AccessDeniedException $accessDeniedException): ?Response
     {
@@ -26,8 +27,8 @@ class AccessDeniedHandler implements AccessDeniedHandlerInterface
         }
 
         // Redirect to dashboard (or login if not authenticated)
-        $route = $request->getSession() && $request->getSession()->has('_security_main') 
-            ? 'app_dashboard' 
+        $route = $request->getSession()->has('_security_main')
+            ? 'app_dashboard'
             : 'app_login';
 
         return new RedirectResponse($this->urlGenerator->generate($route));

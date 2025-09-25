@@ -11,7 +11,8 @@ class CredentialField
         private ?string $placeholder = null,
         private bool $required = true,
         private ?string $description = null
-    ) {}
+    ) {
+    }
 
     public function getName(): string
     {

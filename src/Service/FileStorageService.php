@@ -13,7 +13,7 @@ class FileStorageService
     private S3Client $s3Client;
     private string $bucket;
     private array $allowedExtensions = [
-        'pdf', 'docx', 'xlsx', 'csv', 'txt', 'json', 
+        'pdf', 'docx', 'xlsx', 'csv', 'txt', 'json',
         'jpg', 'jpeg', 'png', 'gif', 'bmp'
     ];
     private int $maxFileSize = 104857600; // 100MB
@@ -32,7 +32,7 @@ class FileStorageService
                 'secret' => $params->get('minio.root_password'),
             ],
         ]);
-        
+
         $this->bucket = $params->get('minio.bucket');
         $this->ensureBucketExists();
     }
@@ -132,7 +132,7 @@ class FileStorageService
                 'error' => $e->getMessage(),
                 'org_uuid' => $orgUuid
             ]);
-            
+
             // Re-throw the exception to let the controller handle it
             throw new \RuntimeException('Unable to connect to file storage service: ' . $e->getMessage(), 0, $e);
         }

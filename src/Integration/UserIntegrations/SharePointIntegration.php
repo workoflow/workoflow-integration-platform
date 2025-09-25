@@ -15,7 +15,8 @@ class SharePointIntegration implements IntegrationInterface
         private SharePointService $sharePointService,
         private EncryptionService $encryptionService,
         private EntityManagerInterface $entityManager
-    ) {}
+    ) {
+    }
 
     public function getType(): string
     {
@@ -182,7 +183,7 @@ class SharePointIntegration implements IntegrationInterface
             $credentials = $this->refreshTokenIfNeeded($credentials);
         }
 
-        return match($toolName) {
+        return match ($toolName) {
             'sharepoint_search_documents' => $this->sharePointService->searchDocuments(
                 $credentials,
                 $parameters['query'],

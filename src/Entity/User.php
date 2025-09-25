@@ -179,7 +179,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         if (!$this->tokenExpiresAt) {
             return true;
         }
-        
+
         return $this->tokenExpiresAt < new \DateTime();
     }
 

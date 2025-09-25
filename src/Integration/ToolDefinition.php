@@ -8,7 +8,8 @@ class ToolDefinition
         private string $name,
         private string $description,
         private array $parameters = []
-    ) {}
+    ) {
+    }
 
     public function getName(): string
     {

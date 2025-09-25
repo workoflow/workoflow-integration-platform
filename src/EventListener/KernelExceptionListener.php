@@ -13,7 +13,8 @@ class KernelExceptionListener implements EventSubscriberInterface
 {
     public function __construct(
         private UrlGeneratorInterface $urlGenerator
-    ) {}
+    ) {
+    }
 
     public static function getSubscribedEvents(): array
     {
@@ -29,13 +30,13 @@ class KernelExceptionListener implements EventSubscriberInterface
         // Handle authentication exceptions that weren't caught by the entry point
         if ($exception instanceof InsufficientAuthenticationException) {
             $request = $event->getRequest();
-            
+
             // Skip handling for public routes
             $route = $request->attributes->get('_route');
             if (in_array($route, ['app_home', 'app_login'])) {
                 return;
             }
-            
+
             // Store the target path in session
             if ($request->hasSession() && $targetPath = $request->getRequestUri()) {
                 $request->getSession()->set('_security.main.target_path', $targetPath);

@@ -15,7 +15,7 @@ class MagicLinkController extends AbstractController
         // The actual authentication is handled by MagicLinkAuthenticator
         // This method will only be reached if authentication fails
         // (successful authentication redirects in the authenticator)
-        
+
         // If we reach here without a token, show an error
         if (!$request->query->has('token')) {
             $this->addFlash('error', 'No magic link token provided');

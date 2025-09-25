@@ -69,10 +69,10 @@ class TestSharePointTokenCommand extends Command
                     'Authorization' => 'Bearer ' . $credentials['access_token'],
                 ]
             ]);
-            
+
             $statusCode = $response->getStatusCode();
             $io->success("Status: $statusCode");
-            
+
             if ($statusCode === 200) {
                 $data = $response->toArray();
                 $io->text('User: ' . ($data['displayName'] ?? 'Unknown'));
@@ -93,17 +93,17 @@ class TestSharePointTokenCommand extends Command
                     '$top' => 5
                 ]
             ]);
-            
+
             $statusCode = $response->getStatusCode();
             $io->success("Status: $statusCode");
-            
+
             if ($statusCode === 200) {
                 $data = $response->toArray();
                 $io->text('Found ' . count($data['value'] ?? []) . ' sites');
             }
         } catch (\Exception $e) {
             $io->error('Failed: ' . $e->getMessage());
-            
+
             // Try to get response details
             try {
                 $response = $this->httpClient->request('GET', 'https://graph.microsoft.com/v1.0/sites?search=test', [

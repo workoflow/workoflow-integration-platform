@@ -30,18 +30,18 @@ class ShareFileService
                 'secret' => $params->get('minio.root_password'),
             ],
         ]);
-        
+
         $this->bucket = $params->get('minio.bucket');
         $this->publicBucket = $params->get('minio.public_bucket');
-        
+
         // Extract the public endpoint without internal docker hostname
         $endpoint = $params->get('minio.endpoint');
         // Replace internal minio hostname with localhost for public access
         $this->publicEndpoint = str_replace('minio:', 'localhost:', $endpoint);
-        
+
         // Get the application URL from environment
         $this->appUrl = $params->get('app.url') ?? 'http://localhost:3979';
-        
+
         $this->ensureBucketExists();
     }
 
@@ -53,7 +53,7 @@ class ShareFileService
                 $this->s3Client->createBucket([
                     'Bucket' => $this->publicBucket,
                 ]);
-                
+
                 // Set bucket policy to allow public read access
                 $policy = json_encode([
                     'Version' => '2012-10-17',
@@ -67,12 +67,12 @@ class ShareFileService
                         ]
                     ]
                 ]);
-                
+
                 $this->s3Client->putBucketPolicy([
                     'Bucket' => $this->publicBucket,
                     'Policy' => $policy
                 ]);
-                
+
                 // Set lifecycle policy for 1-day expiration
                 $this->s3Client->putBucketLifecycleConfiguration([
                     'Bucket' => $this->publicBucket,
@@ -105,13 +105,13 @@ class ShareFileService
             $fileId = Uuid::v4()->toString();
             $extension = $this->getExtensionFromMimeType($contentType);
             $filename = sprintf('%s/%s.%s', $orgUuid, $fileId, $extension);
-            
+
             // Decode base64 data
             $decodedData = base64_decode($binaryData, true);
             if ($decodedData === false) {
                 throw new \InvalidArgumentException('Invalid base64 encoded data');
             }
-            
+
             // Upload to public bucket
             $result = $this->s3Client->putObject([
                 'Bucket' => $this->publicBucket,
@@ -123,28 +123,28 @@ class ShareFileService
                     'org_uuid' => $orgUuid
                 ]
             ]);
-            
+
             // Generate public URL using the application route
-            $publicUrl = sprintf('%s/%s/file/%s', 
+            $publicUrl = sprintf(
+                '%s/%s/file/%s',
                 rtrim($this->appUrl, '/'),
                 $orgUuid,
                 $fileId
             );
-            
+
             $this->logger->info('File shared successfully', [
                 'org_uuid' => $orgUuid,
                 'file_id' => $fileId,
                 'content_type' => $contentType,
                 'size' => strlen($decodedData)
             ]);
-            
+
             return [
                 'url' => $publicUrl,
                 'contentType' => $contentType,
                 'fileId' => $fileId,
                 'expiresAt' => (new \DateTime('+1 day'))->format('Y-m-d H:i:s')
             ];
-            
         } catch (\Exception $e) {
             $this->logger->error('Failed to share file', [
                 'error' => $e->getMessage(),
@@ -153,7 +153,7 @@ class ShareFileService
             throw new \RuntimeException('Failed to share file: ' . $e->getMessage());
         }
     }
-    
+
     private function getExtensionFromMimeType(string $mimeType): string
     {
         $extensions = [
@@ -175,7 +175,7 @@ class ShareFileService
             'application/x-rar-compressed' => 'rar',
             'application/x-7z-compressed' => '7z'
         ];
-        
+
         return $extensions[$mimeType] ?? 'bin';
     }
 }

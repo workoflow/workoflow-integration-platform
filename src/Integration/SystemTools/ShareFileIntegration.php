@@ -11,7 +11,8 @@ class ShareFileIntegration implements IntegrationInterface
 {
     public function __construct(
         private ShareFileService $shareFileService
-    ) {}
+    ) {
+    }
 
     public function getType(): string
     {

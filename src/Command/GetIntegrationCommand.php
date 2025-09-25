@@ -77,7 +77,7 @@ class GetIntegrationCommand extends Command
                         ['Client Secret', isset($credentials['client_secret']) ? 'Present' : 'Missing'],
                         ['Tenant ID', isset($credentials['tenant_id']) ? 'Present' : 'Missing'],
                     ]);
-                    
+
                     // Show token preview (first 20 chars)
                     if (isset($credentials['access_token'])) {
                         $tokenPreview = substr($credentials['access_token'], 0, 20) . '...';

@@ -14,7 +14,8 @@ class HealthController extends AbstractController
     public function __construct(
         private Connection $connection,
         private CacheInterface $cache
-    ) {}
+    ) {
+    }
 
     #[Route('/health', name: 'app_health', methods: ['GET'])]
     public function health(): JsonResponse
@@ -56,7 +57,7 @@ class HealthController extends AbstractController
         }
 
         $statusCode = $checks['status'] === 'healthy' ? Response::HTTP_OK : Response::HTTP_SERVICE_UNAVAILABLE;
-        
+
         return new JsonResponse($checks, $statusCode);
     }
 }

@@ -28,7 +28,8 @@ class GoogleAuthenticator extends OAuth2Authenticator
         private RouterInterface $router,
         private UserRepository $userRepository,
         private AuditLogService $auditLogService
-    ) {}
+    ) {
+    }
 
     public function supports(Request $request): ?bool
     {
@@ -41,7 +42,8 @@ class GoogleAuthenticator extends OAuth2Authenticator
         $accessToken = $this->fetchAccessToken($client);
 
         return new SelfValidatingPassport(
-            new UserBadge($accessToken->getToken(), function() use ($accessToken, $client) {
+            new UserBadge($accessToken->getToken(), function () use ($accessToken, $client) {
+                /** @var \League\OAuth2\Client\Provider\GoogleUser $googleUser */
                 $googleUser = $client->fetchUserFromToken($accessToken);
 
                 $existingUser = $this->userRepository->findOneBy(['email' => $googleUser->getEmail()]);
@@ -49,27 +51,27 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 if ($existingUser) {
                     $existingUser->setGoogleId($googleUser->getId());
                     $existingUser->setAccessToken($accessToken->getToken());
-                    
+
                     // Store refresh token if available
                     if ($accessToken->getRefreshToken()) {
                         $existingUser->setRefreshToken($accessToken->getRefreshToken());
                     }
-                    
+
                     // Set token expiry time (Google tokens typically expire after 1 hour)
                     if ($accessToken->getExpires()) {
                         $expiresAt = new \DateTime();
                         $expiresAt->setTimestamp($accessToken->getExpires());
                         $existingUser->setTokenExpiresAt($expiresAt);
                     }
-                    
+
                     $this->entityManager->flush();
-                    
+
                     $this->auditLogService->log(
                         'user.login',
                         $existingUser,
                         ['provider' => 'google']
                     );
-                    
+
                     return $existingUser;
                 }
 
@@ -78,24 +80,24 @@ class GoogleAuthenticator extends OAuth2Authenticator
                 $user->setName($googleUser->getName());
                 $user->setGoogleId($googleUser->getId());
                 $user->setAccessToken($accessToken->getToken());
-                
+
                 // Store refresh token if available
                 if ($accessToken->getRefreshToken()) {
                     $user->setRefreshToken($accessToken->getRefreshToken());
                 }
-                
+
                 // Set token expiry time
                 if ($accessToken->getExpires()) {
                     $expiresAt = new \DateTime();
                     $expiresAt->setTimestamp($accessToken->getExpires());
                     $user->setTokenExpiresAt($expiresAt);
                 }
-                
+
                 $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
 
                 $this->entityManager->persist($user);
                 $this->entityManager->flush();
-                
+
                 $this->auditLogService->log(
                     'user.register',
                     $user,

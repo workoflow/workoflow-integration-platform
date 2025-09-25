@@ -80,7 +80,7 @@ class SharedFileController extends AbstractController
 
             $response->headers->set('Content-Type', $contentType);
             $response->headers->set('Cache-Control', 'public, max-age=3600');
-            
+
             // Add Content-Disposition for better download experience
             // The key format is: orgUuid/fileId.extension
             $filename = basename($key);
@@ -98,7 +98,6 @@ class SharedFileController extends AbstractController
             ]);
 
             return $response;
-
         } catch (\Exception $e) {
             $this->logger->error('Failed to serve shared file', [
                 'org_uuid' => $orgUuid,
@@ -109,7 +108,7 @@ class SharedFileController extends AbstractController
             return new Response('File not found', 404);
         }
     }
-    
+
     private function getExtensionFromContentType(string $contentType): string
     {
         $extensions = [
@@ -131,7 +130,7 @@ class SharedFileController extends AbstractController
             'application/x-rar-compressed' => 'rar',
             'application/x-7z-compressed' => '7z'
         ];
-        
+
         return $extensions[$contentType] ?? 'bin';
     }
 }

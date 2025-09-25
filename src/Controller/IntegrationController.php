@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\IntegrationConfig;
+use App\Entity\User;
 use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
@@ -25,11 +26,13 @@ class IntegrationController extends AbstractController
         private EncryptionService $encryptionService,
         private AuditLogService $auditLogService,
         private EntityManagerInterface $entityManager
-    ) {}
+    ) {
+    }
 
     #[Route('/', name: 'app_integrations')]
     public function index(Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -159,6 +162,7 @@ class IntegrationController extends AbstractController
     #[Route('/setup/{type}', name: 'app_integration_setup', methods: ['GET', 'POST'])]
     public function setup(string $type, Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -267,9 +271,6 @@ class IntegrationController extends AbstractController
                     } elseif (!$hasOAuthField && !empty($credentials) && $integration->validateCredentials($credentials)) {
                         // Non-OAuth with valid credentials
                         $shouldSave = true;
-                    } elseif (!$integration->requiresCredentials()) {
-                        // System integrations without credentials
-                        $shouldSave = true;
                     }
 
                     if ($shouldSave) {
@@ -306,9 +307,11 @@ class IntegrationController extends AbstractController
                         $this->entityManager->persist($config);
                         $this->entityManager->flush();
 
+                        /** @var User $logUser */
+                        $logUser = $this->getUser();
                         $this->auditLogService->log(
                             $instanceId ? 'integration.updated' : 'integration.setup',
-                            $this->getUser(),
+                            $logUser,
                             ['type' => $type, 'name' => $name]
                         );
 
@@ -334,6 +337,7 @@ class IntegrationController extends AbstractController
     #[Route('/{type}/toggle-tool', name: 'app_integration_toggle_tool', methods: ['POST'])]
     public function toggleTool(string $type, Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -347,7 +351,7 @@ class IntegrationController extends AbstractController
         $instanceId = $request->request->get('instance');
 
         // Validate instanceId is provided and valid
-        if (!$instanceId || $instanceId === 'null' || $instanceId === '') {
+        if (!$instanceId || $instanceId === 'null' || empty($instanceId)) {
             return $this->json(['error' => 'Instance ID is required'], Response::HTTP_BAD_REQUEST);
         }
 
@@ -367,9 +371,11 @@ class IntegrationController extends AbstractController
         $this->entityManager->persist($config);
         $this->entityManager->flush();
 
+        /** @var User $logUser */
+        $logUser = $this->getUser();
         $this->auditLogService->log(
             $enabled ? 'integration.tool.enabled' : 'integration.tool.disabled',
-            $this->getUser(),
+            $logUser,
             ['type' => $type, 'tool' => $toolName, 'instance' => $config->getName()]
         );
 
@@ -379,6 +385,7 @@ class IntegrationController extends AbstractController
     #[Route('/{type}/toggle', name: 'app_integration_toggle', methods: ['POST'])]
     public function toggleIntegration(string $type, Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -411,9 +418,11 @@ class IntegrationController extends AbstractController
         $this->entityManager->persist($config);
         $this->entityManager->flush();
 
+        /** @var User $logUser */
+        $logUser = $this->getUser();
         $this->auditLogService->log(
             $active ? 'integration.activated' : 'integration.deactivated',
-            $this->getUser(),
+            $logUser,
             [
                 'type' => $type,
                 'instance' => $config->getId(),
@@ -428,6 +437,7 @@ class IntegrationController extends AbstractController
     #[Route('/delete/{instanceId}', name: 'app_integration_delete', methods: ['POST'])]
     public function delete(int $instanceId, Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
@@ -439,9 +449,11 @@ class IntegrationController extends AbstractController
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
 
         if ($config && $config->getOrganisation() === $organisation) {
+            /** @var User $logUser */
+            $logUser = $this->getUser();
             $this->auditLogService->log(
                 'integration.deleted',
-                $this->getUser(),
+                $logUser,
                 ['type' => $config->getIntegrationType(), 'name' => $config->getName()]
             );
 
@@ -459,6 +471,7 @@ class IntegrationController extends AbstractController
     #[Route('/{type}/test', name: 'app_integration_test', methods: ['POST'])]
     public function testConnection(string $type, Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);

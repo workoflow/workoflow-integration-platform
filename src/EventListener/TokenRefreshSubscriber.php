@@ -18,7 +18,8 @@ class TokenRefreshSubscriber implements EventSubscriberInterface
         private ClientRegistry $clientRegistry,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
-    ) {}
+    ) {
+    }
 
     public static function getSubscribedEvents(): array
     {
@@ -73,7 +74,7 @@ class TokenRefreshSubscriber implements EventSubscriberInterface
 
         // Update user with new tokens
         $user->setAccessToken($newAccessToken->getToken());
-        
+
         // Update refresh token if a new one was provided
         if ($newAccessToken->getRefreshToken()) {
             $user->setRefreshToken($newAccessToken->getRefreshToken());

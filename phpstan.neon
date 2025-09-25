@@ -1,0 +1,33 @@
+parameters:
+    level: 5  # Level 5 is more reasonable for existing projects
+    phpVersion: 80400 # PHP 8.4
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - src/Kernel.php
+        - tests/bootstrap.php
+    symfony:
+        containerXmlPath: 'var/cache/dev/App_KernelDevDebugContainer.xml'
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Allow accessing properties on mixed types (common in Symfony)
+        - '#Cannot access property .* on mixed#'
+        # Allow calling methods on mixed types
+        - '#Cannot call method .* on mixed#'
+        # Ignore Symfony-specific patterns
+        - '#Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::#'
+        # Allow arrays without specific value types (common in Symfony)
+        - '#no value type specified in iterable type array#'
+        # Ignore unused methods (they may be used via DI or routing)
+        - '#Method .* is unused#'
+        # Ignore write-only properties (common with DI)
+        - '#Property .* is never read, only written#'
+        # SessionInterface doesn't have getFlashBag() but Session class does
+        - '#Call to an undefined method Symfony\\Component\\HttpFoundation\\Session\\SessionInterface::getFlashBag\(\)#'
+        # Ignore Doctrine Entity ID type warnings (IDs are null before persistence)
+        -
+            message: '#Property .+::\$id \(int\|null\) is never assigned int so it can be removed from the property type#'
+            paths:
+                - src/Entity/*.php

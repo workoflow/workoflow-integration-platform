@@ -11,7 +11,8 @@ class JiraIntegration implements IntegrationInterface
 {
     public function __construct(
         private JiraService $jiraService
-    ) {}
+    ) {
+    }
 
     public function getType(): string
     {
@@ -95,7 +96,7 @@ class JiraIntegration implements IntegrationInterface
             throw new \InvalidArgumentException('Jira integration requires credentials');
         }
 
-        return match($toolName) {
+        return match ($toolName) {
             'jira_search' => $this->jiraService->search(
                 $credentials,
                 $parameters['jql'],
@@ -111,8 +112,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             'jira_get_sprint_issues' => $this->jiraService->getSprintIssues(
                 $credentials,
-                $parameters['sprintId'],
-                $parameters['maxResults'] ?? 50
+                $parameters['sprintId']
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };

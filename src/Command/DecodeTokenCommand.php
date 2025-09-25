@@ -55,25 +55,25 @@ class DecodeTokenCommand extends Command
         }
 
         $io->title('SharePoint Token Analysis');
-        
+
         $token = $credentials['access_token'];
         $parts = explode('.', $token);
-        
+
         if (count($parts) !== 3) {
             $io->error('Invalid JWT token format');
             return Command::FAILURE;
         }
-        
+
         // Decode header
         $header = json_decode(base64_decode($parts[0]), true);
         $io->section('Token Header');
         $io->text(json_encode($header, JSON_PRETTY_PRINT));
-        
+
         // Decode payload
         $payload = json_decode(base64_decode($parts[1]), true);
         $io->section('Token Payload');
         $io->text(json_encode($payload, JSON_PRETTY_PRINT));
-        
+
         // Check important fields
         $io->section('Token Analysis');
         $io->table(['Field', 'Value'], [
@@ -85,12 +85,12 @@ class DecodeTokenCommand extends Command
             ['Expires (exp)', isset($payload['exp']) ? date('Y-m-d H:i:s', $payload['exp']) : 'Not set'],
             ['Not Before (nbf)', isset($payload['nbf']) ? date('Y-m-d H:i:s', $payload['nbf']) : 'Not set'],
         ]);
-        
+
         // Check if token is for Microsoft Graph
         if (isset($payload['aud']) && $payload['aud'] !== 'https://graph.microsoft.com' && $payload['aud'] !== '00000003-0000-0000-c000-000000000000') {
             $io->warning('Token audience is not Microsoft Graph! Expected "https://graph.microsoft.com" or "00000003-0000-0000-c000-000000000000", got: ' . $payload['aud']);
         }
-        
+
         // Check scopes
         if (isset($payload['scp'])) {
             $scopes = explode(' ', $payload['scp']);

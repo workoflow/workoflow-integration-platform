@@ -14,6 +14,16 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
     - Example: ✅ "Removed address confirmation step for faster returns"
     - Example: ❌ "Modified processReturn function to skip confirmAddress parameter"
 
+2. **Code Quality Verification**:
+    - **ALWAYS** run `docker-compose exec frankenphp composer code-check` after code changes
+    - This runs both PHPStan (static analysis) and PHP CodeSniffer (coding standards)
+    - Available commands:
+        - `composer phpstan` - Run PHPStan analysis (level 6)
+        - `composer phpcs` - Check coding standards (PSR-12)
+        - `composer phpcbf` - Auto-fix coding standard violations
+        - `composer code-check` - Run both PHPStan and PHPCS
+    - Ensure code passes both checks before considering task complete
+
 ### Main Features
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management

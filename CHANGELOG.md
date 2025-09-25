@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-09-25 (Latest)
 
+### Added
+- New Omnichannel AI Agent promotion section on landing page highlighting platform's ability to create channel-specific AI agents
+- Visual hub-and-spoke diagram showing how the platform connects to multiple channels (Teams, E-Commerce, WhatsApp, etc.)
+- Three key platform benefits prominently displayed: Channel-Specific Intelligence, Maximum Reusability, and Connected Ecosystem
+
 ### Fixed
 - Fixed duplicate slashes in Jira and Confluence API URLs that caused 404 errors
 - Jira and Confluence integrations now properly validate and format URLs before making API calls

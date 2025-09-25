@@ -21,7 +21,8 @@ class IntegrationOAuthController extends AbstractController
         private EntityManagerInterface $entityManager,
         private EncryptionService $encryptionService,
         private ClientRegistry $clientRegistry
-    ) {}
+    ) {
+    }
 
     #[Route('/microsoft/start/{configId}', name: 'app_integration_oauth_microsoft_start')]
     public function microsoftStart(int $configId, Request $request): RedirectResponse
@@ -47,7 +48,7 @@ class IntegrationOAuthController extends AbstractController
                 'https://graph.microsoft.com/Sites.Read.All',
                 'https://graph.microsoft.com/Files.Read.All',
                 'https://graph.microsoft.com/User.Read'
-            ]);
+            ], []);
     }
 
     #[Route('/callback/microsoft', name: 'app_integration_oauth_microsoft_callback')]
@@ -123,10 +124,12 @@ class IntegrationOAuthController extends AbstractController
 
             // Auto-disable less useful tools for SharePoint on first setup
             $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
-            if ($config->getIntegrationType() === 'sharepoint' &&
+            if (
+                $config->getIntegrationType() === 'sharepoint' &&
                 $oauthFlowIntegration &&
                 $oauthFlowIntegration == $configId &&
-                empty($config->getDisabledTools())) {
+                empty($config->getDisabledTools())
+            ) {
                 // These tools are less useful for AI agents, disable by default
                 $toolsToDisable = [
                     'sharepoint_list_files',      // Agents should search, not browse
@@ -156,7 +159,6 @@ class IntegrationOAuthController extends AbstractController
             }
 
             return $this->redirectToRoute('app_integrations');
-
         } catch (\Exception $e) {
             // If this was initial setup and failed, remove the temporary config
             $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');

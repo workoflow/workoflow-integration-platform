@@ -29,7 +29,8 @@ class IntegrationApiController extends AbstractController
         private LoggerInterface $logger,
         private string $apiAuthUser,
         private string $apiAuthPassword
-    ) {}
+    ) {
+    }
 
     #[Route('/{organisationUuid}', name: 'api_integration_tools', methods: ['GET'])]
     public function getTools(string $organisationUuid, Request $request): JsonResponse
@@ -278,7 +279,6 @@ class IntegrationApiController extends AbstractController
                 'success' => true,
                 'result' => $result
             ]);
-
         } catch (\Exception $e) {
             $this->logger->error('API Tool execution failed', [
                 'organisation' => $organisation->getName(),

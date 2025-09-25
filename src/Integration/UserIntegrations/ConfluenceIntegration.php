@@ -11,7 +11,8 @@ class ConfluenceIntegration implements IntegrationInterface
 {
     public function __construct(
         private ConfluenceService $confluenceService
-    ) {}
+    ) {
+    }
 
     public function getType(): string
     {
@@ -77,7 +78,7 @@ class ConfluenceIntegration implements IntegrationInterface
             throw new \InvalidArgumentException('Confluence integration requires credentials');
         }
 
-        return match($toolName) {
+        return match ($toolName) {
             'confluence_search' => $this->confluenceService->search(
                 $credentials,
                 $parameters['cql'],

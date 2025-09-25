@@ -11,7 +11,8 @@ class ConfluenceService
 {
     public function __construct(
         private HttpClientInterface $httpClient
-    ) {}
+    ) {
+    }
 
     private function validateAndNormalizeUrl(string $url): string
     {
@@ -50,7 +51,6 @@ class ConfluenceService
 
             // Return the normalized URL as string
             return (string) $uri;
-
         } catch (\InvalidArgumentException $e) {
             // Re-throw our custom messages
             throw $e;

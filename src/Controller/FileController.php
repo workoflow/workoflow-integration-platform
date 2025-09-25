@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Service\AuditLogService;
 use App\Service\FileStorageService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,15 +20,17 @@ class FileController extends AbstractController
     public function __construct(
         private FileStorageService $fileStorageService,
         private AuditLogService $auditLogService
-    ) {}
+    ) {
+    }
 
     #[Route('/', name: 'app_files')]
     public function index(Request $request): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
         }
@@ -48,7 +51,7 @@ class FileController extends AbstractController
         } catch (\Exception $e) {
             $connectionError = 'Error accessing file storage: ' . $e->getMessage();
             $this->addFlash('error', $connectionError);
-            
+
             // Log the error for debugging
             error_log('FileController: Connection error - ' . $e->getMessage());
             error_log('FileController: isConnected = ' . ($isConnected ? 'true' : 'false'));
@@ -65,22 +68,23 @@ class FileController extends AbstractController
     #[Route('/upload', name: 'app_file_upload', methods: ['POST'])]
     public function upload(Request $request): JsonResponse
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return new JsonResponse(['error' => 'No organisation'], 400);
         }
 
         // Handle files sent as 'files[]' from the frontend
         $uploadedFiles = $request->files->get('files', []);
-        
+
         // If no files under 'files' key, check all files
         if (empty($uploadedFiles)) {
             $uploadedFiles = $request->files->all();
         }
-        
+
         // Ensure we have files to process
         if (empty($uploadedFiles)) {
             return new JsonResponse([
@@ -88,7 +92,7 @@ class FileController extends AbstractController
                 'error' => 'No files received in the request'
             ], 400);
         }
-        
+
         $results = [];
         $errors = [];
 
@@ -96,7 +100,7 @@ class FileController extends AbstractController
         if (!is_array($uploadedFiles)) {
             $uploadedFiles = [$uploadedFiles];
         }
-        
+
         foreach ($uploadedFiles as $uploadedFile) {
             if ($uploadedFile instanceof UploadedFile) {
                 try {
@@ -105,9 +109,9 @@ class FileController extends AbstractController
                         $organisation->getUuid(),
                         $user->getId()
                     );
-                    
+
                     $results[] = $result;
-                    
+
                     $this->auditLogService->log(
                         'file.uploaded',
                         $user,
@@ -142,10 +146,11 @@ class FileController extends AbstractController
     #[Route('/{key}/delete', name: 'app_file_delete', methods: ['POST'], requirements: ['key' => '.+'])]
     public function delete(Request $request, string $key): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         // Verify file belongs to user's organisation
         if (!str_starts_with($key, $organisation->getUuid() . '/')) {
             throw $this->createAccessDeniedException();
@@ -157,7 +162,7 @@ class FileController extends AbstractController
                 $user,
                 ['key' => $key]
             );
-            
+
             $this->addFlash('success', 'file.deleted.success');
         } else {
             $this->addFlash('error', 'file.deleted.error');
@@ -169,10 +174,11 @@ class FileController extends AbstractController
     #[Route('/{key}/download', name: 'app_file_download', requirements: ['key' => '.+'])]
     public function download(Request $request, string $key): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         // Verify file belongs to user's organisation
         if (!str_starts_with($key, $organisation->getUuid() . '/')) {
             throw $this->createAccessDeniedException();
@@ -180,13 +186,13 @@ class FileController extends AbstractController
 
         try {
             $url = $this->fileStorageService->getDownloadUrl($key);
-            
+
             $this->auditLogService->log(
                 'file.downloaded',
                 $user,
                 ['key' => $key]
             );
-            
+
             return $this->redirect($url);
         } catch (\Exception $e) {
             $this->addFlash('error', 'file.download.error');

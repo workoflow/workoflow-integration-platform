@@ -494,7 +494,7 @@ body {
 .video-section {
   padding: var(--space-3xl) 0;
   background: var(--bg-secondary);
-  
+
   .video-wrapper {
     max-width: 900px;
     margin: 0 auto;
@@ -502,6 +502,214 @@ body {
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     border: 1px solid var(--border-color);
+  }
+}
+
+// Omnichannel AI Agent Section
+.omnichannel-section {
+  padding: var(--space-3xl) 0;
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  position: relative;
+  overflow: hidden;
+
+  .lead-text {
+    font-size: var(--text-xl);
+    color: var(--text-secondary);
+    max-width: 800px;
+    margin: 0 auto var(--space-2xl);
+  }
+
+  .omnichannel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-3xl);
+
+    .omnichannel-feature {
+      background: var(--bg-card);
+      padding: var(--space-xl);
+      border-radius: var(--border-radius-lg);
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(103, 126, 234, 0.2);
+        border-color: var(--color-primary);
+      }
+
+      .feature-icon-wrapper {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+        border-radius: 50%;
+        margin-bottom: var(--space-md);
+
+        .icon-gradient {
+          font-size: 2rem;
+          filter: brightness(1.2);
+        }
+      }
+
+      h3 {
+        font-size: var(--text-2xl);
+        margin-bottom: var(--space-sm);
+        color: var(--text-primary);
+      }
+
+      p {
+        font-size: var(--text-lg);
+        line-height: 1.6;
+        color: var(--text-secondary);
+      }
+    }
+  }
+
+  .omnichannel-diagram {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 500px;
+    margin: var(--space-3xl) 0;
+    position: relative;
+
+    .central-hub {
+      position: relative;
+      width: 400px;
+      height: 400px;
+
+      .hub-core {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 150px;
+        height: 150px;
+        background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: white;
+        font-weight: 700;
+        font-size: var(--text-md);
+        box-shadow: 0 10px 40px rgba(103, 126, 234, 0.4);
+        z-index: 10;
+      }
+
+      .hub-ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 200px;
+        height: 200px;
+        border: 2px dashed var(--color-primary);
+        border-radius: 50%;
+        opacity: 0.3;
+        animation: rotate 30s linear infinite;
+      }
+
+      .channel-node {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 80px;
+        height: 80px;
+        margin: -40px 0 0 -40px;
+        transform: rotate(var(--angle)) translateY(-180px) rotate(calc(-1 * var(--angle)));
+
+        .node-content {
+          background: var(--bg-card);
+          border: 2px solid var(--border-color);
+          border-radius: var(--border-radius-lg);
+          padding: var(--space-sm);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          transition: var(--transition);
+          cursor: pointer;
+
+          &:hover {
+            transform: scale(1.1);
+            border-color: var(--color-primary);
+            box-shadow: 0 5px 20px rgba(103, 126, 234, 0.3);
+          }
+
+          .node-icon {
+            font-size: 1.5rem;
+            margin-bottom: var(--space-xs);
+          }
+
+          .node-label {
+            font-size: 0.7rem;
+            text-align: center;
+            line-height: 1.2;
+            color: var(--text-secondary);
+          }
+        }
+      }
+    }
+
+    @media (max-width: 768px) {
+      .central-hub {
+        width: 300px;
+        height: 300px;
+
+        .hub-core {
+          width: 120px;
+          height: 120px;
+          font-size: var(--text-sm);
+        }
+
+        .channel-node {
+          width: 60px;
+          height: 60px;
+          margin: -30px 0 0 -30px;
+          transform: rotate(var(--angle)) translateY(-130px) rotate(calc(-1 * var(--angle)));
+
+          .node-content {
+            padding: var(--space-xs);
+
+            .node-icon {
+              font-size: 1.2rem;
+            }
+
+            .node-label {
+              font-size: 0.6rem;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .omnichannel-cta {
+    text-align: center;
+    margin-top: var(--space-2xl);
+
+    .cta-text {
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      margin-bottom: var(--space-lg);
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 

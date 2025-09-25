@@ -35,7 +35,7 @@ class AuthController extends AbstractController
         return $clientRegistry
             ->getClient('google')
             ->redirect([
-                'email', 
+                'email',
                 'profile'
             ], [
                 'access_type' => 'offline',

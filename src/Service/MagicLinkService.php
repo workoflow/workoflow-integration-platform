@@ -45,10 +45,10 @@ class MagicLinkService
     {
         try {
             $decoded = JWT::decode($token, new Key($this->secret, $this->algorithm));
-            
+
             // Convert object to array
             $payload = (array) $decoded;
-            
+
             // Verify token type
             if (!isset($payload['type']) || $payload['type'] !== 'magic_link') {
                 $this->logger->warning('Invalid token type', ['payload' => $payload]);

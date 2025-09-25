@@ -25,7 +25,7 @@ class UserOrganisation
     private ?Organisation $organisation = null;
 
     #[ORM\Column(length: 50)]
-    private ?string $role = 'MEMBER';
+    private string $role = 'MEMBER';
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $workflowUserId = null;
@@ -65,7 +65,7 @@ class UserOrganisation
         return $this;
     }
 
-    public function getRole(): ?string
+    public function getRole(): string
     {
         return $this->role;
     }

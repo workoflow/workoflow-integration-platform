@@ -21,7 +21,8 @@ class TestAuthenticator extends AbstractAuthenticator
         private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
         private string $environment
-    ) {}
+    ) {
+    }
 
     public function supports(Request $request): ?bool
     {
@@ -33,7 +34,7 @@ class TestAuthenticator extends AbstractAuthenticator
         $email = $request->query->get('X-Test-Auth-Email');
 
         return new SelfValidatingPassport(
-            new UserBadge($email, function($userIdentifier) {
+            new UserBadge($email, function ($userIdentifier) {
                 $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
 
                 if (!$user) {
@@ -41,7 +42,7 @@ class TestAuthenticator extends AbstractAuthenticator
                     $user->setEmail($userIdentifier);
                     $user->setName('Test User');
                     $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
-                    
+
                     $this->entityManager->persist($user);
                     $this->entityManager->flush();
                 }

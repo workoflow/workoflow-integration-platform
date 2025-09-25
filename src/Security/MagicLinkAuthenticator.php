@@ -41,17 +41,17 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
     public function supports(Request $request): ?bool
     {
-        return $request->attributes->get('_route') === 'app_magic_link' 
+        return $request->attributes->get('_route') === 'app_magic_link'
             && $request->query->has('token');
     }
 
     public function authenticate(Request $request): Passport
     {
         $token = $request->query->get('token');
-        
+
         // Validate token
         $payload = $this->magicLinkService->validateToken($token);
-        
+
         if (!$payload) {
             throw new CustomUserMessageAuthenticationException('Invalid or expired magic link');
         }
@@ -66,16 +66,16 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
         // Find or create organisation
         $organisation = $this->organisationRepository->findOneBy(['uuid' => $orgUuid]);
-        
+
         if (!$organisation) {
             // Create new organisation if it doesn't exist
             $organisation = new Organisation();
             $organisation->setUuid($orgUuid);
             $organisation->setName('Organisation ' . substr($orgUuid, 0, 8)); // Default name
-            
+
             $this->entityManager->persist($organisation);
             $this->entityManager->flush();
-            
+
             $this->logger->info('Created new organisation via magic link', [
                 'org_uuid' => $orgUuid,
                 'name' => $organisation->getName()
@@ -85,7 +85,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
         return new SelfValidatingPassport(
             new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $workflowUserId, $request) {
                 $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
-                
+
                 if (!$user) {
                     // Create new user
                     $user = new User();
@@ -105,7 +105,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
                     $this->entityManager->persist($userOrganisation);
                     $this->entityManager->flush();
-                    
+
                     $this->logger->info('Created new user via magic link', [
                         'email' => $userIdentifier,
                         'name' => $name,
@@ -195,7 +195,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
         // Redirect to dashboard or originally requested page
         $targetPath = $request->getSession()->get('_security.' . $firewallName . '.target_path');
-        
+
         if ($targetPath) {
             $request->getSession()->remove('_security.' . $firewallName . '.target_path');
             return new RedirectResponse($targetPath);
@@ -207,7 +207,8 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
         if ($request->hasSession()) {
-            $request->getSession()->getFlashBag()->add('error', 
+            $request->getSession()->getFlashBag()->add(
+                'error',
                 $exception->getMessage() ?: 'Magic link authentication failed'
             );
         }
@@ -219,7 +220,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
     {
         $parts = explode('@', $email);
         $localPart = $parts[0];
-        
+
         // Replace common separators with spaces and capitalize
         $name = str_replace(['.', '_', '-'], ' ', $localPart);
         return ucwords($name);

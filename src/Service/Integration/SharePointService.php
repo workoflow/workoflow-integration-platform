@@ -11,10 +11,11 @@ use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 class SharePointService
 {
     private const GRAPH_API_BASE = 'https://graph.microsoft.com/v1.0';
-    
+
     public function __construct(
         private HttpClientInterface $httpClient
-    ) {}
+    ) {
+    }
 
     public function testConnection(array $credentials): bool
     {
@@ -36,11 +37,11 @@ class SharePointService
         // The /search/query endpoint requires Application permissions
         // With delegated permissions, we need to use site-specific search
         // First, get the user's sites, then search within them
-        
+
         try {
             $results = [];
             $remainingLimit = $limit;
-            
+
             // 1. Search for matching sites
             try {
                 $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
@@ -50,9 +51,9 @@ class SharePointService
                         '$top' => min($remainingLimit, 10)
                     ]
                 ]);
-                
+
                 $sites = $sitesResponse->toArray();
-                
+
                 if (isset($sites['value'])) {
                     foreach ($sites['value'] as $site) {
                         $results[] = [
@@ -63,13 +64,17 @@ class SharePointService
                             'description' => $site['description'] ?? ''
                         ];
                         $remainingLimit--;
-                        if ($remainingLimit <= 0) break;
+                        if ($remainingLimit <= 0) {
+                            break;
+                        }
                     }
-                    
+
                     // For each site found, also search for pages and documents within it
                     foreach ($sites['value'] as $site) {
-                        if ($remainingLimit <= 0) break;
-                        
+                        if ($remainingLimit <= 0) {
+                            break;
+                        }
+
                         // Search for pages in this site
                         try {
                             $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/pages', [
@@ -79,7 +84,7 @@ class SharePointService
                                     '$filter' => "contains(title,'" . str_replace("'", "''", $query) . "') or contains(name,'" . str_replace("'", "''", $query) . "')"
                                 ]
                             ]);
-                            
+
                             $pages = $pagesResponse->toArray();
                             if (isset($pages['value'])) {
                                 foreach ($pages['value'] as $page) {
@@ -93,13 +98,15 @@ class SharePointService
                                         'siteName' => $site['displayName'] ?? $site['name'] ?? ''
                                     ];
                                     $remainingLimit--;
-                                    if ($remainingLimit <= 0) break;
+                                    if ($remainingLimit <= 0) {
+                                        break;
+                                    }
                                 }
                             }
                         } catch (\Exception $e) {
                             error_log('Pages search in site ' . $site['id'] . ' failed: ' . $e->getMessage());
                         }
-                        
+
                         // Search for documents in this site's drive
                         try {
                             $driveSearchResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/drive/search(q=\'' . urlencode($query) . '\')', [
@@ -108,7 +115,7 @@ class SharePointService
                                     '$top' => min($remainingLimit, 10)
                                 ]
                             ]);
-                            
+
                             $driveResults = $driveSearchResponse->toArray();
                             if (isset($driveResults['value'])) {
                                 foreach ($driveResults['value'] as $item) {
@@ -123,7 +130,9 @@ class SharePointService
                                         'siteName' => $site['displayName'] ?? $site['name'] ?? ''
                                     ];
                                     $remainingLimit--;
-                                    if ($remainingLimit <= 0) break;
+                                    if ($remainingLimit <= 0) {
+                                        break;
+                                    }
                                 }
                             }
                         } catch (\Exception $e) {
@@ -134,7 +143,7 @@ class SharePointService
             } catch (\Exception $e) {
                 error_log('Sites search failed: ' . $e->getMessage());
             }
-            
+
             // 2. Also search in user's OneDrive if we still have room
             if ($remainingLimit > 0) {
                 try {
@@ -144,7 +153,7 @@ class SharePointService
                             '$top' => $remainingLimit
                         ]
                     ]);
-                    
+
                     $driveResults = $driveSearchResponse->toArray();
                     if (isset($driveResults['value'])) {
                         foreach ($driveResults['value'] as $item) {
@@ -164,12 +173,11 @@ class SharePointService
                     error_log('Personal drive search failed: ' . $e->getMessage());
                 }
             }
-            
+
             return [
                 'value' => $results,
                 'count' => count($results)
             ];
-            
         } catch (\Exception $e) {
             error_log('SharePoint Search Error: ' . $e->getMessage());
             throw $e;
@@ -181,7 +189,7 @@ class SharePointService
         try {
             error_log('SharePoint searchPages called with query: ' . $query . ', limit: ' . $limit);
             $results = [];
-            
+
             // Use the Microsoft Graph Search API
             $searchRequest = [
                 'requests' => [
@@ -193,7 +201,7 @@ class SharePointService
                         'size' => $limit,
                         'fields' => [
                             'title',
-                            'name', 
+                            'name',
                             'webUrl',
                             'description',
                             'createdDateTime',
@@ -204,31 +212,31 @@ class SharePointService
                     ]
                 ]
             ];
-            
+
             error_log('Attempting Microsoft Graph Search API with query: ' . json_encode($searchRequest));
-            
+
             $searchResponse = $this->httpClient->request('POST', self::GRAPH_API_BASE . '/search/query', [
                 'auth_bearer' => $credentials['access_token'],
                 'json' => $searchRequest
             ]);
-            
+
             $searchData = $searchResponse->toArray();
             error_log('Search API full response: ' . json_encode($searchData));
-            
+
             if (isset($searchData['value'][0]['hitsContainers'])) {
                 foreach ($searchData['value'][0]['hitsContainers'] as $container) {
                     error_log('Processing container with entityType: ' . ($container['@odata.type'] ?? 'unknown'));
                     error_log('Container has ' . (isset($container['hits']) ? count($container['hits']) : 0) . ' hits');
-                    
+
                     if (isset($container['hits'])) {
                         foreach ($container['hits'] as $hit) {
                             if (isset($hit['resource'])) {
                                 $resource = $hit['resource'];
                                 error_log('Hit resource type: ' . ($resource['@odata.type'] ?? 'unknown'));
-                                
+
                                 // Log all available fields for debugging
                                 error_log('Resource fields: ' . json_encode(array_keys($resource)));
-                                
+
                                 // More flexible filtering - include any SharePoint content
                                 // Determine the type based on @odata.type
                                 $odataType = $resource['@odata.type'] ?? 'unknown';
@@ -285,15 +293,14 @@ class SharePointService
                 error_log('No hitsContainers found in search response');
                 error_log('Response structure: ' . json_encode(array_keys($searchData)));
             }
-            
+
             error_log('Search API found ' . count($results) . ' results');
-            
+
             return [
                 'value' => $results,
                 'count' => count($results),
                 'searchQuery' => $query
             ];
-            
         } catch (\Exception $e) {
             error_log('SharePoint Pages Search Error: ' . $e->getMessage());
             error_log('Error trace: ' . $e->getTraceAsString());
@@ -305,12 +312,12 @@ class SharePointService
     {
         try {
             error_log('Reading SharePoint page - SiteID: ' . $siteId . ', PageID: ' . $pageId);
-            
+
             // Check if siteId looks like a name rather than a proper ID
             // A proper site ID contains commas and GUIDs, or is in hostname:path format
             if (!str_contains($siteId, ',') && !str_contains($siteId, '.sharepoint.com')) {
                 error_log('SiteID appears to be a name, attempting to resolve to actual site ID');
-                
+
                 // Search for the site by name
                 $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
                     'auth_bearer' => $credentials['access_token'],
@@ -319,9 +326,9 @@ class SharePointService
                         '$top' => 10
                     ]
                 ]);
-                
+
                 $sites = $sitesResponse->toArray();
-                
+
                 if (isset($sites['value']) && count($sites['value']) > 0) {
                     // Try to find exact match first
                     $resolvedSiteId = null;
@@ -337,14 +344,14 @@ class SharePointService
                             break;
                         }
                     }
-                    
+
                     // If no exact match, use the first result
                     if (!$resolvedSiteId && isset($sites['value'][0]['id'])) {
                         $resolvedSiteId = $sites['value'][0]['id'];
                         $siteName = $sites['value'][0]['displayName'] ?? $sites['value'][0]['name'] ?? 'Unknown';
                         error_log('Using first site match: ' . $siteName . ' -> ' . $resolvedSiteId);
                     }
-                    
+
                     if ($resolvedSiteId) {
                         $siteId = $resolvedSiteId;
                     } else {
@@ -354,12 +361,12 @@ class SharePointService
                     throw new \Exception('No sites found matching "' . $siteId . '"');
                 }
             }
-            
+
             // Check if pageId looks like a name/title rather than a GUID
             // A proper page ID is a GUID format like "7b6fd3e8-80ad-4392-9643-6bab61be81e0"
             if (!preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $pageId)) {
                 error_log('PageID appears to be a name/title, attempting to resolve to actual page ID');
-                
+
                 // Get all pages from the site and find the one matching the name/title
                 $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages", [
                     'auth_bearer' => $credentials['access_token'],
@@ -367,13 +374,13 @@ class SharePointService
                         '$top' => 100  // Get more pages to find the right one
                     ]
                 ]);
-                
+
                 $pages = $pagesResponse->toArray();
-                
+
                 if (isset($pages['value'])) {
                     $resolvedPageId = null;
                     $pageNameLower = strtolower($pageId);
-                    
+
                     // Try to find exact match first by title or name
                     foreach ($pages['value'] as $page) {
                         // Check title match
@@ -396,12 +403,14 @@ class SharePointService
                             break;
                         }
                     }
-                    
+
                     // If no exact match, try partial match
                     if (!$resolvedPageId) {
                         foreach ($pages['value'] as $page) {
-                            if ((isset($page['title']) && str_contains(strtolower($page['title']), $pageNameLower)) ||
-                                (isset($page['name']) && str_contains(strtolower($page['name']), $pageNameLower))) {
+                            if (
+                                (isset($page['title']) && str_contains(strtolower($page['title']), $pageNameLower)) ||
+                                (isset($page['name']) && str_contains(strtolower($page['name']), $pageNameLower))
+                            ) {
                                 $resolvedPageId = $page['id'];
                                 $pageTitle = $page['title'] ?? $page['name'] ?? 'Unknown';
                                 error_log('Using partial page match: ' . $pageTitle . ' -> ' . $resolvedPageId);
@@ -409,18 +418,20 @@ class SharePointService
                             }
                         }
                     }
-                    
+
                     if ($resolvedPageId) {
                         $pageId = $resolvedPageId;
                     } else {
-                        throw new \Exception('Could not resolve page name "' . $pageId . '" to a valid page ID. Available pages: ' . 
-                            implode(', ', array_map(function($p) { return $p['title'] ?? $p['name'] ?? 'Untitled'; }, $pages['value'])));
+                        throw new \Exception('Could not resolve page name "' . $pageId . '" to a valid page ID. Available pages: ' .
+                            implode(', ', array_map(function ($p) {
+                                return $p['title'] ?? $p['name'] ?? 'Untitled';
+                            }, $pages['value'])));
                     }
                 } else {
                     throw new \Exception('No pages found in site');
                 }
             }
-            
+
             // Expand canvasLayout to get page content
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}/microsoft.graph.sitePage", [
                 'auth_bearer' => $credentials['access_token'],
@@ -430,7 +441,7 @@ class SharePointService
             ]);
 
             $data = $response->toArray();
-            
+
             // Extract content from canvasLayout if available
             $content = $this->extractPageContent($data);
             if ($content !== null) {
@@ -440,22 +451,20 @@ class SharePointService
             } else {
                 error_log('SharePoint page read successfully (no extractable content)');
             }
-            
+
             return $data;
-            
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorContent = $e->getResponse()->getContent(false);
             error_log('SharePoint Read Page Client Error (' . $statusCode . '): ' . $errorContent);
             error_log('Request URL: ' . self::GRAPH_API_BASE . "/sites/{$siteId}/pages/{$pageId}");
-            
+
             // Parse error details if available
             $errorData = json_decode($errorContent, true);
             if (isset($errorData['error']['message'])) {
                 throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
             }
             throw new \Exception('Failed to read SharePoint page (HTTP ' . $statusCode . '): ' . $errorContent);
-            
         } catch (\Exception $e) {
             error_log('SharePoint Read Page Error: ' . $e->getMessage());
             throw new \Exception('Failed to read SharePoint page: ' . $e->getMessage());
@@ -465,12 +474,12 @@ class SharePointService
     public function listFiles(array $credentials, string $siteId, string $path = ''): array
     {
         try {
-            $endpoint = $path 
+            $endpoint = $path
                 ? "/sites/{$siteId}/drive/root:/{$path}:/children"
                 : "/sites/{$siteId}/drive/root/children";
-            
+
             error_log('Listing SharePoint files - SiteID: ' . $siteId . ', Path: ' . ($path ?: 'root'));
-            
+
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . $endpoint, [
                 'auth_bearer' => $credentials['access_token'],
                 'query' => [
@@ -482,18 +491,16 @@ class SharePointService
             $data = $response->toArray();
             error_log('SharePoint files listed successfully, count: ' . (isset($data['value']) ? count($data['value']) : 0));
             return $data;
-            
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorContent = $e->getResponse()->getContent(false);
             error_log('SharePoint List Files Client Error (' . $statusCode . '): ' . $errorContent);
-            
+
             $errorData = json_decode($errorContent, true);
             if (isset($errorData['error']['message'])) {
                 throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
             }
             throw new \Exception('Failed to list SharePoint files (HTTP ' . $statusCode . ')');
-            
         } catch (\Exception $e) {
             error_log('SharePoint List Files Error: ' . $e->getMessage());
             throw new \Exception('Failed to list files: ' . $e->getMessage());
@@ -504,25 +511,25 @@ class SharePointService
     {
         try {
             error_log('Downloading SharePoint file - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
-            
+
             // Get file metadata first
             $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}", [
                 'auth_bearer' => $credentials['access_token'],
             ]);
-            
+
             $metadata = $metadataResponse->toArray();
-            
+
             // Get download URL
             $downloadResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/drive/items/{$itemId}/content", [
                 'auth_bearer' => $credentials['access_token'],
                 'max_redirects' => 0,
             ]);
-            
+
             // The download URL is in the Location header
             $downloadUrl = $downloadResponse->getHeaders(false)['location'][0] ?? null;
-            
+
             error_log('SharePoint file download prepared successfully: ' . ($metadata['name'] ?? 'unknown'));
-            
+
             return [
                 'metadata' => $metadata,
                 'downloadUrl' => $downloadUrl,
@@ -530,18 +537,16 @@ class SharePointService
                 'size' => $metadata['size'] ?? 0,
                 'mimeType' => $metadata['file']['mimeType'] ?? 'application/octet-stream'
             ];
-            
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorContent = $e->getResponse()->getContent(false);
             error_log('SharePoint Download File Client Error (' . $statusCode . '): ' . $errorContent);
-            
+
             $errorData = json_decode($errorContent, true);
             if (isset($errorData['error']['message'])) {
                 throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
             }
             throw new \Exception('Failed to download SharePoint file (HTTP ' . $statusCode . ')');
-            
         } catch (\Exception $e) {
             error_log('SharePoint Download File Error: ' . $e->getMessage());
             throw new \Exception('Failed to download file: ' . $e->getMessage());
@@ -552,21 +557,21 @@ class SharePointService
     {
         try {
             error_log('Getting SharePoint list items - SiteID: ' . $siteId . ', ListID: ' . $listId);
-            
+
             $query = [
                 '$expand' => 'fields',
                 '$top' => 100
             ];
-            
+
             if (!empty($filters['filter'])) {
                 $query['$filter'] = $filters['filter'];
                 error_log('Applying filter: ' . $filters['filter']);
             }
-            
+
             if (!empty($filters['orderby'])) {
                 $query['$orderby'] = $filters['orderby'];
             }
-            
+
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . "/sites/{$siteId}/lists/{$listId}/items", [
                 'auth_bearer' => $credentials['access_token'],
                 'query' => $query
@@ -575,18 +580,16 @@ class SharePointService
             $data = $response->toArray();
             error_log('SharePoint list items retrieved successfully, count: ' . (isset($data['value']) ? count($data['value']) : 0));
             return $data;
-            
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorContent = $e->getResponse()->getContent(false);
             error_log('SharePoint Get List Items Client Error (' . $statusCode . '): ' . $errorContent);
-            
+
             $errorData = json_decode($errorContent, true);
             if (isset($errorData['error']['message'])) {
                 throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
             }
             throw new \Exception('Failed to get SharePoint list items (HTTP ' . $statusCode . ')');
-            
         } catch (\Exception $e) {
             error_log('SharePoint Get List Items Error: ' . $e->getMessage());
             throw new \Exception('Failed to get list items: ' . $e->getMessage());
@@ -628,18 +631,18 @@ class SharePointService
             $parsedUrl = parse_url($siteUrl);
             $hostname = $parsedUrl['host'] ?? '';
             $path = trim($parsedUrl['path'] ?? '', '/');
-            
+
             // Construct the API endpoint
             if ($path) {
                 $endpoint = "/sites/{$hostname}:/sites/{$path}";
             } else {
                 $endpoint = "/sites/{$hostname}";
             }
-            
+
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . $endpoint, [
                 'auth_bearer' => $credentials['access_token'],
             ]);
-            
+
             $data = $response->toArray();
             return $data['id'] ?? null;
         } catch (\Exception $e) {
@@ -649,7 +652,7 @@ class SharePointService
 
     /**
      * Get site information by site ID
-     * 
+     *
      * @param array $credentials The authentication credentials
      * @param string $siteId The site ID
      * @return array Site information
@@ -660,7 +663,7 @@ class SharePointService
             $response = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $siteId, [
                 'auth_bearer' => $credentials['access_token'],
             ]);
-            
+
             return $response->toArray();
         } catch (\Exception $e) {
             error_log('Failed to get site info for ' . $siteId . ': ' . $e->getMessage());
@@ -710,8 +713,10 @@ class SharePointService
                         if (isset($sites['value']) && count($sites['value']) > 0) {
                             // Try to find exact match first
                             foreach ($sites['value'] as $site) {
-                                if ((isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
-                                    (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)) {
+                                if (
+                                    (isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
+                                    (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)
+                                ) {
                                     $siteId = $site['id'];
                                     error_log('Resolved site name to ID: ' . $siteId);
                                     break;
@@ -891,7 +896,6 @@ class SharePointService
                     'truncated' => $truncated,
                     'mimeType' => $mimeType
                 ];
-
             } catch (\Exception $e) {
                 error_log('Document extraction failed: ' . $e->getMessage());
 
@@ -905,7 +909,6 @@ class SharePointService
                     'exception' => $e->getMessage()
                 ];
             }
-
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
             $errorContent = $e->getResponse()->getContent(false);
@@ -916,7 +919,6 @@ class SharePointService
                 throw new \Exception('SharePoint API Error: ' . $errorData['error']['message']);
             }
             throw new \Exception('Failed to read SharePoint document (HTTP ' . $statusCode . ')');
-
         } catch (\Exception $e) {
             error_log('SharePoint Read Document Error: ' . $e->getMessage());
             throw new \Exception('Failed to read document: ' . $e->getMessage());
@@ -933,14 +935,14 @@ class SharePointService
     private function extractPageContent(array $pageData, int $maxLength = 1000): ?string
     {
         $content = '';
-        
+
         // Check if canvasLayout exists
         if (!isset($pageData['canvasLayout'])) {
             return null;
         }
-        
+
         $canvasLayout = $pageData['canvasLayout'];
-        
+
         // Process horizontal sections
         if (isset($canvasLayout['horizontalSections']) && is_array($canvasLayout['horizontalSections'])) {
             foreach ($canvasLayout['horizontalSections'] as $section) {
@@ -958,7 +960,7 @@ class SharePointService
                                         $content .= $text . ' ';
                                     }
                                 }
-                                
+
                                 // Also check for other content types in data field
                                 if (isset($webpart['data']['properties']['title'])) {
                                     $content .= $webpart['data']['properties']['title'] . ' ';
@@ -972,7 +974,7 @@ class SharePointService
                 }
             }
         }
-        
+
         // Process vertical section if exists
         if (isset($canvasLayout['verticalSection']['webparts']) && is_array($canvasLayout['verticalSection']['webparts'])) {
             foreach ($canvasLayout['verticalSection']['webparts'] as $webpart) {
@@ -985,19 +987,19 @@ class SharePointService
                 }
             }
         }
-        
+
         // Trim and limit content length
         $content = trim($content);
-        
+
         if (empty($content)) {
             return null;
         }
-        
+
         // Truncate to maxLength if necessary
         if (strlen($content) > $maxLength) {
             $content = substr($content, 0, $maxLength) . '...';
         }
-        
+
         return $content;
     }
 
@@ -1006,12 +1008,12 @@ class SharePointService
      * Uses byte range requests to avoid downloading entire file
      *
      * @param array $credentials Authentication credentials
-     * @param string $siteId Site ID
+     * @param string $driveEndpoint Drive endpoint URL
      * @param string $itemId Document item ID
      * @param int $maxLength Maximum characters to extract
-     * @return string|null Extracted content or null if extraction fails
+     * @return string Extracted content
      */
-    private function extractFirstPartOfLargeDocument(array $credentials, string $driveEndpoint, string $itemId, int $maxLength): ?string
+    private function extractFirstPartOfLargeDocument(array $credentials, string $driveEndpoint, string $itemId, int $maxLength): string
     {
         try {
             // For large files, we can try to get just the first part using Range headers
@@ -1040,7 +1042,6 @@ class SharePointService
             }
 
             return $partialContent ?: 'Unable to extract content from large document';
-
         } catch (\Exception $e) {
             error_log('Failed to extract content from large document: ' . $e->getMessage());
             return 'Unable to extract content from large document (size limit exceeded)';
@@ -1076,7 +1077,6 @@ class SharePointService
             error_log('Successfully extracted ' . strlen($text) . ' characters from PDF');
 
             return $text;
-
         } catch (\Exception $e) {
             error_log('PDF extraction failed: ' . $e->getMessage());
             return null;
@@ -1111,7 +1111,9 @@ class SharePointService
 
                 // Extract text from all worksheets
                 foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
-                    if ($charCount >= $maxLength) break;
+                    if ($charCount >= $maxLength) {
+                        break;
+                    }
 
                     $worksheetTitle = $worksheet->getTitle();
                     $text .= "Sheet: $worksheetTitle\n";
@@ -1120,7 +1122,9 @@ class SharePointService
                     $highestColumn = $worksheet->getHighestColumn();
 
                     for ($row = 1; $row <= $highestRow; $row++) {
-                        if ($charCount >= $maxLength) break;
+                        if ($charCount >= $maxLength) {
+                            break;
+                        }
 
                         $rowData = $worksheet->rangeToArray(
                             "A$row:$highestColumn$row",
@@ -1130,7 +1134,7 @@ class SharePointService
                         )[0];
 
                         // Filter out empty cells and join with tabs
-                        $rowText = implode("\t", array_filter($rowData, function($cell) {
+                        $rowText = implode("\t", array_filter($rowData, function ($cell) {
                             return $cell !== null && $cell !== '';
                         }));
 
@@ -1146,14 +1150,12 @@ class SharePointService
                 error_log('Successfully extracted ' . strlen($text) . ' characters from spreadsheet');
 
                 return $text;
-
             } finally {
                 // Clean up temp file
                 if (file_exists($tempFile)) {
                     unlink($tempFile);
                 }
             }
-
         } catch (\Exception $e) {
             error_log('Spreadsheet extraction failed: ' . $e->getMessage());
             return null;
@@ -1202,14 +1204,12 @@ class SharePointService
                 error_log('Successfully extracted ' . strlen($text) . ' characters from Word document');
 
                 return $text;
-
             } finally {
                 // Clean up temp file
                 if (file_exists($tempFile)) {
                     unlink($tempFile);
                 }
             }
-
         } catch (\Exception $e) {
             error_log('Word document extraction failed: ' . $e->getMessage());
             return null;

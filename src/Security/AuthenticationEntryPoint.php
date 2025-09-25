@@ -12,7 +12,8 @@ class AuthenticationEntryPoint implements AuthenticationEntryPointInterface
 {
     public function __construct(
         private UrlGeneratorInterface $urlGenerator
-    ) {}
+    ) {
+    }
 
     public function start(Request $request, ?AuthenticationException $authException = null): RedirectResponse
     {
@@ -22,7 +23,7 @@ class AuthenticationEntryPoint implements AuthenticationEntryPointInterface
             // For home page, we should not require authentication
             throw new \LogicException('Authentication should not be required for public pages.');
         }
-        
+
         // Store the target path in session so we can redirect back after login
         if ($request->hasSession() && $targetPath = $request->getRequestUri()) {
             $request->getSession()->set('_security.main.target_path', $targetPath);

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Service\AuditLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,19 +29,20 @@ class ProfileController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
-        
+
         if (!$this->isCsrfTokenValid('delete-account', $request->request->get('_csrf_token'))) {
             throw $this->createAccessDeniedException();
         }
 
         $auditLogService->log('user.deleted', $user, ['email' => $user->getEmail()]);
-        
+
         $em->remove($user);
         $em->flush();
-        
+
         $request->getSession()->invalidate();
-        
+
         return $this->redirectToRoute('app_login');
     }
 }

@@ -24,28 +24,29 @@ class OrganisationController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
         }
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name');
-            
+
             if ($name && $name !== $organisation->getName()) {
                 $oldName = $organisation->getName();
                 $organisation->setName($name);
                 $em->flush();
-                
+
                 $auditLogService->log(
                     'organisation.updated',
                     $user,
                     ['old_name' => $oldName, 'new_name' => $name]
                 );
-                
+
                 $this->addFlash('success', 'organisation.updated.success');
                 return $this->redirectToRoute('app_organisation_settings');
             }
@@ -59,10 +60,11 @@ class OrganisationController extends AbstractController
     #[Route('/members', name: 'app_organisation_members')]
     public function members(Request $request, UserRepository $userRepository): Response
     {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return $this->redirectToRoute('app_organisation_create');
         }
@@ -83,10 +85,11 @@ class OrganisationController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if ($member->getOrganisation() !== $organisation) {
             throw $this->createAccessDeniedException();
         }
@@ -102,15 +105,15 @@ class OrganisationController extends AbstractController
         } else {
             $member->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
         }
-        
+
         $em->flush();
-        
+
         $auditLogService->log(
             'organisation.member.role_updated',
             $user,
             ['member_id' => $member->getId(), 'new_role' => $role]
         );
-        
+
         $this->addFlash('success', 'organisation.member.role_updated');
         return $this->redirectToRoute('app_organisation_members');
     }
@@ -122,8 +125,9 @@ class OrganisationController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
-        
+
         // Check if user has access to this organisation
         $hasAccess = false;
         $targetOrganisation = null;
@@ -134,30 +138,30 @@ class OrganisationController extends AbstractController
                 break;
             }
         }
-        
+
         if (!$hasAccess || !$targetOrganisation) {
             $this->addFlash('error', 'You do not have access to this organisation');
             return $this->redirectToRoute('app_dashboard');
         }
-        
+
         // Store the selected organisation ID in session
         $session = $request->getSession();
         $session->set('current_organisation_id', $id);
-        
+
         $auditLogService->log(
             'organisation.switched',
             $user,
             ['organisation_id' => $id, 'organisation_name' => $targetOrganisation->getName()]
         );
-        
+
         $this->addFlash('success', 'Switched to organisation: ' . $targetOrganisation->getName());
-        
+
         // Redirect to the referer or dashboard
         $referer = $request->headers->get('referer');
         if ($referer) {
             return $this->redirect($referer);
         }
-        
+
         return $this->redirectToRoute('app_dashboard');
     }
 
@@ -169,10 +173,11 @@ class OrganisationController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): Response {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         $email = $request->request->get('email');
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->addFlash('error', 'organisation.invite.invalid_email');
@@ -187,13 +192,13 @@ class OrganisationController extends AbstractController
                 $existingUser->setOrganisation($organisation);
                 $existingUser->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
                 $em->flush();
-                
+
                 $auditLogService->log(
                     'organisation.member.added',
                     $user,
                     ['invited_email' => $email]
                 );
-                
+
                 $this->addFlash('success', 'organisation.invite.user_added');
             }
         } else {
@@ -210,39 +215,40 @@ class OrganisationController extends AbstractController
         EntityManagerInterface $em,
         AuditLogService $auditLogService
     ): JsonResponse {
+        /** @var User $user */
         $user = $this->getUser();
         $sessionOrgId = $request->getSession()->get('current_organisation_id');
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
-        
+
         if (!$organisation) {
             return new JsonResponse(['success' => false, 'error' => 'No organisation found'], 404);
         }
 
         $data = json_decode($request->getContent(), true);
         $newName = $data['name'] ?? null;
-        
+
         if (!$newName || trim($newName) === '') {
             return new JsonResponse(['success' => false, 'error' => 'Name cannot be empty'], 400);
         }
-        
+
         $oldName = $organisation->getName();
         if ($newName !== $oldName) {
             $organisation->setName($newName);
             $em->flush();
-            
+
             $auditLogService->log(
                 'organisation.name_updated',
                 $user,
                 ['old_name' => $oldName, 'new_name' => $newName]
             );
-            
+
             return new JsonResponse([
                 'success' => true,
                 'name' => $newName,
                 'message' => 'Organisation name updated successfully'
             ]);
         }
-        
+
         return new JsonResponse([
             'success' => true,
             'name' => $newName,
