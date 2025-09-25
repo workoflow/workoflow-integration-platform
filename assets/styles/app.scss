@@ -1415,6 +1415,57 @@ body {
     }
   }
 
+  // Global header mobile styles
+  .global-header {
+    padding: var(--space-md) var(--space-lg);
+
+    .header-content {
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .header-brand {
+      .header-title {
+        font-size: var(--text-base);
+      }
+    }
+
+    .header-nav {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      justify-content: center;
+
+      .organisation-switcher {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: var(--space-sm);
+
+        .organisation-switcher-button {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .organisation-dropdown {
+          width: 100%;
+          max-width: none;
+        }
+      }
+
+      .single-org-display {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: var(--space-sm);
+        text-align: center;
+      }
+
+      .header-link {
+        font-size: var(--text-sm);
+        padding: var(--space-xs) var(--space-sm);
+      }
+    }
+  }
+
   .integrations-showcase-section {
     .integrations-logos {
       grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
