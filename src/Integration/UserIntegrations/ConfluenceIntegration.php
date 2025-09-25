@@ -115,7 +115,7 @@ class ConfluenceIntegration implements IntegrationInterface
                 'url',
                 'url',
                 'Confluence URL',
-                'https://your-domain.atlassian.net',
+                'https://your-domain.atlassian.net/wiki',
                 true,
                 'Your Confluence instance URL'
             ),

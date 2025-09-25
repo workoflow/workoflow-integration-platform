@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Added helpful error messages when integration URLs are incorrectly formatted
 - Fixed file sharing tool that was failing when uploading files - now properly handles base64 encoded files
 - File uploads now work correctly with PDF and other document formats
+- Updated Confluence URL placeholder to include /wiki path for better user guidance
 
 ## 2025-09-24
 
