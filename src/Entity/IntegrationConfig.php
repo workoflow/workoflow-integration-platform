@@ -86,6 +86,14 @@ class IntegrationConfig
         return $this->integrationType;
     }
 
+    /**
+     * Alias for getIntegrationType() for backward compatibility
+     */
+    public function getType(): ?string
+    {
+        return $this->integrationType;
+    }
+
     public function setIntegrationType(string $integrationType): static
     {
         $this->integrationType = $integrationType;
