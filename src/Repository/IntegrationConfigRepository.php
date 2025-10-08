@@ -163,6 +163,36 @@ class IntegrationConfigRepository extends ServiceEntityRepository
     }
 
     /**
+     * Find configs by organisation, type and workflow user
+     * @return IntegrationConfig[]
+     */
+    public function findByOrganisationTypeAndWorkflowUser(
+        Organisation $organisation,
+        string $integrationType,
+        ?string $workflowUserId
+    ): array {
+        $qb = $this->createQueryBuilder('ic')
+            ->leftJoin('ic.user', 'u')
+            ->leftJoin('u.userOrganisations', 'uo')
+            ->andWhere('ic.organisation = :organisation')
+            ->andWhere('ic.integrationType = :type')
+            ->setParameter('organisation', $organisation)
+            ->setParameter('type', $integrationType);
+
+        if ($workflowUserId !== null) {
+            // Filter by workflow_user_id from UserOrganisation or configs without a user (system configs)
+            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
+                ->setParameter('workflowUserId', $workflowUserId);
+        } else {
+            $qb->andWhere('ic.user IS NULL');
+        }
+
+        return $qb->orderBy('ic.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Count configs by organisation and type
      */
     private function countByOrganisationAndType(

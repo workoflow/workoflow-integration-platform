@@ -2,7 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2025-09-25 (Latest)
+## 2025-10-08
+
+### Fixed
+- Integration management now properly isolated per user - users can no longer view or modify other users' integrations within the same organization
+- Integration editing, deletion, and tool toggling now require user ownership verification
+
+## 2025-09-25
 
 ### Added
 - New Omnichannel AI Agent promotion section on landing page highlighting platform's ability to create channel-specific AI agents

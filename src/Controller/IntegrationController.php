@@ -41,11 +41,21 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_organisation_create');
         }
 
+        // Get workflow_user_id from the user's organization relationship
+        $userOrg = null;
+        foreach ($user->getUserOrganisations() as $userOrganisation) {
+            if ($userOrganisation->getOrganisation() === $organisation) {
+                $userOrg = $userOrganisation;
+                break;
+            }
+        }
+        $workflowUserId = $userOrg ? $userOrg->getWorkflowUserId() : null;
+
         // Get all integrations from registry (code-defined)
         $allIntegrations = $this->integrationRegistry->getAllIntegrations();
 
-        // Get user configs from database
-        $configs = $this->integrationConfigRepository->findByOrganisation($organisation);
+        // Get user configs from database (filtered by workflow_user_id)
+        $configs = $this->integrationConfigRepository->findByOrganisationAndWorkflowUser($organisation, $workflowUserId);
 
         // Build config map for quick lookup (type => array of configs)
         $configMap = [];
@@ -184,32 +194,33 @@ class IntegrationController extends AbstractController
             return $this->redirectToRoute('app_integrations');
         }
 
+        // Get workflow_user_id from the user's organization relationship
+        $userOrg = null;
+        foreach ($user->getUserOrganisations() as $userOrganisation) {
+            if ($userOrganisation->getOrganisation() === $organisation) {
+                $userOrg = $userOrganisation;
+                break;
+            }
+        }
+        $workflowUserId = $userOrg ? $userOrg->getWorkflowUserId() : null;
+
         // Check if editing existing or creating new
         $instanceId = $request->query->get('instance');
         $config = null;
 
         if ($instanceId) {
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-            if (!$config || $config->getOrganisation() !== $organisation) {
+            if (!$config || $config->getOrganisation() !== $organisation || $config->getUser() !== $user) {
                 $this->addFlash('error', 'Instance not found');
                 return $this->redirectToRoute('app_integrations');
             }
         }
 
-        // Get existing instances for this type
-        $existingInstances = $this->integrationConfigRepository->findByOrganisationAndType($organisation, $type);
+        // Get existing instances for this type (filtered by workflow_user_id)
+        $existingInstances = $this->integrationConfigRepository->findByOrganisationTypeAndWorkflowUser($organisation, $type, $workflowUserId);
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name', '');
-            // Get workflow_user_id from the user's organization relationship
-            $userOrg = null;
-            foreach ($user->getUserOrganisations() as $userOrganisation) {
-                if ($userOrganisation->getOrganisation() === $organisation) {
-                    $userOrg = $userOrganisation;
-                    break;
-                }
-            }
-            $workflowUserId = $userOrg ? $userOrg->getWorkflowUserId() : null;
 
             // Validate name is provided and unique
             if (empty($name)) {
@@ -355,9 +366,9 @@ class IntegrationController extends AbstractController
             return $this->json(['error' => 'Instance ID is required'], Response::HTTP_BAD_REQUEST);
         }
 
-        // Get specific instance
+        // Get specific instance and verify ownership
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-        if (!$config || $config->getOrganisation() !== $organisation) {
+        if (!$config || $config->getOrganisation() !== $organisation || $config->getUser() !== $user) {
             return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -405,7 +416,7 @@ class IntegrationController extends AbstractController
                 'integrationType' => $type
             ]);
 
-            if (!$config) {
+            if (!$config || $config->getUser() !== $user) {
                 return $this->json(['error' => 'Integration instance not found'], Response::HTTP_NOT_FOUND);
             }
         } else {
@@ -448,7 +459,7 @@ class IntegrationController extends AbstractController
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
 
-        if ($config && $config->getOrganisation() === $organisation) {
+        if ($config && $config->getOrganisation() === $organisation && $config->getUser() === $user) {
             /** @var User $logUser */
             $logUser = $this->getUser();
             $this->auditLogService->log(
