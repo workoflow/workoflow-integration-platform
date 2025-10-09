@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - SAP Commerce and Shopify added to the integration showcase on homepage - demonstrating platform's expanded e-commerce capabilities
 
+### Fixed
+- Jira search now uses the correct API v3 endpoint - resolves issue where search queries were failing with recent Jira Cloud instances
+
 ## 2025-10-08
 
 ### Fixed
