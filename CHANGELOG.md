@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-09
+
+### Added
+- SAP Commerce and Shopify added to the integration showcase on homepage - demonstrating platform's expanded e-commerce capabilities
+
 ## 2025-10-08
 
 ### Fixed

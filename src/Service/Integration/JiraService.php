@@ -77,7 +77,7 @@ class JiraService
     public function search(array $credentials, string $jql, int $maxResults = 50): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/3/search', [
+        $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
                 'jql' => $jql,
