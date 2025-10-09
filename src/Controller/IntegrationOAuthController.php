@@ -19,13 +19,12 @@ class IntegrationOAuthController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private EncryptionService $encryptionService,
-        private ClientRegistry $clientRegistry
+        private EncryptionService $encryptionService
     ) {
     }
 
     #[Route('/microsoft/start/{configId}', name: 'app_integration_oauth_microsoft_start')]
-    public function microsoftStart(int $configId, Request $request): RedirectResponse
+    public function microsoftStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
     {
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
 
@@ -38,7 +37,7 @@ class IntegrationOAuthController extends AbstractController
         $request->getSession()->set('microsoft_oauth_config_id', $configId);
 
         // Redirect to Microsoft OAuth
-        return $this->clientRegistry
+        return $clientRegistry
             ->getClient('azure')
             ->redirect([
                 'openid',
@@ -52,7 +51,7 @@ class IntegrationOAuthController extends AbstractController
     }
 
     #[Route('/callback/microsoft', name: 'app_integration_oauth_microsoft_callback')]
-    public function microsoftCallback(Request $request): Response
+    public function microsoftCallback(Request $request, ClientRegistry $clientRegistry): Response
     {
         $error = $request->query->get('error');
         $configId = $request->getSession()->get('microsoft_oauth_config_id');
@@ -101,7 +100,7 @@ class IntegrationOAuthController extends AbstractController
 
         try {
             // Get the OAuth2 client
-            $client = $this->clientRegistry->getClient('azure');
+            $client = $clientRegistry->getClient('azure');
 
             // Get the access token
             $accessToken = $client->getAccessToken();

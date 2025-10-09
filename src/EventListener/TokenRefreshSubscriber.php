@@ -6,6 +6,7 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Psr\Log\LoggerInterface;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -15,7 +16,7 @@ class TokenRefreshSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private TokenStorageInterface $tokenStorage,
-        private ClientRegistry $clientRegistry,
+        private ContainerInterface $container,
         private EntityManagerInterface $entityManager,
         private LoggerInterface $logger
     ) {
@@ -64,7 +65,9 @@ class TokenRefreshSubscriber implements EventSubscriberInterface
 
     private function refreshToken(User $user): void
     {
-        $client = $this->clientRegistry->getClient('google');
+        /** @var ClientRegistry $clientRegistry */
+        $clientRegistry = $this->container->get('knpu.oauth2.registry');
+        $client = $clientRegistry->getClient('google');
         $provider = $client->getOAuth2Provider();
 
         // Use the refresh token to get a new access token
