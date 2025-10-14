@@ -6,7 +6,7 @@ framework:
     trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port', 'x-forwarded-prefix']
 
     session:
-        handler_id: 'redis://redis:6379'
+        handler_id: '%env(REDIS_URL)%'
         cookie_secure: auto
         cookie_samesite: lax
         cookie_httponly: true
