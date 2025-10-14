@@ -6,6 +6,8 @@
 <div class="integrations-page">
     {% include '_partials/header.html.twig' %}
 
+    {% set existingCredentials = existingCredentials|default({}) %}
+
     <div class="setup-container">
         <div class="setup-card">
             <div class="setup-header">
@@ -97,12 +99,33 @@
                                     <span class="field-hint">{{ field.getHint()|raw }}</span>
                                 {% endif %}
                             </label>
-                            <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
-                                   id="{{ field.getName() }}"
-                                   name="{{ field.getName() }}"
-                                   class="form-control"
-                                   {% if field.isRequired() %}required{% endif %}
-                                   placeholder="{{ field.getPlaceholder() }}">
+
+                            {% set fieldName = field.getName() %}
+                            {% set isSensitiveField = fieldName in ['api_token', 'password', 'client_secret'] %}
+                            {% set fieldValue = existingCredentials[fieldName]|default('') %}
+                            {% set fieldExists = existingCredentials[fieldName ~ '_exists']|default(false) %}
+
+                            {% if isSensitiveField and fieldExists and isEdit %}
+                                {# For sensitive fields in edit mode, show placeholder if value exists #}
+                                <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
+                                       id="{{ fieldName }}"
+                                       name="{{ fieldName }}"
+                                       class="form-control"
+                                       {% if not isEdit and field.isRequired() %}required{% endif %}
+                                       placeholder="{{ 'integration.keep_existing'|trans|default('Leave empty to keep existing value') }}">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lock"></i> {{ 'integration.credential_exists'|trans|default('Current value is stored securely. Leave empty to keep it.') }}
+                                </small>
+                            {% else %}
+                                {# For non-sensitive fields or new integrations, show actual value #}
+                                <input type="{{ field.getType() == 'password' ? 'password' : 'text' }}"
+                                       id="{{ fieldName }}"
+                                       name="{{ fieldName }}"
+                                       class="form-control"
+                                       value="{{ fieldValue }}"
+                                       {% if field.isRequired() %}required{% endif %}
+                                       placeholder="{{ field.getPlaceholder() }}">
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -344,6 +367,20 @@
 
 .alert-info p:last-child {
     margin-bottom: 0;
+}
+
+.form-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.text-muted {
+    color: var(--text-secondary);
+}
+
+.form-text i {
+    margin-right: 0.25rem;
 }
 </style>
 {% endblock %}

@@ -207,12 +207,38 @@ class IntegrationController extends AbstractController
         // Check if editing existing or creating new
         $instanceId = $request->query->get('instance');
         $config = null;
+        $existingCredentials = [];
 
         if ($instanceId) {
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
             if (!$config || $config->getOrganisation() !== $organisation || $config->getUser() !== $user) {
                 $this->addFlash('error', 'Instance not found');
                 return $this->redirectToRoute('app_integrations');
+            }
+
+            // Decrypt existing credentials for display (with masking for sensitive fields)
+            if ($config->hasCredentials()) {
+                try {
+                    $decryptedCredentials = json_decode(
+                        $this->encryptionService->decrypt($config->getEncryptedCredentials()),
+                        true
+                    );
+
+                    // Prepare credentials for display - mask sensitive fields like api_token
+                    foreach ($decryptedCredentials as $key => $value) {
+                        if ($key === 'api_token' || $key === 'password' || $key === 'client_secret') {
+                            // Don't show the actual token, just indicate it exists
+                            $existingCredentials[$key] = ''; // Leave empty, we'll show a placeholder
+                            $existingCredentials[$key . '_exists'] = true;
+                        } else {
+                            // Non-sensitive fields like URL and email can be shown
+                            $existingCredentials[$key] = $value;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // If decryption fails, just continue with empty credentials
+                    $this->addFlash('warning', 'Could not load existing credentials');
+                }
             }
         }
 
@@ -241,14 +267,42 @@ class IntegrationController extends AbstractController
                     // Get credentials from form
                     $credentials = [];
                     $hasOAuthField = false;
+
+                    // If editing, start with existing credentials
+                    if ($config && $config->hasCredentials()) {
+                        try {
+                            $credentials = json_decode(
+                                $this->encryptionService->decrypt($config->getEncryptedCredentials()),
+                                true
+                            );
+                        } catch (\Exception $e) {
+                            // If decryption fails, start with empty credentials
+                            $credentials = [];
+                        }
+                    }
+
                     foreach ($integration->getCredentialFields() as $field) {
                         if ($field->getType() === 'oauth') {
                             $hasOAuthField = true;
                             continue; // Skip OAuth fields, they'll be handled separately
                         }
                         $value = $request->request->get($field->getName());
-                        if ($value) {
-                            $credentials[$field->getName()] = $value;
+
+                        // For sensitive fields, only update if a new value was provided
+                        if ($field->getName() === 'api_token' || $field->getName() === 'password' || $field->getName() === 'client_secret') {
+                            if (!empty($value)) {
+                                $credentials[$field->getName()] = $value;
+                            }
+                            // If empty and editing, keep existing value (already in $credentials)
+                        } else {
+                            // For non-sensitive fields, always update
+                            if ($value !== null) {
+                                // Normalize URLs by removing trailing slashes
+                                if ($field->getName() === 'url' && !empty($value)) {
+                                    $value = rtrim($value, '/');
+                                }
+                                $credentials[$field->getName()] = $value;
+                            }
                         }
                     }
 
@@ -341,7 +395,8 @@ class IntegrationController extends AbstractController
             'organisation' => $organisation,
             'credentialFields' => $integration->getCredentialFields(),
             'existingInstances' => $existingInstances,
-            'isEdit' => $config !== null
+            'isEdit' => $config !== null,
+            'existingCredentials' => $existingCredentials
         ]);
     }
 

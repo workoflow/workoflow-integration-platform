@@ -200,6 +200,8 @@ integration:
   connect_sharepoint: Connect to SharePoint
   active: Active
   credentials_not_editable: Credentials cannot be edited for security reasons.
+  credential_exists: Current value is stored securely. Leave empty to keep it.
+  keep_existing: Leave empty to keep existing value
 
 action:
   edit: Edit
