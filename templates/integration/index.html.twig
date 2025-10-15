@@ -139,7 +139,8 @@
                                                     <i class="fas fa-edit"></i> {{ 'action.edit'|trans|default('Bearbeiten') }}
                                                 </a>
                                                 <button class="btn btn-secondary test-connection"
-                                                        data-type="{{ integration.type }}">
+                                                        data-type="{{ integration.type }}"
+                                                        data-instance="{{ integration.instanceId }}">
                                                     <i class="fas fa-plug"></i> {{ 'integration.test_connection'|trans|default('Verbindung testen') }}
                                                 </button>
                                                 <form method="post" action="{{ path('app_integration_delete', {instanceId: integration.instanceId}) }}"
@@ -753,8 +754,9 @@ async function toggleIntegration(checkbox) {
 
 document.querySelectorAll('.test-connection').forEach(button => {
     button.addEventListener('click', async (e) => {
-        const type = e.target.dataset.type;
-        const btn = e.target;
+        const type = e.currentTarget.dataset.type;
+        const instance = e.currentTarget.dataset.instance;
+        const btn = e.currentTarget;
         btn.disabled = true;
         btn.textContent = 'Testing...';
 
@@ -762,8 +764,10 @@ document.querySelectorAll('.test-connection').forEach(button => {
             const response = await fetch(`/integrations/${type}/test`, {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Requested-With': 'XMLHttpRequest'
-                }
+                },
+                body: `instance=${encodeURIComponent(instance)}`
             });
 
             const data = await response.json();

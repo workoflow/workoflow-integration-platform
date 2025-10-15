@@ -202,6 +202,8 @@ integration:
   credentials_not_editable: Anmeldedaten können aus Sicherheitsgründen nicht bearbeitet werden.
   credential_exists: Aktueller Wert ist sicher gespeichert. Leer lassen um ihn beizubehalten.
   keep_existing: Leer lassen um bestehenden Wert beizubehalten
+  connection_failed: Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten und die URL.
+  connection_failed_message: Verbindung konnte nicht hergestellt werden
 
 action:
   edit: Bearbeiten
@@ -269,3 +271,10 @@ footer:
     platform: Integrationsplattform
     pptx: PPTX
     rag: RAG
+
+validation:
+  name_required: Name ist erforderlich
+  name_duplicate: Eine Integration mit diesem Namen existiert bereits
+  field_required: Dieses Feld ist erforderlich
+  email_invalid: Bitte geben Sie eine gültige E-Mail-Adresse ein
+  url_invalid: Bitte geben Sie eine gültige URL ein

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-15
+
+### Added
+- Server-side validation for integration forms - prevents saving integrations with empty or duplicate names
+- Clear error messages displayed when integration name is missing or already in use
+- Form error messages now properly translated in both German and English
+
+### Improved
+- JIRA connection test now validates credentials with actual API calls - immediately detects invalid tokens or incorrect URLs
+- Integration setup forms now preserve entered data when validation fails for easier corrections
+- Editing integrations is now faster - changing only the name no longer requires re-validating credentials with external APIs
+- URLs are automatically normalized when saving integrations - trailing slashes are removed for consistency
+- Form validation errors now display with clear bullet points and proper spacing for better readability
+
 ## 2025-10-09
 
 ### Added

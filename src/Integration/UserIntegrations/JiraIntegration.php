@@ -125,9 +125,35 @@ class JiraIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return isset($credentials['url'])
-            && isset($credentials['username'])
-            && isset($credentials['api_token']);
+        // First check if all required fields are present and not empty
+        if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
+            return false;
+        }
+
+        // Make a simple API call to validate credentials
+        try {
+            $url = rtrim($credentials['url'], '/') . '/rest/api/3/myself';
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Accept: application/json',
+                'Content-Type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_USERPWD, $credentials['username'] . ':' . $credentials['api_token']);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            // 200 means successful authentication
+            return $httpCode === 200;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public function getCredentialFields(): array

@@ -1,0 +1,883 @@
+<?php
+
+namespace App\Tests\Integration\Controller;
+
+use App\DataFixtures\OrganisationTestFixtures;
+use App\Entity\IntegrationConfig;
+use App\Tests\Integration\AbstractIntegrationTestCase;
+use Symfony\Component\HttpFoundation\Response;
+
+class IntegrationControllerTest extends AbstractIntegrationTestCase
+{
+    protected function getFixtures(): array
+    {
+        return [
+            OrganisationTestFixtures::class,
+        ];
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Login as admin user by default
+        $this->loginUser('admin@test.example.com');
+    }
+
+    // ========================================
+    // RENDERING TESTS
+    // ========================================
+
+    public function testIndexPageDisplaysIntegrations(): void
+    {
+        $crawler = $this->client->request('GET', '/integrations/');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertPageTitleContains('Integrationen');
+
+        // Check if integration cards are displayed - look for the integration names from fixtures
+        $this->assertSelectorExists('.integration-card');
+        $this->assertSelectorTextContains('body', 'Test JIRA Active');
+    }
+
+    public function testSetupPageRendersCorrectForm(): void
+    {
+        $crawler = $this->client->request('GET', '/integrations/setup/jira');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorTextContains('h1', 'Einrichten Jira');
+
+        // Check form fields exist with Symfony form namespace
+        $form = $crawler->filter('form')->form();
+        $values = $form->getValues();
+
+        // Symfony forms use namespace like "integration_config_type[name]"
+        $hasNameField = false;
+        $hasUrlField = false;
+        $hasUsernameField = false;
+        $hasApiTokenField = false;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $hasNameField = true;
+            }
+            if (str_contains($key, '[url]')) {
+                $hasUrlField = true;
+            }
+            if (str_contains($key, '[username]')) {
+                $hasUsernameField = true;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $hasApiTokenField = true;
+            }
+        }
+
+        $this->assertTrue($hasNameField, 'Form should have name field');
+        $this->assertTrue($hasUrlField, 'Form should have url field');
+        $this->assertTrue($hasUsernameField, 'Form should have username field');
+        $this->assertTrue($hasApiTokenField, 'Form should have api_token field');
+    }
+
+    // ========================================
+    // CREATE TESTS
+    // ========================================
+
+    public function testCreateNewJiraIntegration(): void
+    {
+        // Get real JIRA credentials from environment
+        $jiraUrl = $_ENV['TEST_JIRA_URL'] ?? null;
+        $jiraEmail = $_ENV['TEST_JIRA_EMAIL'] ?? null;
+        $jiraToken = $_ENV['TEST_JIRA_TOKEN'] ?? null;
+
+        // Skip test if credentials not configured or using dummy token
+        if (!$jiraUrl || !$jiraEmail || !$jiraToken || $jiraToken === 'dummy-token-for-testing') {
+            $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
+        }
+
+        $crawler = $this->client->request('GET', '/integrations/setup/jira');
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names (they have namespace)
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Submit with valid credentials
+        $uniqueName = 'Test Jira Valid ' . uniqid();
+        $form[$nameField] = $uniqueName;
+        $form[$urlField] = $jiraUrl;
+        $form[$usernameField] = $jiraEmail;
+        $form[$apiTokenField] = $jiraToken;
+
+        $this->client->submit($form);
+
+        // Should redirect to integrations page on success
+        $this->assertResponseRedirects('/integrations/');
+
+        // Follow the redirect
+        $this->client->followRedirect();
+
+        // Verify integration was created
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => $uniqueName]);
+
+        $this->assertNotNull($config, 'Integration should be created');
+        $this->assertEquals('jira', $config->getIntegrationType());
+        $this->assertTrue($config->isActive());
+
+        // Verify credentials are encrypted and stored
+        $this->assertTrue($config->hasCredentials());
+
+        // Cleanup
+        $this->entityManager->remove($config);
+        $this->entityManager->flush();
+    }
+
+    public function testCreateJiraIntegrationWithInvalidToken(): void
+    {
+        // Get real JIRA URL and email from ENV, but use WRONG token
+        $jiraUrl = $_ENV['TEST_JIRA_URL'] ?? null;
+        $jiraEmail = $_ENV['TEST_JIRA_EMAIL'] ?? null;
+
+        // Skip test if credentials not configured
+        if (!$jiraUrl || !$jiraEmail) {
+            $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
+        }
+
+        $invalidToken = 'INVALID-TOKEN-WRONG-12345';
+
+        $crawler = $this->client->request('GET', '/integrations/setup/jira');
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names (they have namespace)
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Submit with invalid token but valid URL and email
+        $form[$nameField] = 'Test Jira Invalid Token';
+        $form[$urlField] = $jiraUrl;
+        $form[$usernameField] = $jiraEmail;
+        $form[$apiTokenField] = $invalidToken;
+
+        $this->client->submit($form);
+
+        // Should return 200 or 422 with errors (not redirect)
+        $statusCode = $this->client->getResponse()->getStatusCode();
+        $this->assertTrue(
+            in_array($statusCode, [Response::HTTP_OK, Response::HTTP_UNPROCESSABLE_ENTITY]),
+            "Expected status code 200 or 422, got {$statusCode}"
+        );
+
+        // Check that the connection failed error is displayed
+        $crawler = $this->client->getCrawler();
+
+        // Look for global form errors or alert messages
+        $alerts = $crawler->filter('.alert-danger');
+        $this->assertGreaterThan(0, $alerts->count(), 'Should have danger alert');
+
+        $errorText = $crawler->filter('body')->text();
+        $this->assertStringContainsString('Verbindung konnte nicht hergestellt werden', $errorText);
+
+        // Verify no config was created
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => 'Test Jira Invalid Token']);
+
+        $this->assertNull($config, 'Integration should not be created with invalid credentials');
+    }
+
+    public function testCreateIntegrationWithDuplicateName(): void
+    {
+        // Get the current user for verification
+        $user = $this->entityManager
+            ->getRepository(\App\Entity\User::class)
+            ->findOneBy(['email' => 'admin@test.example.com']);
+
+        // Clean up any existing test data
+        $existingConfigs = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findBy(['name' => 'Duplicate Test Name']);
+
+        foreach ($existingConfigs as $config) {
+            $this->entityManager->remove($config);
+        }
+        $this->entityManager->flush();
+
+        // First create an integration with a specific name
+        $existing = $this->createTestIntegrationConfig('jira', 'Duplicate Test Name');
+
+        // Try to create another with the same name
+        $crawler = $this->client->request('GET', '/integrations/setup/jira');
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names (they have namespace)
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Use the same name as existing
+        $form[$nameField] = 'Duplicate Test Name';
+        $form[$urlField] = 'https://different.atlassian.net';
+        $form[$usernameField] = 'different@example.com';
+        $form[$apiTokenField] = 'different-token-12345';
+
+        $this->client->submit($form);
+
+        // Symfony forms return 422 for validation errors, or 200 for manual validation
+        $statusCode = $this->client->getResponse()->getStatusCode();
+        $this->assertTrue(
+            in_array($statusCode, [Response::HTTP_OK, Response::HTTP_UNPROCESSABLE_ENTITY]),
+            "Expected status code 200 or 422, got {$statusCode}"
+        );
+
+        // Check that the error is displayed in the form (Symfony form errors)
+        $crawler = $this->client->getCrawler();
+        // Symfony forms render errors in <ul> tags by default
+        $errors = $crawler->filter('.form-group ul li, .invalid-feedback, .form-error-message');
+        $this->assertGreaterThan(0, $errors->count(), 'Should have form errors');
+
+        $errorText = $errors->text();
+        $this->assertStringContainsString('Eine Integration mit diesem Namen existiert bereits', $errorText);
+
+        // Verify only one config exists with this name for this user
+        $configs = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findBy([
+                'name' => 'Duplicate Test Name',
+                'user' => $user
+            ]);
+
+        $this->assertCount(1, $configs, 'Only one integration with this name should exist for this user');
+    }
+
+
+    // ========================================
+    // UPDATE TESTS
+    // ========================================
+
+    public function testUpdateExistingIntegration(): void
+    {
+        // Use test credentials - no need for real ones since update doesn't re-validate
+        $originalName = 'Original Integration Name ' . uniqid();
+        $updatedName = 'Updated Integration Name ' . uniqid();
+
+        // Create config with test credentials using helper method
+        $testConfig = $this->createTestIntegrationConfig('jira', $originalName);
+        $configId = $testConfig->getId();
+
+        // Store original token for comparison
+        $encryptionService = static::getContainer()->get('App\Service\EncryptionService');
+        $originalCredentials = json_decode(
+            $encryptionService->decrypt($testConfig->getEncryptedCredentials()),
+            true
+        );
+        $originalToken = $originalCredentials['api_token'];
+
+        // Open edit form
+        $crawler = $this->client->request('GET', '/integrations/setup/jira?instance=' . $configId);
+
+        $this->assertResponseIsSuccessful();
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names (they have namespace)
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Update only the name, leave token empty (should keep existing token from DB)
+        $form[$nameField] = $updatedName;
+        // Keep URL and username from existing config (they are pre-filled in edit mode)
+        // Form already has these values, we just don't change them
+        // API token field is empty (masked in edit mode) - should keep existing value
+        $form[$apiTokenField] = '';
+
+        $this->client->submit($form);
+
+        // Should redirect to integrations page on success
+        $this->assertResponseRedirects('/integrations/');
+
+        // Follow the redirect
+        $this->client->followRedirect();
+
+        // Reload config from database
+        $this->entityManager->clear();
+        $updatedConfig = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+
+        $this->assertNotNull($updatedConfig, 'Config should still exist');
+
+        // Verify name was updated
+        $this->assertEquals($updatedName, $updatedConfig->getName());
+
+        // Verify credentials are still encrypted and token is unchanged
+        $this->assertTrue($updatedConfig->hasCredentials());
+
+        $updatedCredentials = json_decode(
+            $encryptionService->decrypt($updatedConfig->getEncryptedCredentials()),
+            true
+        );
+
+        // Token should be the same as before (not changed because field was empty)
+        $this->assertEquals($originalToken, $updatedCredentials['api_token'], 'Token should remain unchanged when field is empty');
+
+        // URL and username should remain unchanged (we didn't change them in the form)
+        $this->assertEquals($originalCredentials['url'], $updatedCredentials['url']);
+        $this->assertEquals($originalCredentials['username'], $updatedCredentials['username']);
+
+        // Cleanup
+        $this->entityManager->remove($updatedConfig);
+        $this->entityManager->flush();
+    }
+
+    public function testEditFormShowsExistingValues(): void
+    {
+        // Create integration with known values
+        $config = $this->createTestIntegrationConfig('jira', 'Test Integration');
+
+        // Open edit form
+        $crawler = $this->client->request('GET', '/integrations/setup/jira?instance=' . $config->getId());
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names (they have namespace)
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Name should be visible
+        $this->assertEquals('Test Integration', $form[$nameField]->getValue());
+
+        // URL should be visible
+        $this->assertEquals('https://test.atlassian.net', $form[$urlField]->getValue());
+
+        // Email should be visible
+        $this->assertEquals('test@example.com', $form[$usernameField]->getValue());
+
+        // API token should be empty (masked)
+        $this->assertEquals('', $form[$apiTokenField]->getValue());
+
+        // But should show hint that value exists
+        $this->assertSelectorTextContains('.form-text', 'Aktueller Wert ist sicher gespeichert');
+    }
+
+    public function testUrlNormalizationRemovesTrailingSlash(): void
+    {
+        // Get real JIRA credentials from environment
+        $jiraUrl = $_ENV['TEST_JIRA_URL'] ?? null;
+        $jiraEmail = $_ENV['TEST_JIRA_EMAIL'] ?? null;
+        $jiraToken = $_ENV['TEST_JIRA_TOKEN'] ?? null;
+
+        // Skip test if credentials not configured or using dummy token
+        if (!$jiraUrl || !$jiraEmail || !$jiraToken || $jiraToken === 'dummy-token-for-testing') {
+            $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
+        }
+
+        // Add trailing slash to URL if not already present
+        $urlWithSlash = rtrim($jiraUrl, '/') . '/';
+
+        $crawler = $this->client->request('GET', '/integrations/setup/jira');
+
+        $form = $crawler->selectButton('Konfiguration speichern')->form();
+
+        // Find the correct form field names
+        $values = $form->getValues();
+        $nameField = null;
+        $urlField = null;
+        $usernameField = null;
+        $apiTokenField = null;
+
+        foreach (array_keys($values) as $key) {
+            if (str_contains($key, '[name]')) {
+                $nameField = $key;
+            }
+            if (str_contains($key, '[url]')) {
+                $urlField = $key;
+            }
+            if (str_contains($key, '[username]')) {
+                $usernameField = $key;
+            }
+            if (str_contains($key, '[api_token]')) {
+                $apiTokenField = $key;
+            }
+        }
+
+        // Submit with URL that has trailing slash
+        $uniqueName = 'Test URL Normalization ' . uniqid();
+        $form[$nameField] = $uniqueName;
+        $form[$urlField] = $urlWithSlash; // URL with trailing slash
+        $form[$usernameField] = $jiraEmail;
+        $form[$apiTokenField] = $jiraToken;
+
+        $this->client->submit($form);
+
+        // Should redirect to integrations page on success
+        $this->assertResponseRedirects('/integrations/');
+
+        // Verify integration was created and URL is normalized (no trailing slash)
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => $uniqueName]);
+
+        $this->assertNotNull($config, 'Integration should be created');
+
+        // Decrypt credentials to check the stored URL
+        $encryptionService = static::getContainer()->get('App\Service\EncryptionService');
+        $credentials = json_decode(
+            $encryptionService->decrypt($config->getEncryptedCredentials()),
+            true
+        );
+
+        // URL should be stored without trailing slash
+        $expectedUrl = rtrim($jiraUrl, '/');
+        $this->assertEquals($expectedUrl, $credentials['url'], 'URL should be normalized without trailing slash');
+
+        // Cleanup
+        $this->entityManager->remove($config);
+        $this->entityManager->flush();
+    }
+
+    // ========================================
+    // DELETE TESTS
+    // ========================================
+
+    public function testDeleteIntegration(): void
+    {
+        $config = $this->createTestIntegrationConfig('jira', 'To Delete');
+        $configId = $config->getId();
+
+        $this->client->request('POST', '/integrations/delete/' . $configId);
+
+        $this->assertResponseRedirects('/integrations/');
+
+        // Should be deleted from database
+        $deletedConfig = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+
+        $this->assertNull($deletedConfig);
+    }
+
+    public function testCannotDeleteOtherUsersIntegration(): void
+    {
+        // Login as member user
+        $this->loginUser('member@test.example.com');
+
+        // Try to delete admin's integration
+        $adminConfig = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => 'Test JIRA Active']);
+
+        $this->client->request('POST', '/integrations/delete/' . $adminConfig->getId());
+
+        $this->assertResponseRedirects('/integrations/');
+
+        // Config should still exist - reload from database
+        $stillExists = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($adminConfig->getId());
+        $this->assertNotNull($stillExists);
+    }
+
+    // ========================================
+    // TOGGLE TESTS
+    // ========================================
+
+    public function testToggleIntegrationActivation(): void
+    {
+        // Use existing fixture integration "Test JIRA Active" which belongs to admin user
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => 'Test JIRA Active']);
+
+        $this->assertNotNull($config, 'Test JIRA Active fixture should exist');
+        $configId = $config->getId();
+
+        // Ensure it starts as active
+        $this->assertTrue($config->isActive(), 'Integration should start as active');
+
+        // Deactivate the integration - send as form data, not JSON
+        $this->client->request('POST', '/integrations/jira/toggle', [
+            'active' => 'false',
+            'instance' => (string) $configId
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+
+        // Verify it's deactivated in database - need to reload from DB
+        $this->entityManager->clear(); // Clear to get fresh data
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+        $this->assertNotNull($config, 'Config should still exist');
+        $this->assertFalse($config->isActive(), 'Config should be inactive after deactivation');
+
+        // Activate it again
+        $this->client->request('POST', '/integrations/jira/toggle', [
+            'active' => 'true',
+            'instance' => (string) $configId
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+
+        // Verify it's activated in database
+        $this->entityManager->clear();
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+        $this->assertNotNull($config, 'Config should still exist');
+        $this->assertTrue($config->isActive(), 'Config should be active after activation');
+    }
+
+    public function testToggleToolEnableDisable(): void
+    {
+        // Use existing fixture integration "Test JIRA Active" which belongs to admin user
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => 'Test JIRA Active']);
+
+        $this->assertNotNull($config, 'Test JIRA Active fixture should exist');
+        $configId = $config->getId();
+
+        // The fixture has 'jira_get_sprint_issues' disabled, let's enable it first
+        $this->assertTrue($config->isToolDisabled('jira_get_sprint_issues'), 'Tool should start as disabled from fixture');
+
+        // Enable the tool that is disabled in fixture - send as form data, not JSON
+        $this->client->request('POST', '/integrations/jira/toggle-tool', [
+            'tool' => 'jira_get_sprint_issues',
+            'enabled' => 'true',
+            'instance' => (string) $configId
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+
+        // Verify the tool is enabled
+        $this->entityManager->clear();
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+        $this->assertNotNull($config, 'Config should still exist');
+        $this->assertFalse($config->isToolDisabled('jira_get_sprint_issues'), 'Tool should now be enabled');
+
+        // Disable it again
+        $this->client->request('POST', '/integrations/jira/toggle-tool', [
+            'tool' => 'jira_get_sprint_issues',
+            'enabled' => 'false',
+            'instance' => (string) $configId
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success']);
+
+        // Verify the tool is disabled again
+        $this->entityManager->clear();
+        $config = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($configId);
+        $this->assertNotNull($config, 'Config should still exist');
+        $this->assertTrue($config->isToolDisabled('jira_get_sprint_issues'), 'Tool should be disabled again');
+    }
+
+    public function testToggleToolRequiresValidInstance(): void
+    {
+        // Send without instance parameter - form data, not JSON
+        $this->client->request('POST', '/integrations/jira/toggle-tool', [
+            'tool' => 'jira_search',
+            'enabled' => 'true'
+            // Omit instance parameter
+        ]);
+
+        $this->assertEquals(400, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('error', $response);
+        $this->assertEquals('Instance ID is required', $response['error']);
+    }
+
+    public function testCannotAccessOtherOrganisationIntegration(): void
+    {
+        // Login as other organisation user
+        $this->loginUser('other@test.example.com');
+
+        // Try to access test organisation's integration
+        $testOrgConfig = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findOneBy(['name' => 'Test JIRA Active']);
+
+        // Try to edit
+        $this->client->request('GET', '/integrations/setup/jira?instance=' . $testOrgConfig->getId());
+        $this->assertResponseRedirects('/integrations/');
+
+        // Try to delete
+        $this->client->request('POST', '/integrations/delete/' . $testOrgConfig->getId());
+        $this->assertResponseRedirects('/integrations/');
+
+        // Config should still exist
+        $stillExists = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($testOrgConfig->getId());
+
+        $this->assertNotNull($stillExists);
+    }
+
+    // ========================================
+    // TEST CONNECTION TESTS
+    // ========================================
+
+    public function testTestConnectionWithValidCredentials(): void
+    {
+        // Get real JIRA credentials from environment
+        $jiraUrl = $_ENV['TEST_JIRA_URL'] ?? null;
+        $jiraEmail = $_ENV['TEST_JIRA_EMAIL'] ?? null;
+        $jiraToken = $_ENV['TEST_JIRA_TOKEN'] ?? null;
+
+        // Skip test if credentials not configured or using dummy token
+        if (!$jiraUrl || !$jiraEmail || !$jiraToken || $jiraToken === 'dummy-token-for-testing') {
+            $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
+        }
+
+        // Create a new integration with valid real credentials
+        // Use a unique name to avoid conflicts with fixtures
+        $testConfig = new IntegrationConfig();
+        $testConfig->setOrganisation($this->currentOrganisation);
+        $testConfig->setUser($this->currentUser);
+        $testConfig->setIntegrationType('jira');
+        $testConfig->setName('Test Connection Valid ' . uniqid()); // Unique name to avoid conflicts
+        $testConfig->setActive(true);
+
+        // Set real credentials
+        $encryptionService = static::getContainer()->get('App\Service\EncryptionService');
+        $realCredentials = [
+            'url' => $jiraUrl,
+            'username' => $jiraEmail,
+            'api_token' => $jiraToken
+        ];
+        $testConfig->setEncryptedCredentials(
+            $encryptionService->encrypt(json_encode($realCredentials))
+        );
+        $this->entityManager->persist($testConfig);
+        $this->entityManager->flush();
+
+        // Temporarily remove other JIRA configs to ensure our test config is found
+        $otherConfigs = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findBy([
+                'integrationType' => 'jira',
+                'organisation' => $this->currentOrganisation
+            ]);
+
+        $removedConfigIds = [];
+        foreach ($otherConfigs as $config) {
+            if ($config->getId() !== $testConfig->getId()) {
+                $removedConfigIds[] = $config->getId();
+                $this->entityManager->remove($config);
+            }
+        }
+        $this->entityManager->flush();
+
+        // Test the connection - send instance ID in POST body
+        $this->client->request('POST', '/integrations/jira/test', [
+            'instance' => (string) $testConfig->getId()
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertTrue($response['success'], 'Connection with valid credentials should succeed');
+        $this->assertEquals('Connection successful', $response['message']);
+
+        // Cleanup - remove our test config
+        $testConfigToDelete = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($testConfig->getId());
+        if ($testConfigToDelete) {
+            $this->entityManager->remove($testConfigToDelete);
+            $this->entityManager->flush();
+        }
+
+        // Only reload fixtures if we removed other configs
+        if (!empty($removedConfigIds)) {
+            $this->reloadFixtures();
+            $this->loginUser('admin@test.example.com');
+        }
+    }
+
+    public function testTestConnectionWithInvalidCredentials(): void
+    {
+        // Get real JIRA URL and email from ENV but use invalid token
+        $jiraUrl = $_ENV['TEST_JIRA_URL'] ?? null;
+        $jiraEmail = $_ENV['TEST_JIRA_EMAIL'] ?? null;
+
+        // Skip test if credentials not configured
+        if (!$jiraUrl || !$jiraEmail) {
+            $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
+        }
+
+        // Create a new integration with invalid credentials (wrong token)
+        // Use a unique name to avoid conflicts with fixtures
+        $testConfig = new IntegrationConfig();
+        $testConfig->setOrganisation($this->currentOrganisation);
+        $testConfig->setUser($this->currentUser);
+        $testConfig->setIntegrationType('jira');
+        $testConfig->setName('Test Connection Invalid ' . uniqid()); // Unique name to avoid conflicts
+        $testConfig->setActive(true);
+
+        // Set invalid credentials (wrong API token)
+        $encryptionService = static::getContainer()->get('App\Service\EncryptionService');
+        $invalidCredentials = [
+            'url' => $jiraUrl,
+            'username' => $jiraEmail,
+            'api_token' => 'INVALID-TOKEN-12345-WRONG'  // Intentionally wrong token
+        ];
+        $testConfig->setEncryptedCredentials(
+            $encryptionService->encrypt(json_encode($invalidCredentials))
+        );
+        $this->entityManager->persist($testConfig);
+        $this->entityManager->flush();
+
+        // Temporarily remove other JIRA configs to ensure our test config is found
+        $otherConfigs = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->findBy([
+                'integrationType' => 'jira',
+                'organisation' => $this->currentOrganisation
+            ]);
+
+        $removedConfigIds = [];
+        foreach ($otherConfigs as $config) {
+            if ($config->getId() !== $testConfig->getId()) {
+                $removedConfigIds[] = $config->getId();
+                $this->entityManager->remove($config);
+            }
+        }
+        $this->entityManager->flush();
+
+        // Test the connection - send instance ID in POST body
+        $this->client->request('POST', '/integrations/jira/test', [
+            'instance' => (string) $testConfig->getId()
+        ]);
+
+        $this->assertEquals(200, $this->client->getResponse()->getStatusCode());
+
+        $response = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertFalse($response['success'], 'Connection with invalid credentials should fail');
+        $this->assertStringContainsString('Invalid credentials', $response['message']);
+
+        // Cleanup - remove our test config
+        $testConfigToDelete = $this->entityManager
+            ->getRepository(IntegrationConfig::class)
+            ->find($testConfig->getId());
+        if ($testConfigToDelete) {
+            $this->entityManager->remove($testConfigToDelete);
+            $this->entityManager->flush();
+        }
+
+        // Only reload fixtures if we removed other configs
+        if (!empty($removedConfigIds)) {
+            $this->reloadFixtures();
+            $this->loginUser('admin@test.example.com');
+        }
+    }
+}

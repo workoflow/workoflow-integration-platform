@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\IntegrationConfig;
 use App\Entity\User;
+use App\Form\IntegrationConfigType;
 use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route('/integrations')]
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
@@ -25,7 +27,8 @@ class IntegrationController extends AbstractController
         private IntegrationRegistry $integrationRegistry,
         private EncryptionService $encryptionService,
         private AuditLogService $auditLogService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private TranslatorInterface $translator
     ) {
     }
 
@@ -211,7 +214,7 @@ class IntegrationController extends AbstractController
 
         if ($instanceId) {
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-            if (!$config || $config->getOrganisation() !== $organisation || $config->getUser() !== $user) {
+            if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
                 $this->addFlash('error', 'Instance not found');
                 return $this->redirectToRoute('app_integrations');
             }
@@ -235,170 +238,199 @@ class IntegrationController extends AbstractController
                             $existingCredentials[$key] = $value;
                         }
                     }
+                    // Also set name for form
+                    $existingCredentials['name'] = $config->getName();
                 } catch (\Exception $e) {
                     // If decryption fails, just continue with empty credentials
                     $this->addFlash('warning', 'Could not load existing credentials');
                 }
+            } else {
+                $existingCredentials['name'] = $config->getName();
             }
         }
 
         // Get existing instances for this type (filtered by workflow_user_id)
         $existingInstances = $this->integrationConfigRepository->findByOrganisationTypeAndWorkflowUser($organisation, $type, $workflowUserId);
 
-        if ($request->isMethod('POST')) {
-            $name = $request->request->get('name', '');
+        // Create form
+        $form = $this->createForm(IntegrationConfigType::class, $existingCredentials, [
+            'integration' => $integration,
+            'existing_credentials' => $existingCredentials,
+            'is_edit' => $config !== null
+        ]);
 
-            // Validate name is provided and unique
-            if (empty($name)) {
-                $this->addFlash('error', 'Please provide a name for this integration instance');
-            } else {
-                // Check for duplicate names
-                $isDuplicate = false;
-                foreach ($existingInstances as $existing) {
-                    if ($existing->getName() === $name && (!$config || $existing->getId() !== $config->getId())) {
-                        $isDuplicate = true;
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $formData = $form->getData();
+            $name = $formData['name'];
+
+            // Check for duplicate names
+            foreach ($existingInstances as $existing) {
+                if ($existing->getName() === $name && (!$config || $existing->getId() !== $config->getId())) {
+                    $this->addFlash('error', $this->translator->trans('validation.name_duplicate'));
+                    $form->get('name')->addError(new \Symfony\Component\Form\FormError($this->translator->trans('validation.name_duplicate')));
+
+                    return $this->render('integration/setup.html.twig', [
+                        'form' => $form,
+                        'integration' => $integration,
+                        'config' => $config,
+                        'organisation' => $organisation,
+                        'credentialFields' => $integration->getCredentialFields(),
+                        'existingInstances' => $existingInstances,
+                        'isEdit' => $config !== null
+                    ]);
+                }
+            }
+
+            // Build credentials array
+            $credentials = [];
+            $hasOAuthField = false;
+            $credentialsModified = false; // Track if any credentials were changed
+
+            // If editing, start with existing credentials
+            if ($config && $config->hasCredentials()) {
+                try {
+                    $credentials = json_decode(
+                        $this->encryptionService->decrypt($config->getEncryptedCredentials()),
+                        true
+                    );
+                } catch (\Exception $e) {
+                    $credentials = [];
+                }
+            }
+
+            // Process credential fields
+            foreach ($integration->getCredentialFields() as $field) {
+                if ($field->getType() === 'oauth') {
+                    $hasOAuthField = true;
+                    continue;
+                }
+
+                $value = $formData[$field->getName()] ?? null;
+
+                // For sensitive fields, only update if new value provided
+                if (in_array($field->getName(), ['api_token', 'password', 'client_secret'])) {
+                    if (!empty($value)) {
+                        $credentials[$field->getName()] = $value;
+                        $credentialsModified = true; // Mark as modified
+                    }
+                } else {
+                    // For non-sensitive fields, always update
+                    if ($value !== null) {
+                        // Normalize URLs
+                        if ($field->getName() === 'url' && !empty($value)) {
+                            $value = rtrim($value, '/');
+                        }
+                        $credentials[$field->getName()] = $value;
+                        // Check if value actually changed
+                        if (!$config || !isset($credentials[$field->getName()]) || $credentials[$field->getName()] !== $value) {
+                            $credentialsModified = true;
+                        }
+                    }
+                }
+            }
+
+            // For OAuth integrations, start OAuth flow immediately
+            if ($hasOAuthField && !$config) {
+                $tempConfig = new IntegrationConfig();
+                $tempConfig->setOrganisation($organisation);
+                $tempConfig->setIntegrationType($type);
+                $tempConfig->setUser($user);
+                $tempConfig->setName($name);
+                $tempConfig->setActive(false);
+
+                $this->entityManager->persist($tempConfig);
+                $this->entityManager->flush();
+
+                $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
+
+                return $this->redirectToRoute('app_integration_oauth_microsoft_start', [
+                    'configId' => $tempConfig->getId()
+                ]);
+            }
+
+            // Validate credentials for non-OAuth integrations
+            // Only validate if:
+            // 1. All required fields are present, AND
+            // 2. Either creating new integration OR credentials were modified in edit mode
+            if (!$hasOAuthField) {
+                $hasAllFields = true;
+                foreach ($integration->getCredentialFields() as $field) {
+                    if ($field->getType() === 'oauth') {
+                        continue;
+                    }
+                    if ($field->isRequired() && empty($credentials[$field->getName()])) {
+                        $hasAllFields = false;
                         break;
                     }
                 }
 
-                if ($isDuplicate) {
-                    $this->addFlash('error', 'An integration with this name already exists');
-                } else {
-                    // Get credentials from form
-                    $credentials = [];
-                    $hasOAuthField = false;
+                // Skip validation if editing and no credentials were modified
+                $shouldValidate = $hasAllFields && (!$config || $credentialsModified);
 
-                    // If editing, start with existing credentials
-                    if ($config && $config->hasCredentials()) {
-                        try {
-                            $credentials = json_decode(
-                                $this->encryptionService->decrypt($config->getEncryptedCredentials()),
-                                true
-                            );
-                        } catch (\Exception $e) {
-                            // If decryption fails, start with empty credentials
-                            $credentials = [];
-                        }
-                    }
+                if ($shouldValidate && !$integration->validateCredentials($credentials)) {
+                    $this->addFlash('error', $this->translator->trans('integration.connection_failed'));
+                    $form->addError(new \Symfony\Component\Form\FormError($this->translator->trans('integration.connection_failed_message')));
 
-                    foreach ($integration->getCredentialFields() as $field) {
-                        if ($field->getType() === 'oauth') {
-                            $hasOAuthField = true;
-                            continue; // Skip OAuth fields, they'll be handled separately
-                        }
-                        $value = $request->request->get($field->getName());
-
-                        // For sensitive fields, only update if a new value was provided
-                        if ($field->getName() === 'api_token' || $field->getName() === 'password' || $field->getName() === 'client_secret') {
-                            if (!empty($value)) {
-                                $credentials[$field->getName()] = $value;
-                            }
-                            // If empty and editing, keep existing value (already in $credentials)
-                        } else {
-                            // For non-sensitive fields, always update
-                            if ($value !== null) {
-                                // Normalize URLs by removing trailing slashes
-                                if ($field->getName() === 'url' && !empty($value)) {
-                                    $value = rtrim($value, '/');
-                                }
-                                $credentials[$field->getName()] = $value;
-                            }
-                        }
-                    }
-
-                    // For OAuth integrations, start OAuth flow immediately
-                    if ($hasOAuthField && !$config) {
-                        // Create temporary config to get ID for OAuth flow
-                        $tempConfig = new IntegrationConfig();
-                        $tempConfig->setOrganisation($organisation);
-                        $tempConfig->setIntegrationType($type);
-                        $tempConfig->setUser($user);
-                        $tempConfig->setName($name);
-                        $tempConfig->setActive(false); // Not active until OAuth completes
-
-                        $this->entityManager->persist($tempConfig);
-                        $this->entityManager->flush();
-
-                        // Store in session that we're in OAuth flow
-                        $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
-
-                        // Redirect to OAuth authorization
-                        return $this->redirectToRoute('app_integration_oauth_microsoft_start', [
-                            'configId' => $tempConfig->getId()
-                        ]);
-                    }
-
-                    // For non-OAuth integrations or editing existing OAuth configs
-                    $shouldSave = false;
-                    if ($hasOAuthField && $config && $config->hasCredentials()) {
-                        // Existing OAuth config with credentials can be updated
-                        $shouldSave = true;
-                    } elseif (!$hasOAuthField && !empty($credentials) && $integration->validateCredentials($credentials)) {
-                        // Non-OAuth with valid credentials
-                        $shouldSave = true;
-                    }
-
-                    if ($shouldSave) {
-                        // Create or update config
-                        if (!$config) {
-                            $config = new IntegrationConfig();
-                            $config->setOrganisation($organisation);
-                            $config->setIntegrationType($type);
-                            $config->setUser($user);
-                        }
-
-                        $config->setName($name);
-                        $config->setEncryptedCredentials(
-                            $this->encryptionService->encrypt(json_encode($credentials))
-                        );
-                        $config->setActive(true);
-
-                        // Auto-disable less useful tools for SharePoint
-                        if ($type === 'sharepoint' && !$instanceId) {
-                            // These tools are less useful for AI agents, disable by default
-                            $toolsToDisable = [
-                                'sharepoint_list_files',      // Agents should search, not browse
-                                'sharepoint_download_file',    // Only returns URL, agent can't fetch it
-                                'sharepoint_get_list_items'    // Too technical for most use cases
-                            ];
-
-                            foreach ($toolsToDisable as $toolName) {
-                                $config->disableTool($toolName);
-                            }
-
-                            error_log('Auto-disabled less useful SharePoint tools for new integration: ' . implode(', ', $toolsToDisable));
-                        }
-
-                        $this->entityManager->persist($config);
-                        $this->entityManager->flush();
-
-                        /** @var User $logUser */
-                        $logUser = $this->getUser();
-                        $this->auditLogService->log(
-                            $instanceId ? 'integration.updated' : 'integration.setup',
-                            $logUser,
-                            ['type' => $type, 'name' => $name]
-                        );
-
-                        $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
-                        return $this->redirectToRoute('app_integrations');
-                    } else {
-                        $this->addFlash('error', 'Invalid credentials provided');
-                    }
+                    return $this->render('integration/setup.html.twig', [
+                        'form' => $form,
+                        'integration' => $integration,
+                        'config' => $config,
+                        'organisation' => $organisation,
+                        'credentialFields' => $integration->getCredentialFields(),
+                        'existingInstances' => $existingInstances,
+                        'isEdit' => $config !== null
+                    ]);
                 }
             }
+
+            // Create or update config
+            if (!$config) {
+                $config = new IntegrationConfig();
+                $config->setOrganisation($organisation);
+                $config->setIntegrationType($type);
+                $config->setUser($user);
+            }
+
+            $config->setName($name);
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            // Auto-disable less useful tools for SharePoint
+            if ($type === 'sharepoint' && !$instanceId) {
+                $toolsToDisable = ['sharepoint_list_files', 'sharepoint_download_file', 'sharepoint_get_list_items'];
+                foreach ($toolsToDisable as $toolName) {
+                    $config->disableTool($toolName);
+                }
+            }
+
+            $this->entityManager->persist($config);
+            $this->entityManager->flush();
+
+            $this->auditLogService->log(
+                $instanceId ? 'integration.updated' : 'integration.setup',
+                $user,
+                ['type' => $type, 'name' => $name]
+            );
+
+            $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
+            return $this->redirectToRoute('app_integrations');
         }
 
         return $this->render('integration/setup.html.twig', [
+            'form' => $form,
             'integration' => $integration,
             'config' => $config,
             'organisation' => $organisation,
             'credentialFields' => $integration->getCredentialFields(),
             'existingInstances' => $existingInstances,
-            'isEdit' => $config !== null,
-            'existingCredentials' => $existingCredentials
+            'isEdit' => $config !== null
         ]);
     }
+
 
     #[Route('/{type}/toggle-tool', name: 'app_integration_toggle_tool', methods: ['POST'])]
     public function toggleTool(string $type, Request $request): JsonResponse
@@ -423,7 +455,7 @@ class IntegrationController extends AbstractController
 
         // Get specific instance and verify ownership
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-        if (!$config || $config->getOrganisation() !== $organisation || $config->getUser() !== $user) {
+        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
             return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -471,7 +503,7 @@ class IntegrationController extends AbstractController
                 'integrationType' => $type
             ]);
 
-            if (!$config || $config->getUser() !== $user) {
+            if (!$config || $config->getUser()->getId() !== $user->getId()) {
                 return $this->json(['error' => 'Integration instance not found'], Response::HTTP_NOT_FOUND);
             }
         } else {
@@ -514,7 +546,7 @@ class IntegrationController extends AbstractController
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
 
-        if ($config && $config->getOrganisation() === $organisation && $config->getUser() === $user) {
+        if ($config && $config->getOrganisation()->getId() === $organisation->getId() && $config->getUser()->getId() === $user->getId()) {
             /** @var User $logUser */
             $logUser = $this->getUser();
             $this->auditLogService->log(
@@ -557,10 +589,20 @@ class IntegrationController extends AbstractController
             return $this->json(['success' => true, 'message' => 'System integration is always available']);
         }
 
-        // Get config
-        $config = $this->integrationConfigRepository->findOneByOrganisationAndType($organisation, $type);
+        // Get instance ID from request
+        $instanceId = $request->request->get('instance');
+        if (!$instanceId) {
+            return $this->json(['success' => false, 'message' => 'Instance ID required']);
+        }
 
-        if (!$config || !$config->hasCredentials()) {
+        // Get specific config by instance ID
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
+
+        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
+            return $this->json(['success' => false, 'message' => 'Instance not found']);
+        }
+
+        if (!$config->hasCredentials()) {
             return $this->json(['success' => false, 'message' => 'No credentials configured']);
         }
 

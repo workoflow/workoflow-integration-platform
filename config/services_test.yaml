@@ -1,0 +1,20 @@
+parameters:
+    # Test JIRA credentials (will be overridden by .env.test if set)
+    test.jira.url: '%env(TEST_JIRA_URL)%'
+    test.jira.email: '%env(TEST_JIRA_EMAIL)%'
+    test.jira.token: '%env(TEST_JIRA_TOKEN)%'
+
+    # Default values if not in environment
+    env(TEST_JIRA_URL): 'https://test.atlassian.net'
+    env(TEST_JIRA_EMAIL): 'test@example.com'
+    env(TEST_JIRA_TOKEN): 'test-token-12345'
+
+services:
+    _defaults:
+        public: true
+
+    # Make fixtures autowirable in test environment
+    App\DataFixtures\:
+        resource: '../src/DataFixtures/'
+        autowire: true
+        autoconfigure: true

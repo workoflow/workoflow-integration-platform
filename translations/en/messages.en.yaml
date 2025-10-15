@@ -202,6 +202,8 @@ integration:
   credentials_not_editable: Credentials cannot be edited for security reasons.
   credential_exists: Current value is stored securely. Leave empty to keep it.
   keep_existing: Leave empty to keep existing value
+  connection_failed: Connection failed. Please check your credentials and URL.
+  connection_failed_message: Could not establish connection
 
 action:
   edit: Edit
@@ -267,3 +269,10 @@ footer:
     platform: Integration Platform
     pptx: PPTX
     rag: RAG
+
+validation:
+  name_required: Name is required
+  name_duplicate: An integration with this name already exists
+  field_required: This field is required
+  email_invalid: Please enter a valid email address
+  url_invalid: Please enter a valid URL
