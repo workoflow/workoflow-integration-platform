@@ -1,0 +1,94 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11.2
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: workoflow_test
+          MYSQL_USER: workoflow_test
+          MYSQL_PASSWORD: workoflow_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, sodium, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Create .env.test.local
+        run: |
+          cat > .env.test.local << EOF
+          APP_ENV=test
+          APP_SECRET=test-secret-key-for-github-actions
+          DATABASE_URL=mysql://workoflow_test:workoflow_test@127.0.0.1:3306/workoflow?serverVersion=11.2.2-MariaDB&charset=utf8mb4
+          REDIS_URL=redis://127.0.0.1:6379
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          TEST_JIRA_URL=${{ secrets.TEST_JIRA_URL }}
+          TEST_JIRA_EMAIL=${{ secrets.TEST_JIRA_EMAIL }}
+          TEST_JIRA_TOKEN=${{ secrets.TEST_JIRA_TOKEN }}
+          EOF
+
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..30}; do
+            if mysql -h 127.0.0.1 -u workoflow_test -pworkoflow_test -e "SELECT 1" > /dev/null 2>&1; then
+              echo "MariaDB is ready"
+              break
+            fi
+            echo "Waiting for MariaDB... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run migrations
+        run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Run fixtures
+        run: php bin/console doctrine:fixtures:load --env=test --no-interaction
+
+      - name: Run PHPUnit tests
+        run: vendor/bin/phpunit
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Run PHP CodeSniffer
+        run: vendor/bin/phpcs
