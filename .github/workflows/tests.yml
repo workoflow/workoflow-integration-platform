@@ -130,6 +130,9 @@ jobs:
           mc anonymous set download local/workoflow-shared
           echo "MinIO buckets created successfully"
 
+      - name: migrations
+        run: php bin/console doctrine:schema:update --force
+
       - name: Run migrations
         run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
 
