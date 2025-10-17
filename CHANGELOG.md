@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 ## 2025-10-17
 
 ### Added
+- New command to export all integration tools to XML format - provides complete documentation of all available tools with descriptions and parameters
+- Tool export command supports filtering by category (system tools or user integrations) for targeted documentation
 - New channel system allowing users to belong to multiple channels for future feature expansion
 - Channel association during user registration - external systems can now assign users to specific channels when creating accounts
 - Automatic channel creation through the registration API - channels are created on-demand when users are registered
@@ -19,6 +21,13 @@ All notable changes to this project will be documented in this file.
 - Users and organizations are now created immediately when registration API is called - improves integration with external workflow systems
 - Comprehensive API documentation for the new registration endpoint with examples in multiple programming languages
 - Comprehensive documentation about magic link authentication lifecycle and session management
+- Confluence page creation capability for AI agents - can now create new pages directly in Confluence spaces
+- Confluence page update capability for AI agents - can now update existing pages with new content while handling version conflicts automatically
+- Support for multiple content formats when creating or updating Confluence pages - AI agents can use familiar markdown, plain text, or HTML instead of Confluence's native format
+- Intelligent space identification for Confluence pages - accepts both human-readable space keys (like 'PROJ') and technical space IDs
+- AI-friendly error messages for Confluence operations - provides clear guidance when page creation or update fails, helping AI agents correct and retry
+- Automatic content format conversion - markdown and plain text are automatically converted to Confluence's storage format
+- Version conflict detection and handling for page updates - automatically retrieves current version to prevent update conflicts
 - MinIO service now included in automated testing workflows to prevent test failures
 
 ### Fixed
