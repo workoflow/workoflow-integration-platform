@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - Fixed git repository permission warnings in Docker container environment
 - Updated frontend dependencies to fix security vulnerability
 - File storage service startup issues that prevented application from loading when MinIO was unavailable
+- Automated test workflow now builds frontend assets before running tests
 
 ### Changed
 - Login page now displays instructions for Magic Link authentication instead of Google login
