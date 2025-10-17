@@ -236,6 +236,112 @@ class ConfluenceService
     }
 
     /**
+     * Update an existing page in Confluence
+     *
+     * @param array $credentials Confluence credentials
+     * @param array $params Page update parameters
+     * @return array Response with updated page details or error information
+     */
+    public function updatePage(array $credentials, array $params): array
+    {
+        try {
+            $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+            // First, get the current page to retrieve its version number
+            $currentPageResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/pages/' . $params['pageId'], [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'body-format' => 'storage',
+                ],
+            ]);
+
+            $currentPage = $currentPageResponse->toArray();
+            $currentVersion = $currentPage['version']['number'] ?? 1;
+
+            // Prepare the update request body
+            $body = [
+                'id' => $params['pageId'],
+                'status' => $params['status'] ?? $currentPage['status'] ?? 'current',
+                'title' => $params['title'] ?? $currentPage['title'],
+                'body' => [
+                    'representation' => 'storage',
+                    'value' => $this->convertToStorageFormat(
+                        $params['content'],
+                        $params['contentFormat'] ?? 'markdown'
+                    )
+                ],
+                'version' => [
+                    'number' => $currentVersion + 1,
+                ]
+            ];
+
+            // Add version message if provided
+            if (!empty($params['versionMessage'])) {
+                $body['version']['message'] = $params['versionMessage'];
+            }
+
+            // Update the page using the v2 API
+            $response = $this->httpClient->request('PUT', $url . '/wiki/api/v2/pages/' . $params['pageId'], [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'json' => $body,
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ],
+            ]);
+
+            $pageData = $response->toArray();
+
+            // Construct the page URL
+            $pageUrl = $url . '/wiki' . $pageData['_links']['webui'];
+
+            return [
+                'success' => true,
+                'pageId' => $pageData['id'],
+                'pageUrl' => $pageUrl,
+                'title' => $pageData['title'],
+                'spaceId' => $pageData['spaceId'],
+                'status' => $pageData['status'],
+                'message' => 'Page updated successfully',
+                'version' => $pageData['version']['number'] ?? ($currentVersion + 1),
+                'previousVersion' => $currentVersion,
+            ];
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $errorData = $response->toArray(false);
+
+            // Provide AI-friendly error messages
+            $errorMessage = $errorData['message'] ?? 'Unknown error occurred';
+            $details = '';
+
+            if (str_contains($errorMessage, 'version') || str_contains($errorMessage, 'conflict')) {
+                $details = 'Page was modified by another user. Try again to get the latest version or use force update if appropriate';
+            } elseif (str_contains($errorMessage, 'does not have permission')) {
+                $details = 'Check that the API token has write permissions for this page';
+            } elseif (str_contains($errorMessage, 'not found')) {
+                $details = 'Page not found. Use confluence_search to find the correct page ID';
+            } elseif (str_contains($errorMessage, 'title')) {
+                $details = 'Page title issue - it may be empty or too long. Check the title parameter';
+            }
+
+            return [
+                'success' => false,
+                'error' => $errorMessage,
+                'details' => $details,
+                'statusCode' => $response->getStatusCode(),
+                'suggestion' => $details ?: 'Check the error message and adjust your parameters accordingly',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'details' => 'An error occurred while updating the page',
+                'suggestion' => 'Verify the page ID exists and try again',
+            ];
+        }
+    }
+
+    /**
      * Create a new page in Confluence
      *
      * @param array $credentials Confluence credentials

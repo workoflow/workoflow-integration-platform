@@ -116,6 +116,48 @@ class ConfluenceIntegration implements IntegrationInterface
                         'description' => 'Page status: \'current\' (published, default) or \'draft\' (not published). Use \'draft\' for pages that need review before publishing.'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'confluence_update_page',
+                'Update an existing Confluence page. Automatically handles version conflicts and supports multiple content formats for AI-friendly page updates.',
+                [
+                    [
+                        'name' => 'pageId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Page ID to update. Use confluence_search or confluence_get_page to find the page ID.'
+                    ],
+                    [
+                        'name' => 'title',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New page title. Leave empty to keep the current title. Example: \'Updated Meeting Notes - Q4 Planning\''
+                    ],
+                    [
+                        'name' => 'content',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'New page content. Supports markdown (# Headers, **bold**, *italic*, [links](url), etc.), plain text, or HTML. Example: \'# Updated Content\\n\\n## Changes\\n* Item 1 completed\\n* Item 2 in progress\''
+                    ],
+                    [
+                        'name' => 'contentFormat',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Format of the content: \'markdown\' (default), \'plain\', \'html\', or \'storage\' (Confluence native format). Most AI agents should use \'markdown\' for best results.'
+                    ],
+                    [
+                        'name' => 'versionMessage',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional message describing what changed in this update. Example: \'Added Q4 action items and updated attendee list\''
+                    ],
+                    [
+                        'name' => 'status',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Page status: \'current\' (published) or \'draft\'. Leave empty to keep the current status.'
+                    ]
+                ]
             )
         ];
     }
@@ -141,6 +183,10 @@ class ConfluenceIntegration implements IntegrationInterface
                 $parameters['pageId']
             ),
             'confluence_create_page' => $this->confluenceService->createPage(
+                $credentials,
+                $parameters
+            ),
+            'confluence_update_page' => $this->confluenceService->updatePage(
                 $credentials,
                 $parameters
             ),
