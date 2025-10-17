@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Intelligent space identification for Confluence pages - accepts both human-readable space keys (like 'PROJ') and technical space IDs
 - AI-friendly error messages for Confluence operations - provides clear guidance when page creation fails, helping AI agents correct and retry
 - Automatic content format conversion - markdown and plain text are automatically converted to Confluence's storage format
+- MinIO service now included in automated testing workflows to prevent test failures
 
 ### Fixed
 - Application startup error that prevented the platform from loading properly
@@ -30,6 +31,8 @@ All notable changes to this project will be documented in this file.
 - Removed deprecated database update option to prepare for future compatibility
 - Fixed git repository permission warnings in Docker container environment
 - Updated frontend dependencies to fix security vulnerability
+- File storage service startup issues that prevented application from loading when MinIO was unavailable
+- Automated test workflow now builds frontend assets before running tests
 
 ### Changed
 - Login page now displays instructions for Magic Link authentication instead of Google login

@@ -10,51 +10,66 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class FileStorageService
 {
-    private S3Client $s3Client;
+    private ?S3Client $s3Client = null;
     private string $bucket;
     private array $allowedExtensions = [
         'pdf', 'docx', 'xlsx', 'csv', 'txt', 'json',
         'jpg', 'jpeg', 'png', 'gif', 'bmp'
     ];
     private int $maxFileSize = 104857600; // 100MB
+    private bool $bucketChecked = false;
 
     public function __construct(
-        ParameterBagInterface $params,
+        private ParameterBagInterface $params,
         private LoggerInterface $logger
     ) {
-        $this->s3Client = new S3Client([
-            'version' => 'latest',
-            'region' => $params->get('minio.region'),
-            'endpoint' => $params->get('minio.endpoint'),
-            'use_path_style_endpoint' => $params->get('minio.use_path_style'),
-            'credentials' => [
-                'key' => $params->get('minio.root_user'),
-                'secret' => $params->get('minio.root_password'),
-            ],
-        ]);
-
         $this->bucket = $params->get('minio.bucket');
-        $this->ensureBucketExists();
+    }
+
+    private function getS3Client(): S3Client
+    {
+        if ($this->s3Client === null) {
+            $this->s3Client = new S3Client([
+                'version' => 'latest',
+                'region' => $this->params->get('minio.region'),
+                'endpoint' => $this->params->get('minio.endpoint'),
+                'use_path_style_endpoint' => $this->params->get('minio.use_path_style'),
+                'credentials' => [
+                    'key' => $this->params->get('minio.root_user'),
+                    'secret' => $this->params->get('minio.root_password'),
+                ],
+            ]);
+        }
+        return $this->s3Client;
     }
 
     private function ensureBucketExists(): void
     {
+        if ($this->bucketChecked) {
+            return;
+        }
+
         try {
-            if (!$this->s3Client->doesBucketExist($this->bucket)) {
-                $this->s3Client->createBucket([
+            $s3Client = $this->getS3Client();
+            if (!$s3Client->doesBucketExist($this->bucket)) {
+                $s3Client->createBucket([
                     'Bucket' => $this->bucket,
                 ]);
             }
+            $this->bucketChecked = true;
         } catch (S3Exception $e) {
             $this->logger->error('Failed to create bucket', [
                 'bucket' => $this->bucket,
                 'error' => $e->getMessage()
             ]);
+            $this->bucketChecked = true; // Mark as checked even on failure to avoid repeated attempts
         }
     }
 
     public function upload(UploadedFile $file, string $orgUuid, int $userId): array
     {
+        $this->ensureBucketExists();
+
         // Validate file
         $extension = strtolower($file->getClientOriginalExtension());
         if (!in_array($extension, $this->allowedExtensions)) {
@@ -74,7 +89,7 @@ class FileStorageService
         );
 
         try {
-            $result = $this->s3Client->putObject([
+            $result = $this->getS3Client()->putObject([
                 'Bucket' => $this->bucket,
                 'Key' => $filename,
                 'Body' => fopen($file->getPathname(), 'r'),
@@ -104,15 +119,18 @@ class FileStorageService
 
     public function listFiles(string $orgUuid): array
     {
+        $this->ensureBucketExists();
+
         try {
-            $objects = $this->s3Client->listObjectsV2([
+            $s3Client = $this->getS3Client();
+            $objects = $s3Client->listObjectsV2([
                 'Bucket' => $this->bucket,
                 'Prefix' => $orgUuid . '/',
             ]);
 
             $files = [];
             foreach ($objects['Contents'] ?? [] as $object) {
-                $metadata = $this->s3Client->headObject([
+                $metadata = $s3Client->headObject([
                     'Bucket' => $this->bucket,
                     'Key' => $object['Key'],
                 ]);
@@ -140,8 +158,10 @@ class FileStorageService
 
     public function delete(string $key): bool
     {
+        $this->ensureBucketExists();
+
         try {
-            $this->s3Client->deleteObject([
+            $this->getS3Client()->deleteObject([
                 'Bucket' => $this->bucket,
                 'Key' => $key,
             ]);
@@ -157,13 +177,16 @@ class FileStorageService
 
     public function getDownloadUrl(string $key, int $expiration = 3600): string
     {
+        $this->ensureBucketExists();
+
         try {
-            $cmd = $this->s3Client->getCommand('GetObject', [
+            $s3Client = $this->getS3Client();
+            $cmd = $s3Client->getCommand('GetObject', [
                 'Bucket' => $this->bucket,
                 'Key' => $key,
             ]);
 
-            $request = $this->s3Client->createPresignedRequest($cmd, '+' . $expiration . ' seconds');
+            $request = $s3Client->createPresignedRequest($cmd, '+' . $expiration . ' seconds');
             return (string) $request->getUri();
         } catch (S3Exception $e) {
             $this->logger->error('Failed to generate download URL', [
@@ -178,7 +201,7 @@ class FileStorageService
     {
         try {
             // Try to check if the bucket exists as a connectivity test
-            $this->s3Client->headBucket([
+            $this->getS3Client()->headBucket([
                 'Bucket' => $this->bucket,
             ]);
             return true;
