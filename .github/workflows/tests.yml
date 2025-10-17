@@ -131,10 +131,7 @@ jobs:
           echo "MinIO buckets created successfully"
 
       - name: migrations
-        run: php bin/console doctrine:schema:update --env=test --force --no-interaction
-
-      - name: Run migrations
-        run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
+        run: php bin/console doctrine:schema:update --force --env=test --no-interaction
 
       - name: Run fixtures
         run: php bin/console doctrine:fixtures:load --env=test --no-interaction
