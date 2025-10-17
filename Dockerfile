@@ -69,6 +69,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /app
 
+# Fix git ownership warning
+RUN git config --global --add safe.directory /app
+
 # Copy application from builder
 COPY --from=builder --chown=www-data:www-data /app /app
 

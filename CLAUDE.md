@@ -283,7 +283,7 @@ All critical configurations via .env:
 docker-compose exec frankenphp composer update
 
 # Update database schema from entities
-docker-compose exec frankenphp php bin/console doctrine:schema:update --force --complete
+docker-compose exec frankenphp php bin/console doctrine:schema:update --force
 
 # View pending schema changes (without applying)
 docker-compose exec frankenphp php bin/console doctrine:schema:update --dump-sql

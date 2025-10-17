@@ -162,7 +162,7 @@ fi
 # Update database schema from entities
 echo ""
 echo "Updating database schema from entity definitions..."
-docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console doctrine:schema:update --force --complete
+docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console doctrine:schema:update --force
 
 # Clear and warm up cache
 echo ""

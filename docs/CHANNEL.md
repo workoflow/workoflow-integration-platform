@@ -201,7 +201,7 @@ The database schema is automatically managed through Doctrine entities and creat
 3. Foreign key constraints to maintain referential integrity
 4. Unique constraint on (user_id, channel_id) to prevent duplicates
 
-Tables are created/updated using: `doctrine:schema:update --force --complete`
+Tables are created/updated using: `doctrine:schema:update --force`
 
 ## Security Considerations
 
