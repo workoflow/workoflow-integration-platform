@@ -10,27 +10,17 @@ use Symfony\Component\Uid\Uuid;
 
 class ShareFileService
 {
-    private S3Client $s3Client;
+    private ?S3Client $s3Client = null;
     private string $bucket;
     private string $publicBucket;
     private string $publicEndpoint;
     private string $appUrl;
+    private bool $bucketChecked = false;
 
     public function __construct(
-        ParameterBagInterface $params,
+        private ParameterBagInterface $params,
         private LoggerInterface $logger
     ) {
-        $this->s3Client = new S3Client([
-            'version' => 'latest',
-            'region' => $params->get('minio.region'),
-            'endpoint' => $params->get('minio.endpoint'),
-            'use_path_style_endpoint' => $params->get('minio.use_path_style'),
-            'credentials' => [
-                'key' => $params->get('minio.root_user'),
-                'secret' => $params->get('minio.root_password'),
-            ],
-        ]);
-
         $this->bucket = $params->get('minio.bucket');
         $this->publicBucket = $params->get('minio.public_bucket');
 
@@ -41,16 +31,36 @@ class ShareFileService
 
         // Get the application URL from environment
         $this->appUrl = $params->get('app.url') ?? 'http://localhost:3979';
+    }
 
-        $this->ensureBucketExists();
+    private function getS3Client(): S3Client
+    {
+        if ($this->s3Client === null) {
+            $this->s3Client = new S3Client([
+                'version' => 'latest',
+                'region' => $this->params->get('minio.region'),
+                'endpoint' => $this->params->get('minio.endpoint'),
+                'use_path_style_endpoint' => $this->params->get('minio.use_path_style'),
+                'credentials' => [
+                    'key' => $this->params->get('minio.root_user'),
+                    'secret' => $this->params->get('minio.root_password'),
+                ],
+            ]);
+        }
+        return $this->s3Client;
     }
 
     private function ensureBucketExists(): void
     {
+        if ($this->bucketChecked) {
+            return;
+        }
+
         try {
+            $s3Client = $this->getS3Client();
             // Ensure public bucket exists
-            if (!$this->s3Client->doesBucketExist($this->publicBucket)) {
-                $this->s3Client->createBucket([
+            if (!$s3Client->doesBucketExist($this->publicBucket)) {
+                $s3Client->createBucket([
                     'Bucket' => $this->publicBucket,
                 ]);
 
@@ -68,13 +78,13 @@ class ShareFileService
                     ]
                 ]);
 
-                $this->s3Client->putBucketPolicy([
+                $s3Client->putBucketPolicy([
                     'Bucket' => $this->publicBucket,
                     'Policy' => $policy
                 ]);
 
                 // Set lifecycle policy for 1-day expiration
-                $this->s3Client->putBucketLifecycleConfiguration([
+                $s3Client->putBucketLifecycleConfiguration([
                     'Bucket' => $this->publicBucket,
                     'LifecycleConfiguration' => [
                         'Rules' => [
@@ -90,16 +100,20 @@ class ShareFileService
                     ]
                 ]);
             }
+            $this->bucketChecked = true;
         } catch (S3Exception $e) {
             $this->logger->error('Failed to setup public bucket', [
                 'bucket' => $this->publicBucket,
                 'error' => $e->getMessage()
             ]);
+            $this->bucketChecked = true; // Mark as checked even on failure to avoid repeated attempts
         }
     }
 
     public function shareFile(string $binaryData, string $contentType, string $orgUuid): array
     {
+        $this->ensureBucketExists();
+
         try {
             // Generate unique filename
             $fileId = Uuid::v4()->toString();
@@ -113,7 +127,7 @@ class ShareFileService
             }
 
             // Upload to public bucket
-            $result = $this->s3Client->putObject([
+            $result = $this->getS3Client()->putObject([
                 'Bucket' => $this->publicBucket,
                 'Key' => $filename,
                 'Body' => $decodedData,

@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - Users and organizations are now created immediately when registration API is called - improves integration with external workflow systems
 - Comprehensive API documentation for the new registration endpoint with examples in multiple programming languages
 - Comprehensive documentation about magic link authentication lifecycle and session management
+- MinIO service now included in automated testing workflows to prevent test failures
 
 ### Fixed
 - Application startup error that prevented the platform from loading properly
@@ -25,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Removed deprecated database update option to prepare for future compatibility
 - Fixed git repository permission warnings in Docker container environment
 - Updated frontend dependencies to fix security vulnerability
+- File storage service startup issues that prevented application from loading when MinIO was unavailable
 
 ### Changed
 - Login page now displays instructions for Magic Link authentication instead of Google login
