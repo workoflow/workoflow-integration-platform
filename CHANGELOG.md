@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-17
+
+### Added
+- New channel system allowing users to belong to multiple channels for future feature expansion
+- Channel association during user registration - external systems can now assign users to specific channels when creating accounts
+- Automatic channel creation through the registration API - channels are created on-demand when users are registered
+- Optional channel parameters in registration API for seamless channel assignment during onboarding
+- New automated user registration API for seamless onboarding - external systems can now create users instantly via API call
+- Registration API returns magic links for immediate user authentication - no waiting for users to click links first
+- Users and organizations are now created immediately when registration API is called - improves integration with external workflow systems
+- Comprehensive API documentation for the new registration endpoint with examples in multiple programming languages
+- Comprehensive documentation about magic link authentication lifecycle and session management
+
+### Fixed
+- Application startup error that prevented the platform from loading properly
+- Authentication system configuration issue that blocked user login functionality
+- Login page styling for Magic Link authentication instructions box
+- Corrected magic link validity display from "15 minutes" to actual "24 hours" on login page
+- Fixed incorrect "single-use" claim - magic links can be used multiple times within validity period
+- Database field size for channel UUIDs increased to support Microsoft Teams channel IDs
+- Removed deprecated database update option to prepare for future compatibility
+- Fixed git repository permission warnings in Docker container environment
+- Updated frontend dependencies to fix security vulnerability
+
+### Changed
+- Login page now displays instructions for Magic Link authentication instead of Google login
+- Users are directed to use Magic Links sent via Microsoft Teams or other connected chat applications
+- Magic link authentication now supports both immediate registration (new API flow) and deferred registration (existing flow) for backward compatibility
+- User creation logic centralized into reusable service for consistent behavior across registration methods
+- Extended user session duration from default (~24 minutes) to 24 hours for better user experience
+- Sessions now remain active for full 24 hours regardless of user activity
+- **Simplified database management** - removed migration files in favor of automatic schema updates directly from entity definitions
+- Database updates now use automatic schema synchronization for faster development workflow
+
+### Improved
+- Login page layout now uses wider design for better readability
+- Magic Link authentication channels displayed side-by-side for cleaner presentation
+
 ## 2025-10-15
 
 ### Added

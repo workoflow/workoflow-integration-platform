@@ -67,12 +67,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: AuditLog::class, mappedBy: 'user')]
     private Collection $auditLogs;
 
+    #[ORM\OneToMany(targetEntity: UserChannel::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private Collection $userChannels;
+
     public function __construct()
     {
         $this->integrationConfigs = new ArrayCollection();
         $this->auditLogs = new ArrayCollection();
         $this->userOrganisations = new ArrayCollection();
         $this->organisations = new ArrayCollection();
+        $this->userChannels = new ArrayCollection();
         $this->roles = [self::ROLE_USER];
     }
 
@@ -383,5 +387,47 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isMember(): bool
     {
         return in_array(self::ROLE_MEMBER, $this->roles, true) || !$this->isAdmin();
+    }
+
+    /**
+     * @return Collection<int, UserChannel>
+     */
+    public function getUserChannels(): Collection
+    {
+        return $this->userChannels;
+    }
+
+    public function addUserChannel(UserChannel $userChannel): static
+    {
+        if (!$this->userChannels->contains($userChannel)) {
+            $this->userChannels->add($userChannel);
+            $userChannel->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeUserChannel(UserChannel $userChannel): static
+    {
+        if ($this->userChannels->removeElement($userChannel)) {
+            if ($userChannel->getUser() === $this) {
+                $userChannel->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Get channels that this user belongs to
+     * @return Collection<int, Channel>
+     */
+    public function getChannels(): Collection
+    {
+        $channels = new ArrayCollection();
+        foreach ($this->userChannels as $userChannel) {
+            if ($userChannel->getChannel()) {
+                $channels->add($userChannel->getChannel());
+            }
+        }
+        return $channels;
     }
 }

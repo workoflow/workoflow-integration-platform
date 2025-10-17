@@ -340,7 +340,7 @@ jobs:
       - name: Setup Test Database
         run: |
           php bin/console doctrine:database:create --env=test
-          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+          php bin/console doctrine:schema:update --force --env=test
           php bin/console doctrine:fixtures:load --env=test --no-interaction
 
       - name: Run Tests
@@ -385,7 +385,7 @@ XDEBUG_CONFIG="idekey=PHPSTORM" php bin/phpunit
 # Test-Datenbank neu erstellen
 php bin/console doctrine:database:drop --force --env=test
 php bin/console doctrine:database:create --env=test
-php bin/console doctrine:migrations:migrate --env=test --no-interaction
+php bin/console doctrine:schema:update --force --env=test
 
 # Fixtures neu laden
 php bin/console doctrine:fixtures:load --env=test --no-interaction
