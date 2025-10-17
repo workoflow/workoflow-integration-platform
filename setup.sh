@@ -159,10 +159,10 @@ if [ "$ENVIRONMENT" != "prod" ]; then
     docker-compose -f $COMPOSE_FILE exec -T frankenphp npm run dev
 fi
 
-# Run database migrations
+# Update database schema from entities
 echo ""
-echo "Running database migrations..."
-docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console doctrine:migrations:migrate --no-interaction
+echo "Updating database schema from entity definitions..."
+docker-compose -f $COMPOSE_FILE exec -T frankenphp php bin/console doctrine:schema:update --force --complete
 
 # Clear and warm up cache
 echo ""

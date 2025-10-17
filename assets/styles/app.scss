@@ -426,7 +426,7 @@ body {
     border-radius: var(--border-radius-lg);
     padding: var(--space-2xl);
     width: 100%;
-    max-width: 400px;
+    max-width: 800px;
     
     .login-header {
       text-align: center;
@@ -474,17 +474,115 @@ body {
       font-size: var(--text-xs);
       color: var(--text-muted);
     }
-    
+
     .alert {
       padding: var(--space-md);
       margin-bottom: var(--space-lg);
       border-radius: var(--border-radius);
       font-size: var(--text-sm);
-      
+
       &.alert-danger {
         background: rgba(239, 68, 68, 0.1);
         border: 1px solid rgba(239, 68, 68, 0.3);
         color: #ef4444;
+      }
+    }
+
+    // Magic Link Authentication Info Styles
+    .magic-link-info {
+      background: var(--info-background);
+      border: 1px solid var(--info-border);
+      border-radius: var(--border-radius-lg);
+      padding: var(--space-2xl);
+
+      .info-icon {
+        display: flex;
+        justify-content: center;
+        margin-bottom: var(--space-lg);
+
+        svg {
+          width: 48px;
+          height: 48px;
+          color: var(--info-border);
+        }
+      }
+
+      h3 {
+        text-align: center;
+        font-size: var(--text-xl);
+        margin-bottom: var(--space-lg);
+        color: var(--info-text);
+        font-weight: 600;
+      }
+
+      .info-text {
+        text-align: center;
+        color: var(--text-secondary);
+        margin-bottom: var(--space-xl);
+        font-size: var(--text-base);
+
+        strong {
+          color: var(--info-text);
+          font-weight: 600;
+        }
+      }
+
+      .channels-list {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        gap: var(--space-lg);
+        margin-bottom: var(--space-xl);
+
+        .channel-item {
+          display: flex;
+          align-items: center;
+          gap: var(--space-sm);
+          padding: var(--space-md) var(--space-lg);
+          background: var(--secondary-background-dark);
+          border-radius: var(--border-radius);
+          border: 1px solid var(--border-color);
+          transition: var(--transition);
+          flex: 1;
+          max-width: 350px;
+
+          &:hover {
+            border-color: var(--info-border);
+            background: rgba(59, 130, 246, 0.05);
+          }
+
+          svg {
+            width: 24px;
+            height: 24px;
+            color: var(--info-border);
+            flex-shrink: 0;
+          }
+
+          span {
+            color: var(--text-primary);
+            font-size: var(--text-sm);
+            font-weight: 500;
+          }
+        }
+      }
+
+      .info-note {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: var(--border-radius);
+        padding: var(--space-md);
+
+        p {
+          margin: 0;
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          text-align: center;
+          line-height: 1.5;
+
+          strong {
+            color: var(--info-text);
+          }
+        }
       }
     }
   }

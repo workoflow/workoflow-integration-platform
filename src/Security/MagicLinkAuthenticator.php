@@ -6,12 +6,9 @@ use App\Entity\User;
 use App\Entity\Organisation;
 use App\Entity\UserOrganisation;
 use App\Repository\UserRepository;
-use App\Repository\OrganisationRepository;
-use App\Repository\UserOrganisationRepository;
 use App\Service\MagicLinkService;
+use App\Service\UserRegistrationService;
 use App\Service\AuditLogService;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,9 +26,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 {
     public function __construct(
         private UserRepository $userRepository,
-        private OrganisationRepository $organisationRepository,
-        private UserOrganisationRepository $userOrganisationRepository,
-        private EntityManagerInterface $entityManager,
+        private UserRegistrationService $userRegistrationService,
         private MagicLinkService $magicLinkService,
         private AuditLogService $auditLogService,
         private RouterInterface $router,
@@ -60,111 +55,22 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
         $orgUuid = $payload['org_uuid'];
         $workflowUserId = $payload['workflow_user_id'];
 
-        // Generate a generic email from the name (without org UUID)
-        $sanitizedName = strtolower(str_replace(' ', '.', $name));
-        $generatedEmail = $sanitizedName . '@local.local';
+        // Generate email from name using the registration service
+        $generatedEmail = $this->userRegistrationService->generateEmailFromName($name);
 
-        // Find or create organisation
-        $organisation = $this->organisationRepository->findOneBy(['uuid' => $orgUuid]);
-
-        if (!$organisation) {
-            // Create new organisation if it doesn't exist
-            $organisation = new Organisation();
-            $organisation->setUuid($orgUuid);
-            $organisation->setName('Organisation ' . substr($orgUuid, 0, 8)); // Default name
-
-            $this->entityManager->persist($organisation);
-            $this->entityManager->flush();
-
-            $this->logger->info('Created new organisation via magic link', [
-                'org_uuid' => $orgUuid,
-                'name' => $organisation->getName()
-            ]);
-        }
+        // Create or find organisation
+        $organisation = $this->userRegistrationService->createOrFindOrganisation($orgUuid);
 
         return new SelfValidatingPassport(
             new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $workflowUserId, $request) {
-                $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
-
-                if (!$user) {
-                    // Create new user
-                    $user = new User();
-                    $user->setEmail($userIdentifier);  // Generated email
-                    $user->setName($name);  // Actual name from token
-                    $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
-
-                    $this->entityManager->persist($user);
-                    $this->entityManager->flush();
-
-                    // Create UserOrganisation with workflow_user_id
-                    $userOrganisation = new UserOrganisation();
-                    $userOrganisation->setUser($user);
-                    $userOrganisation->setOrganisation($organisation);
-                    $userOrganisation->setWorkflowUserId($workflowUserId);
-                    $userOrganisation->setRole('MEMBER');
-
-                    $this->entityManager->persist($userOrganisation);
-                    $this->entityManager->flush();
-
-                    $this->logger->info('Created new user via magic link', [
-                        'email' => $userIdentifier,
-                        'name' => $name,
-                        'organisation' => $organisation->getName()
-                    ]);
-
-                    // Log user creation
-                    $this->auditLogService->log(
-                        'user.created_via_magic_link',
-                        $user,
-                        [
-                            'email' => $userIdentifier,
-                            'name' => $name,
-                            'organisation_id' => $organisation->getId(),
-                            'organisation_name' => $organisation->getName()
-                        ]
-                    );
-                } else {
-                    // Check if user is already associated with this organisation
-                    $userOrganisation = $this->userOrganisationRepository->findOneByUserAndOrganisation($user, $organisation);
-
-                    if (!$userOrganisation) {
-                        // Create new UserOrganisation with workflow_user_id
-                        $userOrganisation = new UserOrganisation();
-                        $userOrganisation->setUser($user);
-                        $userOrganisation->setOrganisation($organisation);
-                        $userOrganisation->setWorkflowUserId($workflowUserId);
-                        $userOrganisation->setRole('MEMBER');
-
-                        $this->entityManager->persist($userOrganisation);
-
-                        // Ensure user has member role if not admin
-                        if (!$user->isAdmin()) {
-                            $user->setRoles([User::ROLE_USER, User::ROLE_MEMBER]);
-                        }
-                    } else {
-                        // Update existing UserOrganisation with new workflow_user_id
-                        $userOrganisation->setWorkflowUserId($workflowUserId);
-                    }
-
-                    $this->entityManager->flush();
-
-                    $this->logger->info('Added user to organisation via magic link', [
-                        'email' => $userIdentifier,
-                        'name' => $user->getName(),
-                        'organisation' => $organisation->getName(),
-                        'workflow_user_id' => $workflowUserId
-                    ]);
-
-                    // Log organisation addition
-                    $this->auditLogService->log(
-                        'user.organisation_added_via_magic_link',
-                        $user,
-                        [
-                            'organisation_id' => $organisation->getId(),
-                            'organisation_name' => $organisation->getName()
-                        ]
-                    );
-                }
+                // Use the registration service to create or update the user
+                // This handles both new users and existing users seamlessly
+                $user = $this->userRegistrationService->createOrUpdateUser(
+                    $name,
+                    $userIdentifier,
+                    $organisation,
+                    $workflowUserId
+                );
 
                 // Store current organisation in session for context
                 if ($request->hasSession()) {
@@ -180,6 +86,13 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
                         'organisation_name' => $organisation->getName()
                     ]
                 );
+
+                $this->logger->info('User authenticated via magic link', [
+                    'email' => $userIdentifier,
+                    'name' => $user->getName(),
+                    'organisation' => $organisation->getName(),
+                    'workflow_user_id' => $workflowUserId
+                ]);
 
                 return $user;
             })
