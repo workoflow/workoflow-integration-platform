@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file.
 - Users and organizations are now created immediately when registration API is called - improves integration with external workflow systems
 - Comprehensive API documentation for the new registration endpoint with examples in multiple programming languages
 - Comprehensive documentation about magic link authentication lifecycle and session management
+- Confluence page creation capability for AI agents - can now create new pages directly in Confluence spaces
+- Support for multiple content formats when creating Confluence pages - AI agents can use familiar markdown, plain text, or HTML instead of Confluence's native format
+- Intelligent space identification for Confluence pages - accepts both human-readable space keys (like 'PROJ') and technical space IDs
+- AI-friendly error messages for Confluence operations - provides clear guidance when page creation fails, helping AI agents correct and retry
+- Automatic content format conversion - markdown and plain text are automatically converted to Confluence's storage format
 
 ### Fixed
 - Application startup error that prevented the platform from loading properly
