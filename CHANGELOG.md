@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## 2025-10-17
 
 ### Added
+- New command to export all integration tools to XML format - provides complete documentation of all available tools with descriptions and parameters
+- Tool export command supports filtering by category (system tools or user integrations) for targeted documentation
 - New channel system allowing users to belong to multiple channels for future feature expansion
 - Channel association during user registration - external systems can now assign users to specific channels when creating accounts
 - Automatic channel creation through the registration API - channels are created on-demand when users are registered
