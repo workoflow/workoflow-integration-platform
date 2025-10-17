@@ -86,6 +86,24 @@ class JiraIntegration implements IntegrationInterface
                         'description' => 'Maximum number of results (default: 50)'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_add_comment',
+                'Add a comment to a Jira issue',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'The comment text to add to the issue'
+                    ]
+                ]
             )
         ];
     }
@@ -113,6 +131,11 @@ class JiraIntegration implements IntegrationInterface
             'jira_get_sprint_issues' => $this->jiraService->getSprintIssues(
                 $credentials,
                 $parameters['sprintId']
+            ),
+            'jira_add_comment' => $this->jiraService->addComment(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['comment']
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-18
+
+### Added
+- Jira integration can now add comments to issues - AI agents can post comments directly to Jira tickets
+
 ## 2025-10-17
 
 ### Added

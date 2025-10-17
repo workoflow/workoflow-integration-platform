@@ -99,6 +99,7 @@ Return Available Tools:
   - jira_get_issue_{config_id}
   - jira_get_sprints_from_board_{config_id}
   - jira_get_sprint_issues_{config_id}
+  - jira_add_comment_{config_id}
 ```
 
 ### 3. Tool Execution (API)
@@ -145,6 +146,7 @@ Die JiraService Klasse ist der zentrale HTTP Client für alle JIRA API Aufrufe:
    getIssue()           # GET /rest/api/3/issue/{issueKey}
    getSprintsFromBoard() # GET /rest/agile/1.0/board/{boardId}/sprint
    getSprintIssues()    # GET /rest/agile/1.0/sprint/{sprintId}/issue
+   addComment()         # POST /rest/api/3/issue/{issueKey}/comment
    ```
 
 3. **Authentication**:
@@ -186,6 +188,15 @@ Die JiraService Klasse ist der zentrale HTTP Client für alle JIRA API Aufrufe:
 - `maxResults` (integer, optional): Maximum Anzahl Ergebnisse (default: 50)
 
 **API Call**: `GET /rest/agile/1.0/sprint/{sprintId}/issue`
+
+### 5. jira_add_comment
+**Beschreibung**: Kommentar zu einem JIRA Issue hinzufügen
+
+**Parameters**:
+- `issueKey` (string, required): Issue Key (z.B. PROJ-123)
+- `comment` (string, required): Der Kommentar-Text, der hinzugefügt werden soll
+
+**API Call**: `POST /rest/api/3/issue/{issueKey}/comment`
 
 ## Authentifizierung & Sicherheit
 

@@ -117,4 +117,38 @@ class JiraService
 
         return $response->toArray();
     }
+
+    public function addComment(array $credentials, string $issueKey, string $comment): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        $payload = [
+            'body' => [
+                'type' => 'doc',
+                'version' => 1,
+                'content' => [
+                    [
+                        'type' => 'paragraph',
+                        'content' => [
+                            [
+                                'text' => $comment,
+                                'type' => 'text'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/comment', [
+            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ],
+            'json' => $payload
+        ]);
+
+        return $response->toArray();
+    }
 }
