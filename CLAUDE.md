@@ -167,6 +167,7 @@ The REST API dynamically provides tools based on activated user integrations.
 - `jira_get_issue_{integration_id}` - Get Issue Details
 - `jira_get_sprints_from_board_{integration_id}` - Board Sprints
 - `jira_get_sprint_issues_{integration_id}` - Sprint Issues
+- `jira_add_comment_{integration_id}` - Add Comment to Issue
 
 #### Confluence Tools
 - `confluence_search_{integration_id}` - CQL Search

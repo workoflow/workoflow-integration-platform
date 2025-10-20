@@ -31,6 +31,11 @@ All notable changes to this project will be documented in this file.
 - Magic link authentication now correctly redirects to the general overview page after successful login
 - Magic link authentication now correctly identifies users when their display name changes - prevents duplicate accounts and authentication failures
 
+## 2025-10-18
+
+### Added
+- Jira integration can now add comments to issues - AI agents can post comments directly to Jira tickets
+
 ## 2025-10-17
 
 ### Added
