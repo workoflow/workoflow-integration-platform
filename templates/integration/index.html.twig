@@ -32,7 +32,7 @@
                             </button>
                             <div class="dropdown-menu" id="integrationDropdown">
                                 {% for availableType in availableTypes %}
-                                    <a href="{{ path('app_integration_setup', {type: availableType.type}) }}" class="dropdown-item">
+                                    <a href="{{ path('app_tool_setup', {type: availableType.type}) }}" class="dropdown-item">
                                         {% if availableType.type == 'jira' %}
                                             <i class="fab fa-jira"></i>
                                         {% elseif availableType.type == 'confluence' %}
@@ -131,11 +131,11 @@
                                         </div>
                                         <div class="integration-actions">
                                             {% if not integration.hasCredentials %}
-                                                <a href="{{ path('app_integration_setup', {type: integration.type}) }}" class="btn btn-primary">
+                                                <a href="{{ path('app_tool_setup', {type: integration.type}) }}" class="btn btn-primary">
                                                     <i class="fas fa-cog"></i> {{ 'integration.setup'|trans|default('Einrichten') }}
                                                 </a>
                                             {% else %}
-                                                <a href="{{ path('app_integration_setup', {type: integration.type, instance: integration.instanceId}) }}" class="btn btn-secondary">
+                                                <a href="{{ path('app_tool_setup', {type: integration.type, instance: integration.instanceId}) }}" class="btn btn-secondary">
                                                     <i class="fas fa-edit"></i> {{ 'action.edit'|trans|default('Bearbeiten') }}
                                                 </a>
                                                 <button class="btn btn-secondary test-connection"
@@ -143,7 +143,7 @@
                                                         data-instance="{{ integration.instanceId }}">
                                                     <i class="fas fa-plug"></i> {{ 'integration.test_connection'|trans|default('Verbindung testen') }}
                                                 </button>
-                                                <form method="post" action="{{ path('app_integration_delete', {instanceId: integration.instanceId}) }}"
+                                                <form method="post" action="{{ path('app_tool_delete', {instanceId: integration.instanceId}) }}"
                                                       class="inline-form"
                                                       onsubmit="return confirm('{{ 'integration.delete_confirm'|trans }}');">
                                                     <button type="submit" class="btn btn-danger">

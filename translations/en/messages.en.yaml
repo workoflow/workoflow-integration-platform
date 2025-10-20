@@ -4,8 +4,8 @@ common:
   optional: optional
 
 nav:
-  dashboard: Dashboard
-  integrations: Integrations
+  general: General
+  tools: Tools
   files: Files
   organisation: Organisation
   profile: Profile
@@ -58,8 +58,8 @@ auth:
     google: Sign in with Google
     privacy: By signing in, you agree to our privacy policy.
 
-dashboard:
-  title: Dashboard
+general:
+  title: General
   welcome: Welcome, %name%!
   organisation: Your Organisation
   integration_api_url: Integration API URL
@@ -122,7 +122,7 @@ integration:
   status: Status
   last_accessed: Last Accessed
   title: Integrations
-  add_new: Add New Integration
+  add_new: Add Personal Integration
   no_integrations: No integrations configured yet
   no_integrations_desc: 'Start by adding your first integration to connect external services'
   system_tools: System Tools

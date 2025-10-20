@@ -17,12 +17,22 @@
                     <span class="info-label">{{ 'user.name'|trans }}</span>
                     <span class="info-value">{{ user.name }}</span>
                 </div>
-                
+
                 <div class="info-item">
                     <span class="info-label">{{ 'user.email'|trans }}</span>
                     <span class="info-value">{{ user.email }}</span>
                 </div>
-                
+
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.organisation'|trans }}</span>
+                    <span class="info-value">{{ user.organisation ? user.organisation.name : '-' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.joined_at'|trans }}</span>
+                    <span class="info-value">{{ user.createdAt|date('d.m.Y H:i') }}</span>
+                </div>
+
                 <div class="info-item">
                     <span class="info-label">{{ 'user.role'|trans }}</span>
                     <span class="info-value">
@@ -30,16 +40,6 @@
                             {{ user.isAdmin() ? 'Admin' : 'Member' }}
                         </span>
                     </span>
-                </div>
-                
-                <div class="info-item">
-                    <span class="info-label">{{ 'user.organisation'|trans }}</span>
-                    <span class="info-value">{{ user.organisation ? user.organisation.name : '-' }}</span>
-                </div>
-                
-                <div class="info-item">
-                    <span class="info-label">{{ 'user.joined_at'|trans }}</span>
-                    <span class="info-value">{{ user.createdAt|date('d.m.Y H:i') }}</span>
                 </div>
             </div>
         </div>

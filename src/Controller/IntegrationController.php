@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-#[Route('/integrations')]
+#[Route('/tools')]
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 class IntegrationController extends AbstractController
 {
@@ -32,7 +32,7 @@ class IntegrationController extends AbstractController
     ) {
     }
 
-    #[Route('/', name: 'app_integrations')]
+    #[Route('/', name: 'app_tools')]
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -172,7 +172,7 @@ class IntegrationController extends AbstractController
         ]);
     }
 
-    #[Route('/setup/{type}', name: 'app_integration_setup', methods: ['GET', 'POST'])]
+    #[Route('/setup/{type}', name: 'app_tool_setup', methods: ['GET', 'POST'])]
     public function setup(string $type, Request $request): Response
     {
         /** @var User $user */
@@ -188,13 +188,13 @@ class IntegrationController extends AbstractController
         $integration = $this->integrationRegistry->get($type);
         if (!$integration) {
             $this->addFlash('error', 'Integration type not found');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         // System tools don't need setup
         if (!$integration->requiresCredentials()) {
             $this->addFlash('info', 'This integration does not require setup');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         // Get workflow_user_id from the user's organization relationship
@@ -216,7 +216,7 @@ class IntegrationController extends AbstractController
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
             if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
                 $this->addFlash('error', 'Instance not found');
-                return $this->redirectToRoute('app_integrations');
+                return $this->redirectToRoute('app_tools');
             }
 
             // Decrypt existing credentials for display (with masking for sensitive fields)
@@ -345,7 +345,7 @@ class IntegrationController extends AbstractController
 
                 $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
 
-                return $this->redirectToRoute('app_integration_oauth_microsoft_start', [
+                return $this->redirectToRoute('app_tool_oauth_microsoft_start', [
                     'configId' => $tempConfig->getId()
                 ]);
             }
@@ -417,7 +417,7 @@ class IntegrationController extends AbstractController
             );
 
             $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         return $this->render('integration/setup.html.twig', [
@@ -432,7 +432,7 @@ class IntegrationController extends AbstractController
     }
 
 
-    #[Route('/{type}/toggle-tool', name: 'app_integration_toggle_tool', methods: ['POST'])]
+    #[Route('/{type}/toggle-tool', name: 'app_tool_toggle_tool', methods: ['POST'])]
     public function toggleTool(string $type, Request $request): JsonResponse
     {
         /** @var User $user */
@@ -480,7 +480,7 @@ class IntegrationController extends AbstractController
         return $this->json(['success' => true]);
     }
 
-    #[Route('/{type}/toggle', name: 'app_integration_toggle', methods: ['POST'])]
+    #[Route('/{type}/toggle', name: 'app_tool_toggle', methods: ['POST'])]
     public function toggleIntegration(string $type, Request $request): JsonResponse
     {
         /** @var User $user */
@@ -532,7 +532,7 @@ class IntegrationController extends AbstractController
     }
 
 
-    #[Route('/delete/{instanceId}', name: 'app_integration_delete', methods: ['POST'])]
+    #[Route('/delete/{instanceId}', name: 'app_tool_delete', methods: ['POST'])]
     public function delete(int $instanceId, Request $request): Response
     {
         /** @var User $user */
@@ -563,10 +563,10 @@ class IntegrationController extends AbstractController
             $this->addFlash('error', 'Integration not found');
         }
 
-        return $this->redirectToRoute('app_integrations');
+        return $this->redirectToRoute('app_tools');
     }
 
-    #[Route('/{type}/test', name: 'app_integration_test', methods: ['POST'])]
+    #[Route('/{type}/test', name: 'app_tool_test', methods: ['POST'])]
     public function testConnection(string $type, Request $request): JsonResponse
     {
         /** @var User $user */

@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-20
+
+### Changed
+- Button to add integrations now labeled "Persönliche Integration" to better distinguish user integrations from system tools
+- Profile page layout improved to a cleaner 2-column grid design for better readability
+
+### Fixed
+- User registration API now correctly uses the real email address from external systems (like Microsoft Teams) instead of generating placeholder emails
+- Magic link authentication now correctly redirects to the general overview page after successful login
+- Magic link authentication now correctly identifies users when their display name changes - prevents duplicate accounts and authentication failures
+
 ## 2025-10-17
 
 ### Added

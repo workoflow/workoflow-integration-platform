@@ -38,9 +38,9 @@
                     <span class="single-org-display">{{ currentOrg.name }}</span>
                 {% endif %}
                 
-                <a href="{{ path('app_home') }}" class="header-link">Dashboard</a>
-                <a href="{{ path('app_integrations') }}" class="header-link">Integrations</a>
-                <a href="{{ path('app_files') }}" class="header-link">Files</a>
+                <a href="{{ path('app_general') }}" class="header-link">{{ 'nav.general'|trans }}</a>
+                <a href="{{ path('app_tools') }}" class="header-link">{{ 'nav.tools'|trans }}</a>
+                {# <a href="{{ path('app_files') }}" class="header-link">{{ 'nav.files'|trans }}</a> #}
                 <a href="{{ path('app_profile') }}" class="header-link">Profile</a>
                 {% if app.user.isAdmin() %}
                     <a href="{{ path('app_organisation_members') }}" class="header-link">Members</a>

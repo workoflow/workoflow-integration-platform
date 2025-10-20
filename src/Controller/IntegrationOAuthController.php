@@ -23,14 +23,14 @@ class IntegrationOAuthController extends AbstractController
     ) {
     }
 
-    #[Route('/microsoft/start/{configId}', name: 'app_integration_oauth_microsoft_start')]
+    #[Route('/microsoft/start/{configId}', name: 'app_tool_oauth_microsoft_start')]
     public function microsoftStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
     {
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
 
         if (!$config || $config->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Integration configuration not found');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         // Store the config ID in session for callback
@@ -50,7 +50,7 @@ class IntegrationOAuthController extends AbstractController
             ], []);
     }
 
-    #[Route('/callback/microsoft', name: 'app_integration_oauth_microsoft_callback')]
+    #[Route('/callback/microsoft', name: 'app_tool_oauth_microsoft_callback')]
     public function microsoftCallback(Request $request, ClientRegistry $clientRegistry): Response
     {
         $error = $request->query->get('error');
@@ -80,7 +80,7 @@ class IntegrationOAuthController extends AbstractController
             }
 
             $request->getSession()->remove('microsoft_oauth_config_id');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         // Continue with normal flow
@@ -88,14 +88,14 @@ class IntegrationOAuthController extends AbstractController
 
         if (!$configId) {
             $this->addFlash('error', 'OAuth session expired. Please try again.');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
 
         if (!$config || $config->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Integration configuration not found');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
 
         try {
@@ -157,7 +157,7 @@ class IntegrationOAuthController extends AbstractController
                 $this->addFlash('success', 'SharePoint integration connected successfully!');
             }
 
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         } catch (\Exception $e) {
             // If this was initial setup and failed, remove the temporary config
             $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
@@ -168,7 +168,7 @@ class IntegrationOAuthController extends AbstractController
             }
 
             $this->addFlash('error', 'Failed to connect to SharePoint: ' . $e->getMessage());
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_tools');
         }
     }
 }

@@ -61,8 +61,8 @@ class RegisterApiController extends AbstractController
             // Create or find organisation
             $organisation = $this->userRegistrationService->createOrFindOrganisation($orgUuid, $orgName);
 
-            // Generate email from name
-            $email = $this->userRegistrationService->generateEmailFromName($name);
+            // Use provided email or generate from name as fallback
+            $email = $data['email'] ?? $this->userRegistrationService->generateEmailFromName($name);
 
             // Create or update user
             $user = $this->userRegistrationService->createOrUpdateUser(
@@ -80,8 +80,8 @@ class RegisterApiController extends AbstractController
                 }
             }
 
-            // Generate magic link token
-            $token = $this->magicLinkService->generateToken($name, $orgUuid, $workflowUserId);
+            // Generate magic link token (with email if provided)
+            $token = $this->magicLinkService->generateToken($name, $orgUuid, $workflowUserId, $email);
 
             // Build magic link URL
             $baseUrl = $this->getBaseUrl($request);

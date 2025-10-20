@@ -55,14 +55,14 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
         $orgUuid = $payload['org_uuid'];
         $workflowUserId = $payload['workflow_user_id'];
 
-        // Generate email from name using the registration service
-        $generatedEmail = $this->userRegistrationService->generateEmailFromName($name);
+        // Use email from token if provided, otherwise generate from name
+        $email = $payload['email'] ?? $this->userRegistrationService->generateEmailFromName($name);
 
         // Create or find organisation
         $organisation = $this->userRegistrationService->createOrFindOrganisation($orgUuid);
 
         return new SelfValidatingPassport(
-            new UserBadge($generatedEmail, function ($userIdentifier) use ($name, $organisation, $workflowUserId, $request) {
+            new UserBadge($email, function ($userIdentifier) use ($name, $organisation, $workflowUserId, $request) {
                 // Use the registration service to create or update the user
                 // This handles both new users and existing users seamlessly
                 $user = $this->userRegistrationService->createOrUpdateUser(
@@ -114,7 +114,7 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
             return new RedirectResponse($targetPath);
         }
 
-        return new RedirectResponse($this->router->generate('app_dashboard'));
+        return new RedirectResponse($this->router->generate('app_general'));
     }
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response

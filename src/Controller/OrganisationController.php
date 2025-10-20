@@ -141,7 +141,7 @@ class OrganisationController extends AbstractController
 
         if (!$hasAccess || !$targetOrganisation) {
             $this->addFlash('error', 'You do not have access to this organisation');
-            return $this->redirectToRoute('app_dashboard');
+            return $this->redirectToRoute('app_general');
         }
 
         // Store the selected organisation ID in session
@@ -162,7 +162,7 @@ class OrganisationController extends AbstractController
             return $this->redirect($referer);
         }
 
-        return $this->redirectToRoute('app_dashboard');
+        return $this->redirectToRoute('app_general');
     }
 
     #[Route('/invite', name: 'app_organisation_invite', methods: ['POST'])]

@@ -4,8 +4,8 @@ common:
   optional: optional
 
 nav:
-  dashboard: Dashboard
-  integrations: Integrationen
+  general: Allgemein
+  tools: Tools
   files: Dateien
   organisation: Organisation
   profile: Profil
@@ -58,8 +58,8 @@ auth:
     google: Mit Google anmelden
     privacy: Mit der Anmeldung akzeptieren Sie unsere Datenschutzbestimmungen.
 
-dashboard:
-  title: Dashboard
+general:
+  title: Allgemein
   welcome: Willkommen, %name%!
   organisation: Ihre Organisation
   integration_api_url: Integration API URL
@@ -135,7 +135,7 @@ integration:
   status: Status
   last_accessed: Letzter Zugriff
   title: Integrationen
-  add_new: Neue Integration hinzufügen
+  add_new: Persönliche Integration hinzufügen
   no_integrations: Noch keine Integrationen konfiguriert
   no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihrer ersten Integration, um externe Dienste zu verbinden'
   workflow_id: Workoflow ID

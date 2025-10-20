@@ -97,6 +97,12 @@ class UserRegistrationService
             if ($user->getName() !== $name) {
                 $user->setName($name);
                 $this->entityManager->flush();
+
+                $this->logger->info('Updated existing user name', [
+                    'email' => $email,
+                    'name' => $name,
+                    'organisation' => $organisation->getName()
+                ]);
             }
         }
 

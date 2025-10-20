@@ -1,32 +1,32 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ 'dashboard.title'|trans }} - Workoflow{% endblock %}
+{% block title %}{{ 'general.title'|trans }} - Workoflow{% endblock %}
 
 {% block body %}
 <div class="dashboard-page">
     {% include '_partials/header.html.twig' %}
     
     <div class="dashboard-container">
-        <h1 class="dashboard-title">{{ 'dashboard.welcome'|trans({'%name%': user.name}) }}</h1>
+        <h1 class="dashboard-title">{{ 'general.welcome'|trans({'%name%': user.name}) }}</h1>
         
         {% if organisation %}
             <div class="organisation-info">
-                <h5>{{ 'dashboard.organisation'|trans }}</h5>
+                <h5>{{ 'general.organisation'|trans }}</h5>
                 {% if is_granted('ROLE_ADMIN') %}
                     <div class="org-name-editable">
                         <p class="org-name" id="orgName" contenteditable="false">{{ organisation.name }}</p>
-                        <button type="button" id="editOrgNameBtn" class="btn-icon-edit" title="{{ 'dashboard.edit_org_name'|trans }}">
+                        <button type="button" id="editOrgNameBtn" class="btn-icon-edit" title="{{ 'general.edit_org_name'|trans }}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button type="button" id="saveOrgNameBtn" class="btn-icon-save" style="display: none;" title="{{ 'dashboard.save_org_name'|trans }}">
+                        <button type="button" id="saveOrgNameBtn" class="btn-icon-save" style="display: none;" title="{{ 'general.save_org_name'|trans }}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="20 6 9 17 4 12"></polyline>
                             </svg>
                         </button>
-                        <button type="button" id="cancelOrgNameBtn" class="btn-icon-cancel" style="display: none;" title="{{ 'dashboard.cancel_edit'|trans }}">
+                        <button type="button" id="cancelOrgNameBtn" class="btn-icon-cancel" style="display: none;" title="{{ 'general.cancel_edit'|trans }}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -37,12 +37,12 @@
                     <p class="org-name">{{ organisation.name }}</p>
                 {% endif %}
                 <p class="org-api-url">
-                    <span class="label">{{ 'dashboard.integration_api_url'|trans }}:</span>
+                    <span class="label">{{ 'general.integration_api_url'|trans }}:</span>
                     <code>{{ organisation.integrationApiUrl }}</code>
                 </p>
                 {% if userOrganisation and userOrganisation.workflowUserId %}
                 <p class="org-api-url">
-                    <span class="label">{{ 'dashboard.workflow_user_id'|trans|default('Workflow User ID') }}:</span>
+                    <span class="label">{{ 'general.workflow_user_id'|trans|default('Workflow User ID') }}:</span>
                     <code>{{ userOrganisation.workflowUserId }}</code>
                 </p>
                 <div class="curl-command-section">
@@ -51,9 +51,9 @@
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
-                        {{ 'dashboard.copy_curl_command'|trans|default('Copy curl command for tools') }}
+                        {{ 'general.copy_curl_command'|trans|default('Copy curl command for tools') }}
                     </button>
-                    <span id="copiedMessage" class="copied-message" style="display: none;">{{ 'dashboard.copied'|trans|default('Copied!') }}</span>
+                    <span id="copiedMessage" class="copied-message" style="display: none;">{{ 'general.copied'|trans|default('Copied!') }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -62,26 +62,26 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <h2 class="stat-number">{{ integrations|length }}</h2>
-                <p class="stat-label">{{ 'dashboard.integrations_count'|trans }}</p>
-                <a href="{{ path('app_integrations') }}" class="btn btn-primary">
-                    {{ 'dashboard.manage_integrations'|trans }}
+                <p class="stat-label">{{ 'general.integrations_count'|trans }}</p>
+                <a href="{{ path('app_tools') }}" class="btn btn-primary">
+                    {{ 'general.manage_integrations'|trans }}
                 </a>
             </div>
             
             <div class="stat-card">
                 <h2 class="stat-number">{{ integrations|filter(i => i.active)|length }}</h2>
-                <p class="stat-label">{{ 'dashboard.active_integrations'|trans }}</p>
+                <p class="stat-label">{{ 'general.active_integrations'|trans }}</p>
             </div>
 
             <div class="stat-card">
                 <h2 class="stat-number">{{ user.isAdmin() ? 'Admin' : 'Member' }}</h2>
-                <p class="stat-label">{{ 'dashboard.your_role'|trans }}</p>
+                <p class="stat-label">{{ 'general.your_role'|trans }}</p>
             </div>
         </div>
 
         {% if integrations|length > 0 %}
             <div class="integrations-section">
-                <h3>{{ 'dashboard.recent_integrations'|trans }}</h3>
+                <h3>{{ 'general.recent_integrations'|trans }}</h3>
                 <div class="integrations-table">
                     <table>
                         <thead>
@@ -107,7 +107,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {{ integration.lastAccessedAt ? integration.lastAccessedAt|date('d.m.Y H:i') : 'dashboard.never'|trans }}
+                                        {{ integration.lastAccessedAt ? integration.lastAccessedAt|date('d.m.Y H:i') : 'general.never'|trans }}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newName = orgNameEl.textContent.trim();
         
         if (!newName) {
-            alert('{{ 'dashboard.org_name_empty'|trans|default('Organisation name cannot be empty') }}');
+            alert('{{ 'general.org_name_empty'|trans|default('Organisation name cannot be empty') }}');
             orgNameEl.textContent = originalName;
             exitEditMode(false);
             return;
@@ -270,17 +270,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show success message
                 const successMsg = document.createElement('div');
                 successMsg.className = 'alert alert-success';
-                successMsg.textContent = data.message || '{{ 'dashboard.org_name_updated'|trans|default('Organisation name updated successfully') }}';
+                successMsg.textContent = data.message || '{{ 'general.org_name_updated'|trans|default('Organisation name updated successfully') }}';
                 document.querySelector('.dashboard-container').insertBefore(successMsg, document.querySelector('.organisation-info'));
                 setTimeout(() => successMsg.remove(), 3000);
             } else {
-                alert(data.error || '{{ 'dashboard.org_name_update_error'|trans|default('Failed to update organisation name') }}');
+                alert(data.error || '{{ 'general.org_name_update_error'|trans|default('Failed to update organisation name') }}');
                 orgNameEl.textContent = originalName;
                 exitEditMode(false);
             }
         } catch (error) {
             console.error('Error updating organisation name:', error);
-            alert('{{ 'dashboard.org_name_update_error'|trans|default('Failed to update organisation name') }}');
+            alert('{{ 'general.org_name_update_error'|trans|default('Failed to update organisation name') }}');
             orgNameEl.textContent = originalName;
             exitEditMode(false);
         }

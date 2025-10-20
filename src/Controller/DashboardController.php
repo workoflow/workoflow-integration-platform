@@ -15,7 +15,7 @@ use App\Entity\User;
 
 class DashboardController extends AbstractController
 {
-    #[Route('/dashboard', name: 'app_dashboard')]
+    #[Route('/general', name: 'app_general')]
     #[IsGranted('ROLE_USER')]
     public function index(Request $request, IntegrationConfigRepository $integrationConfigRepository): Response
     {
@@ -61,7 +61,7 @@ class DashboardController extends AbstractController
 
         // Check if user already has any organisations
         if (!$user->getOrganisations()->isEmpty()) {
-            return $this->redirectToRoute('app_dashboard');
+            return $this->redirectToRoute('app_general');
         }
 
         if ($request->isMethod('POST')) {
@@ -87,7 +87,7 @@ class DashboardController extends AbstractController
                 );
 
                 $this->addFlash('success', 'organisation.created.success');
-                return $this->redirectToRoute('app_dashboard');
+                return $this->redirectToRoute('app_general');
             }
         }
 
