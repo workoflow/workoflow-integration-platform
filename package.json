@@ -17,5 +17,13 @@
         "dev": "encore dev",
         "watch": "encore dev --watch",
         "build": "encore production --progress"
+    },
+    "dependencies": {
+        "@babel/preset-react": "^7.27.1",
+        "@hotwired/stimulus": "^3.2.2",
+        "@symfony/stimulus-bridge": "^4.0.1",
+        "@xyflow/react": "^12.9.0",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0"
     }
 }

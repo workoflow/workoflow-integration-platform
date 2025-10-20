@@ -2,13 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-20 (Latest)
+
+### Improved
+- Workflow visualization now shows only essential nodes for clearer understanding - displays webhooks, AI agent with connected tools, and response nodes in an organized layout
+- N8N workflow visualization automatically filters out intermediate processing nodes to focus on the main workflow structure
+- Workflow nodes are now arranged vertically for better readability with tools grouped below the AI agent
+- Docker compatibility for N8N API connections - workflow visualizations now work correctly when running in containerized environments
+
 ## 2025-10-20
+
+### Added
+- New Instructions page for managing AI agent configuration and workflow settings
+- Agent personality customization through system prompts - define how your AI agent responds
+- Webhook integration support for connecting external workflow systems (Common and N8N)
+- Visual workflow viewer for N8N integrations - see your automation workflows at a glance
+- N8N API key authentication for secure workflow data access
+- Organization-wide agent settings management
+- Workflow user ID display on Instructions page for easy reference
 
 ### Changed
 - Button to add integrations now labeled "Persönliche Integration" to better distinguish user integrations from system tools
 - Profile page layout improved to a cleaner 2-column grid design for better readability
 
 ### Fixed
+- Workflow visualization on Instructions page now displays correctly - interactive controls are visible with proper dark theme styling
 - User registration API now correctly uses the real email address from external systems (like Microsoft Teams) instead of generating placeholder emails
 - Magic link authentication now correctly redirects to the general overview page after successful login
 - Magic link authentication now correctly identifies users when their display name changes - prevents duplicate accounts and authentication failures

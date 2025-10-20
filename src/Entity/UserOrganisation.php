@@ -33,6 +33,9 @@ class UserOrganisation
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $joinedAt = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $systemPrompt = null;
+
     public function __construct()
     {
         $this->joinedAt = new \DateTime();
@@ -95,6 +98,17 @@ class UserOrganisation
     public function setJoinedAt(\DateTimeInterface $joinedAt): static
     {
         $this->joinedAt = $joinedAt;
+        return $this;
+    }
+
+    public function getSystemPrompt(): ?string
+    {
+        return $this->systemPrompt;
+    }
+
+    public function setSystemPrompt(?string $systemPrompt): static
+    {
+        $this->systemPrompt = $systemPrompt;
         return $this;
     }
 }

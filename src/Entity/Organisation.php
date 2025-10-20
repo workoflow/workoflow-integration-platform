@@ -45,6 +45,15 @@ class Organisation
     #[ORM\OneToMany(targetEntity: IntegrationConfig::class, mappedBy: 'organisation')]
     private Collection $integrationConfigs;
 
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $webhookType = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $webhookUrl = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $n8nApiKey = null;
+
 
     public function __construct()
     {
@@ -208,6 +217,39 @@ class Organisation
                 $integrationConfig->setOrganisation(null);
             }
         }
+        return $this;
+    }
+
+    public function getWebhookType(): ?string
+    {
+        return $this->webhookType;
+    }
+
+    public function setWebhookType(?string $webhookType): static
+    {
+        $this->webhookType = $webhookType;
+        return $this;
+    }
+
+    public function getWebhookUrl(): ?string
+    {
+        return $this->webhookUrl;
+    }
+
+    public function setWebhookUrl(?string $webhookUrl): static
+    {
+        $this->webhookUrl = $webhookUrl;
+        return $this;
+    }
+
+    public function getN8nApiKey(): ?string
+    {
+        return $this->n8nApiKey;
+    }
+
+    public function setN8nApiKey(?string $n8nApiKey): static
+    {
+        $this->n8nApiKey = $n8nApiKey;
         return $this;
     }
 
