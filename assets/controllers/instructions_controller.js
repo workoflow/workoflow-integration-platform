@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['webhookType', 'webhookUrl', 'workflowColumn', 'reactContainer'];
+    static targets = ['webhookType', 'webhookUrl', 'workflowColumn', 'reactContainer', 'n8nApiKeyGroup'];
 
     connect() {
         console.log('Instructions controller connected');
@@ -27,8 +27,16 @@ export default class extends Controller {
 
         if (webhookType === 'N8N') {
             this.showWorkflowVisualization();
+            // Show N8N API key field
+            if (this.hasN8nApiKeyGroupTarget) {
+                this.n8nApiKeyGroupTarget.style.display = 'block';
+            }
         } else {
             this.hideWorkflowVisualization();
+            // Hide N8N API key field
+            if (this.hasN8nApiKeyGroupTarget) {
+                this.n8nApiKeyGroupTarget.style.display = 'none';
+            }
         }
     }
 
@@ -70,6 +78,13 @@ export default class extends Controller {
 
     async initializeReactFlow() {
         try {
+            // Check if webhook URL is set
+            const webhookUrl = this.reactContainerTarget.dataset.webhookUrl;
+            if (!webhookUrl) {
+                console.log('Webhook URL not configured, skipping ReactFlow initialization');
+                return;
+            }
+
             // Get the organization ID from the React container
             const orgId = this.reactContainerTarget.dataset.orgId;
 

@@ -12,9 +12,12 @@ All notable changes to this project will be documented in this file.
 - Default language changed from German to English for wider accessibility
 
 ### Fixed
+- Instructions page workflow visualization no longer gets stuck on "Loading..." when N8N webhook URL is not configured - now shows helpful message to configure the webhook URL
+- Non-admin users on Instructions page now see clear guidance to contact an administrator when workflow configuration is needed
 - Language switching now works properly across all pages - selected language persists when navigating between pages
 - All navigation menu items now properly translate when switching languages (Instructions, Profile, Members, Login, Logout)
 - Instructions page content now fully translates including labels and section headings
+- Test suite now works correctly after integration management URL structure update
 
 ## 2025-10-20 (Latest)
 
