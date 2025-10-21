@@ -25,6 +25,28 @@ class HomeController extends AbstractController
         return $this->render('home/index.html.twig');
     }
 
+    #[Route('/locale/switch/{locale}', name: 'app_locale_switch')]
+    public function switchLocale(string $locale, Request $request): Response
+    {
+        // Validate locale against supported locales
+        $supportedLocales = ['de', 'en'];
+        if (!in_array($locale, $supportedLocales)) {
+            throw $this->createNotFoundException('Invalid locale');
+        }
+
+        // Store locale in session
+        $session = $request->getSession();
+        $session->set('_locale', $locale);
+
+        // Redirect back to the referring page or home
+        $referer = $request->headers->get('referer');
+        if ($referer) {
+            return $this->redirect($referer);
+        }
+
+        return $this->redirectToRoute('app_home');
+    }
+
     #[Route('/waitlist/submit', name: 'app_waitlist_submit', methods: ['POST'])]
     public function submitWaitlist(
         Request $request,

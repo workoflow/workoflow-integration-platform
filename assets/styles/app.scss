@@ -245,9 +245,23 @@ body {
     }
   }
   
+  .header-title-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
   .header-title {
     font-size: var(--text-lg);
     font-weight: 600;
+  }
+
+  .header-subtitle {
+    font-size: var(--text-xs);
+    font-style: italic;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    letter-spacing: 0.5px;
   }
   
   .header-nav {
@@ -266,6 +280,96 @@ body {
       }
     }
     
+    // Language Switcher
+    .language-switcher {
+      position: relative;
+      margin-right: var(--space-lg);
+
+      .language-switcher-button {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: var(--space-sm) var(--space-md);
+        color: var(--text-primary);
+        font-size: var(--text-sm);
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+
+        &:hover {
+          background: var(--bg-card-hover);
+          border-color: var(--color-primary);
+        }
+
+        .lang-flag {
+          font-size: 1.2em;
+          line-height: 1;
+        }
+
+        .lang-name {
+          font-weight: 600;
+        }
+
+        .dropdown-arrow {
+          transition: transform 0.2s ease;
+        }
+      }
+
+      .language-dropdown {
+        position: absolute;
+        top: calc(100% + var(--space-sm));
+        left: 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        min-width: 180px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+
+        .lang-item {
+          display: flex;
+          align-items: center;
+          gap: var(--space-md);
+          padding: var(--space-md) var(--space-lg);
+          color: var(--text-secondary);
+          text-decoration: none;
+          transition: var(--transition);
+          border-bottom: 1px solid var(--border-color);
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          &:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+          }
+
+          &.active {
+            color: var(--color-primary);
+            font-weight: 600;
+
+            .current-indicator {
+              color: var(--color-primary);
+            }
+          }
+
+          .lang-flag {
+            font-size: 1.2em;
+            line-height: 1;
+          }
+
+          .current-indicator {
+            margin-left: auto;
+            font-size: var(--text-lg);
+          }
+        }
+      }
+    }
+
     // Organisation Switcher
     .organisation-switcher {
       position: relative;
@@ -1533,6 +1637,22 @@ body {
       flex-wrap: wrap;
       gap: var(--space-md);
       justify-content: center;
+
+      .language-switcher {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: var(--space-sm);
+
+        .language-switcher-button {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .language-dropdown {
+          width: 100%;
+          max-width: none;
+        }
+      }
 
       .organisation-switcher {
         width: 100%;

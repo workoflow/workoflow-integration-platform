@@ -6,14 +6,47 @@
                 <div class="header-logo-circle"></div>
                 <img src="{{ asset('images/valantic-logo-white.png') }}" alt="Valantic Logo" class="header-logo-icon">
             </div>
-            <span class="header-title">Workoflow Integration Platform</span>
+            <div class="header-title-container">
+                <span class="header-title">Workoflow Integration Platform</span>
+                <span class="header-subtitle">EFFICIENCY IS YOURS</span>
+            </div>
         </a>
         <nav class="header-nav">
             {% if app.user %}
+                {# Language Switcher #}
+                {% set currentLocale = app.request.locale %}
+                <div class="language-switcher">
+                    <button class="language-switcher-button" onclick="toggleLangDropdown(event)">
+                        <span class="lang-flag">{{ currentLocale == 'de' ? '🇩🇪' : '🇬🇧' }}</span>
+                        <span class="lang-name">{{ currentLocale == 'de' ? 'DE' : 'EN' }}</span>
+                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M6 9L1 4h10L6 9z"/>
+                        </svg>
+                    </button>
+                    <div class="language-dropdown" id="langDropdown" style="display: none;">
+                        <a href="{{ path('app_locale_switch', {'locale': 'en'}) }}"
+                           class="lang-item {% if currentLocale == 'en' %}active{% endif %}">
+                            <span class="lang-flag">🇬🇧</span>
+                            <span>English</span>
+                            {% if currentLocale == 'en' %}
+                                <span class="current-indicator">✓</span>
+                            {% endif %}
+                        </a>
+                        <a href="{{ path('app_locale_switch', {'locale': 'de'}) }}"
+                           class="lang-item {% if currentLocale == 'de' %}active{% endif %}">
+                            <span class="lang-flag">🇩🇪</span>
+                            <span>Deutsch</span>
+                            {% if currentLocale == 'de' %}
+                                <span class="current-indicator">✓</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+
                 {% set currentOrgId = app.session.get('current_organisation_id') %}
                 {% set currentOrg = app.user.getCurrentOrganisation(currentOrgId) %}
                 {% set userOrganisations = app.user.organisations %}
-                
+
                 {% if userOrganisations|length > 1 %}
                     <div class="organisation-switcher">
                         <button class="organisation-switcher-button" onclick="toggleOrgDropdown(event)">
@@ -41,32 +74,55 @@
                 <a href="{{ path('app_general') }}" class="header-link">{{ 'nav.general'|trans }}</a>
                 <a href="{{ path('app_tools') }}" class="header-link">{{ 'nav.tools'|trans }}</a>
                 {# <a href="{{ path('app_files') }}" class="header-link">{{ 'nav.files'|trans }}</a> #}
-                <a href="{{ path('app_instructions') }}" class="header-link">Instructions</a>
-                <a href="{{ path('app_profile') }}" class="header-link">Profile</a>
+                <a href="{{ path('app_instructions') }}" class="header-link">{{ 'nav.instructions'|trans }}</a>
+                <a href="{{ path('app_profile') }}" class="header-link">{{ 'nav.profile'|trans }}</a>
                 {% if app.user.isAdmin() %}
-                    <a href="{{ path('app_organisation_members') }}" class="header-link">Members</a>
+                    <a href="{{ path('app_organisation_members') }}" class="header-link">{{ 'nav.members'|trans }}</a>
                 {% endif %}
-                <a href="{{ path('app_logout') }}" class="header-link">Logout</a>
+                <a href="{{ path('app_logout') }}" class="header-link">{{ 'nav.logout'|trans }}</a>
             {% else %}
-                <a href="{{ path('app_login') }}" class="header-link">Login</a>
+                <a href="{{ path('app_login') }}" class="header-link">{{ 'nav.login'|trans }}</a>
             {% endif %}
         </nav>
     </div>
 </header>
 
 <script>
-function toggleOrgDropdown(event) {
+function toggleLangDropdown(event) {
     event.stopPropagation();
-    const dropdown = document.getElementById('orgDropdown');
+    const dropdown = document.getElementById('langDropdown');
+    const orgDropdown = document.getElementById('orgDropdown');
+    // Close org dropdown if open
+    if (orgDropdown) {
+        orgDropdown.style.display = 'none';
+    }
     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 }
 
-// Close dropdown when clicking outside
-document.addEventListener('click', function(event) {
+function toggleOrgDropdown(event) {
+    event.stopPropagation();
     const dropdown = document.getElementById('orgDropdown');
-    const switcher = document.querySelector('.organisation-switcher');
-    if (dropdown && !switcher?.contains(event.target)) {
-        dropdown.style.display = 'none';
+    const langDropdown = document.getElementById('langDropdown');
+    // Close lang dropdown if open
+    if (langDropdown) {
+        langDropdown.style.display = 'none';
+    }
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    const orgDropdown = document.getElementById('orgDropdown');
+    const langDropdown = document.getElementById('langDropdown');
+    const orgSwitcher = document.querySelector('.organisation-switcher');
+    const langSwitcher = document.querySelector('.language-switcher');
+
+    if (orgDropdown && !orgSwitcher?.contains(event.target)) {
+        orgDropdown.style.display = 'none';
+    }
+
+    if (langDropdown && !langSwitcher?.contains(event.target)) {
+        langDropdown.style.display = 'none';
     }
 });
 </script>

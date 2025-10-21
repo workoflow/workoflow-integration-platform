@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Instructions - Workoflow{% endblock %}
+{% block title %}{{ 'instructions.title'|trans }} - Workoflow{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
@@ -170,7 +170,7 @@
     {% include '_partials/header.html.twig' %}
 
     <div class="instructions-container" data-controller="instructions">
-        <h1 class="page-title">Instructions</h1>
+        <h1 class="page-title">{{ 'instructions.title'|trans }}</h1>
 
         <form method="post" action="{{ path('app_instructions_update') }}" id="instructions-form" data-action="submit->instructions#submitForm">
             <div class="instructions-grid">
@@ -179,7 +179,7 @@
                     <!-- Organisation Properties -->
                     <div class="form-section">
                         <div class="form-group">
-                            <label for="name" class="form-label">Organisation Name</label>
+                            <label for="name" class="form-label">{{ 'instructions.organisation_name'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="name"
@@ -189,7 +189,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="uuid" class="form-label">UUID</label>
+                            <label for="uuid" class="form-label">{{ 'instructions.uuid'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="uuid"
@@ -198,7 +198,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="workflow_user_id" class="form-label">Workoflow User ID</label>
+                            <label for="workflow_user_id" class="form-label">{{ 'instructions.workflow_user_id'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="workflow_user_id"
@@ -209,7 +209,7 @@
 
                     <!-- Agent Settings -->
                     <div class="form-section">
-                        <h2 class="section-title">Agent Settings</h2>
+                        <h2 class="section-title">{{ 'instructions.agent_settings'|trans }}</h2>
                         <p class="section-subtitle">Describe the agent's role or personality. This sets the tone of how it responds.</p>
 
                         <div class="form-group">
@@ -271,7 +271,7 @@
 
                 <!-- Right Column -->
                 <div class="right-column" id="workflow-column" data-instructions-target="workflowColumn" {% if organisation.webhookType != 'N8N' %}class="hidden"{% endif %}>
-                    <h2 class="section-title">Workflow Visualization</h2>
+                    <h2 class="section-title">{{ 'instructions.workflow_visualization'|trans }}</h2>
                     <p class="section-subtitle">Visual representation of your workflow (read-only)</p>
 
                     <div class="workflow-canvas">

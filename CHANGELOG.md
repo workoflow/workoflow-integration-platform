@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-21
+
+### Added
+- Language switcher in header - easily switch between German and English with flag indicators
+- Tagline "EFFICIENCY IS YOURS" displayed under platform title for brand reinforcement
+
+### Changed
+- Default language changed from German to English for wider accessibility
+
+### Fixed
+- Language switching now works properly across all pages - selected language persists when navigating between pages
+- All navigation menu items now properly translate when switching languages (Instructions, Profile, Members, Login, Logout)
+- Instructions page content now fully translates including labels and section headings
+
 ## 2025-10-20 (Latest)
 
 ### Improved

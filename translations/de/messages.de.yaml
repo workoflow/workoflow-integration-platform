@@ -10,6 +10,9 @@ nav:
   organisation: Organisation
   profile: Profil
   logout: Abmelden
+  instructions: Anweisungen
+  members: Mitglieder
+  login: Anmelden
 
 home:
   title: Willkommen bei Workoflow
@@ -271,6 +274,14 @@ footer:
     platform: Integrationsplattform
     pptx: PPTX
     rag: RAG
+
+instructions:
+  title: Anweisungen
+  workflow_user_id: Workoflow Benutzer-ID
+  organisation_name: Organisationsname
+  uuid: UUID
+  agent_settings: Agenteneinstellungen
+  workflow_visualization: Workflow-Visualisierung
 
 validation:
   name_required: Name ist erforderlich

@@ -10,6 +10,9 @@ nav:
   organisation: Organisation
   profile: Profile
   logout: Logout
+  instructions: Instructions
+  members: Members
+  login: Login
 
 home:
   title: Welcome to Workoflow
@@ -269,6 +272,14 @@ footer:
     platform: Integration Platform
     pptx: PPTX
     rag: RAG
+
+instructions:
+  title: Instructions
+  workflow_user_id: Workoflow User ID
+  organisation_name: Organisation Name
+  uuid: UUID
+  agent_settings: Agent Settings
+  workflow_visualization: Workflow Visualization
 
 validation:
   name_required: Name is required
