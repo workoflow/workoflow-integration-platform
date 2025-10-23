@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-23
+
+### Fixed
+- Tool toggle buttons on integration management page now work correctly - fixed incorrect API endpoint URLs
+
 ## 2025-10-21
 
 ### Added
