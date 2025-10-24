@@ -223,7 +223,7 @@ class ConfluenceIntegration implements IntegrationInterface
                 'Confluence URL',
                 'https://your-domain.atlassian.net',
                 true,
-                'Your Confluence base URL (without /wiki or trailing slashes)'
+                'Your Confluence instance URL (e.g., https://your-domain.atlassian.net) - do not include /wiki'
             ),
             new CredentialField(
                 'username',

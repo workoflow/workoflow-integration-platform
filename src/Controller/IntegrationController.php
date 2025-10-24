@@ -322,16 +322,6 @@ class IntegrationController extends AbstractController
                         if ($field->getName() === 'url' && !empty($value)) {
                             // Remove trailing slash
                             $value = rtrim($value, '/');
-
-                            // Remove /wiki path if present (common mistake from placeholder)
-                            if (str_ends_with($value, '/wiki')) {
-                                $value = substr($value, 0, -5);
-                            }
-
-                            // Remove /wiki/* paths (e.g., /wiki/spaces/FOO)
-                            if (($pos = strpos($value, '/wiki/')) !== false) {
-                                $value = substr($value, 0, $pos);
-                            }
                         }
                         $credentials[$field->getName()] = $value;
                         // Check if value actually changed

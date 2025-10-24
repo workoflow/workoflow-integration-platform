@@ -531,21 +531,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             }
 
-            // Check if URL contains /wiki path
+            // Check if URL contains /wiki path - this is incorrect
             const haswiki = urlObj.pathname.includes('/wiki');
 
             if (haswiki) {
-                // Calculate the corrected URL
-                let correctedUrl = urlObj.protocol + '//' + urlObj.hostname;
-                if (urlObj.port && urlObj.port !== '443') {
-                    correctedUrl += ':' + urlObj.port;
-                }
-
                 return {
-                    valid: true,
-                    message: `URL will be corrected to: ${correctedUrl}`,
-                    type: 'warning',
-                    correctedUrl: correctedUrl
+                    valid: false,
+                    message: 'Please remove /wiki from the URL - enter only the base URL (e.g., https://your-domain.atlassian.net)',
+                    type: 'error'
                 };
             }
 

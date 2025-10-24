@@ -86,14 +86,14 @@ class ConfluenceService
 
             // Test v1 API endpoint (used for search, get page, comments)
             try {
-                $response = $this->httpClient->request('GET', $url . '/rest/api/user/current', [
+                $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/user/current', [
                     'auth_basic' => [$credentials['username'], $credentials['api_token']],
                     'timeout' => 10,
                 ]);
 
                 $statusCode = $response->getStatusCode();
                 $testedEndpoints[] = [
-                    'endpoint' => '/rest/api/user/current',
+                    'endpoint' => '/wiki/rest/api/user/current',
                     'status' => $statusCode === 200 ? 'success' : 'failed',
                     'http_code' => $statusCode
                 ];
@@ -163,7 +163,7 @@ class ConfluenceService
                 $response = $e->getResponse();
                 $statusCode = $response->getStatusCode();
                 $testedEndpoints[] = [
-                    'endpoint' => '/rest/api/user/current',
+                    'endpoint' => '/wiki/rest/api/user/current',
                     'status' => 'failed',
                     'http_code' => $statusCode
                 ];
@@ -233,7 +233,7 @@ class ConfluenceService
     public function search(array $credentials, string $query, int $limit = 25): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/content/search', [
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/search', [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
                 'cql' => $query,
@@ -247,7 +247,7 @@ class ConfluenceService
     public function getPage(array $credentials, string $pageId): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/content/' . $pageId, [
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId, [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
                 'expand' => 'body.storage,version',
@@ -260,7 +260,7 @@ class ConfluenceService
     public function getComments(array $credentials, string $pageId): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/content/' . $pageId . '/child/comment', [
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId . '/child/comment', [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
                 'expand' => 'body.storage',
