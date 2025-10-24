@@ -614,6 +614,35 @@ class IntegrationController extends AbstractController
                 true
             );
 
+            // For Jira, use detailed testing
+            if ($type === 'jira') {
+                $jiraIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($jiraIntegration);
+                $property = $reflection->getProperty('jiraService');
+                $property->setAccessible(true);
+                $jiraService = $property->getValue($jiraIntegration);
+
+                $result = $jiraService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
             // For Confluence, use detailed testing
             if ($type === 'confluence') {
                 $confluenceIntegration = $integration;

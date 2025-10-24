@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-24
+
+### Improved
+- Connection test error messages now provide detailed explanations instead of generic "Connection failed" messages
+- Each error includes specific suggestions on how to fix the problem (e.g., "Check your API token", "Verify the URL is correct")
+- Test connection results now show technical details about what went wrong (authentication failed, network timeout, wrong permissions, etc.)
+- Error messages help troubleshoot integration issues faster with clear guidance
+- Both Jira and Confluence integrations now provide comprehensive error feedback during connection testing
+
 ## 2025-10-25
 
 ### Fixed
