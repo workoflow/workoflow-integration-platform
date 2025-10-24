@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-24
 
+### Fixed
+- Jira connection test now works correctly and no longer shows false permission errors when credentials are valid
+
 ### Improved
 - Connection test error messages now provide detailed explanations instead of generic "Connection failed" messages
 - Each error includes specific suggestions on how to fix the problem (e.g., "Check your API token", "Verify the URL is correct")

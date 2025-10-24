@@ -99,54 +99,14 @@ class JiraService
                 ];
 
                 if ($statusCode === 200) {
-                    // Successfully authenticated, now test permissions endpoint
-                    try {
-                        $permResponse = $this->httpClient->request('GET', $url . '/rest/api/3/mypermissions', [
-                            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                            'timeout' => 10,
-                        ]);
-
-                        $permStatusCode = $permResponse->getStatusCode();
-                        $testedEndpoints[] = [
-                            'endpoint' => '/rest/api/3/mypermissions',
-                            'status' => $permStatusCode === 200 ? 'success' : 'failed',
-                            'http_code' => $permStatusCode
-                        ];
-
-                        if ($permStatusCode === 200) {
-                            return [
-                                'success' => true,
-                                'message' => 'Connection successful',
-                                'details' => 'Successfully connected to Jira. API authentication and permissions check passed.',
-                                'suggestion' => '',
-                                'tested_endpoints' => $testedEndpoints
-                            ];
-                        } else {
-                            return [
-                                'success' => false,
-                                'message' => 'Permissions check failed',
-                                'details' => "Authentication works but permissions check returned HTTP {$permStatusCode}.",
-                                'suggestion' => 'Contact your Jira administrator to verify API access permissions.',
-                                'tested_endpoints' => $testedEndpoints
-                            ];
-                        }
-                    /** @phpstan-ignore-next-line catch.neverThrown */
-                    } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
-                        $permStatusCode = $e->getResponse()->getStatusCode();
-                        $testedEndpoints[] = [
-                            'endpoint' => '/rest/api/3/mypermissions',
-                            'status' => 'failed',
-                            'http_code' => $permStatusCode
-                        ];
-
-                        return [
-                            'success' => false,
-                            'message' => 'Permissions check access denied',
-                            'details' => "Authentication works but permissions check returned HTTP {$permStatusCode}.",
-                            'suggestion' => 'Ensure your API token has sufficient permissions to access Jira APIs.',
-                            'tested_endpoints' => $testedEndpoints
-                        ];
-                    }
+                    // Successfully authenticated
+                    return [
+                        'success' => true,
+                        'message' => 'Connection successful',
+                        'details' => 'Successfully connected to Jira. API authentication verified.',
+                        'suggestion' => '',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
                 } else {
                     // Non-200 response (should not happen as HttpClient throws exception)
                     return [
