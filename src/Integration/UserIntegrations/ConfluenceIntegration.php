@@ -201,9 +201,17 @@ class ConfluenceIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        return isset($credentials['url'])
-            && isset($credentials['username'])
-            && isset($credentials['api_token']);
+        // First check if all required fields are present and not empty
+        if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
+            return false;
+        }
+
+        // Make actual API call to validate credentials
+        try {
+            return $this->confluenceService->testConnection($credentials);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public function getCredentialFields(): array
@@ -213,9 +221,9 @@ class ConfluenceIntegration implements IntegrationInterface
                 'url',
                 'url',
                 'Confluence URL',
-                'https://your-domain.atlassian.net/wiki',
+                'https://your-domain.atlassian.net',
                 true,
-                'Your Confluence instance URL'
+                'Your Confluence base URL (without /wiki or trailing slashes)'
             ),
             new CredentialField(
                 'username',

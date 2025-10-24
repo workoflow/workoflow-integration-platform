@@ -320,7 +320,18 @@ class IntegrationController extends AbstractController
                     if ($value !== null) {
                         // Normalize URLs
                         if ($field->getName() === 'url' && !empty($value)) {
+                            // Remove trailing slash
                             $value = rtrim($value, '/');
+
+                            // Remove /wiki path if present (common mistake from placeholder)
+                            if (str_ends_with($value, '/wiki')) {
+                                $value = substr($value, 0, -5);
+                            }
+
+                            // Remove /wiki/* paths (e.g., /wiki/spaces/FOO)
+                            if (($pos = strpos($value, '/wiki/')) !== false) {
+                                $value = substr($value, 0, $pos);
+                            }
                         }
                         $credentials[$field->getName()] = $value;
                         // Check if value actually changed
@@ -613,7 +624,36 @@ class IntegrationController extends AbstractController
                 true
             );
 
-            // Validate credentials
+            // For Confluence, use detailed testing
+            if ($type === 'confluence') {
+                $confluenceIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($confluenceIntegration);
+                $property = $reflection->getProperty('confluenceService');
+                $property->setAccessible(true);
+                $confluenceService = $property->getValue($confluenceIntegration);
+
+                $result = $confluenceService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
+            // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
                 return $this->json(['success' => true, 'message' => 'Connection successful']);
             } else {

@@ -66,12 +66,168 @@ class ConfluenceService
 
     public function testConnection(array $credentials): bool
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/user/current', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-        ]);
+        $result = $this->testConnectionDetailed($credentials);
+        return $result['success'];
+    }
 
-        return $response->getStatusCode() === 200;
+    /**
+     * Test Confluence connection with detailed error reporting
+     *
+     * @param array $credentials Confluence credentials
+     * @return array Detailed test result with success, message, details, and suggestions
+     */
+    public function testConnectionDetailed(array $credentials): array
+    {
+        $testedEndpoints = [];
+
+        try {
+            // Validate and normalize URL
+            $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+            // Test v1 API endpoint (used for search, get page, comments)
+            try {
+                $response = $this->httpClient->request('GET', $url . '/rest/api/user/current', [
+                    'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                    'timeout' => 10,
+                ]);
+
+                $statusCode = $response->getStatusCode();
+                $testedEndpoints[] = [
+                    'endpoint' => '/rest/api/user/current',
+                    'status' => $statusCode === 200 ? 'success' : 'failed',
+                    'http_code' => $statusCode
+                ];
+
+                if ($statusCode === 200) {
+                    // v1 API works, now test v2 API endpoint (used for creating/updating pages)
+                    try {
+                        $v2Response = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', [
+                            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                            'query' => ['limit' => 1],
+                            'timeout' => 10,
+                        ]);
+
+                        $v2StatusCode = $v2Response->getStatusCode();
+                        $testedEndpoints[] = [
+                            'endpoint' => '/wiki/api/v2/spaces',
+                            'status' => $v2StatusCode === 200 ? 'success' : 'failed',
+                            'http_code' => $v2StatusCode
+                        ];
+
+                        if ($v2StatusCode === 200) {
+                            return [
+                                'success' => true,
+                                'message' => 'Connection successful',
+                                'details' => 'Successfully connected to Confluence. Both v1 and v2 APIs are accessible.',
+                                'suggestion' => '',
+                                'tested_endpoints' => $testedEndpoints
+                            ];
+                        } else {
+                            return [
+                                'success' => false,
+                                'message' => 'v2 API not accessible',
+                                'details' => "v1 API works but v2 API returned HTTP {$v2StatusCode}. Page creation/update may not work.",
+                                'suggestion' => 'Contact your Confluence administrator to verify API access permissions.',
+                                'tested_endpoints' => $testedEndpoints
+                            ];
+                        }
+                    /** @phpstan-ignore-next-line catch.neverThrown */
+                    } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+                        $v2StatusCode = $e->getResponse()->getStatusCode();
+                        $testedEndpoints[] = [
+                            'endpoint' => '/wiki/api/v2/spaces',
+                            'status' => 'failed',
+                            'http_code' => $v2StatusCode
+                        ];
+
+                        return [
+                            'success' => false,
+                            'message' => 'v2 API access denied',
+                            'details' => "v1 API works but v2 API returned HTTP {$v2StatusCode}. Page creation/update will not work.",
+                            'suggestion' => 'Ensure your API token has permissions to access Confluence v2 APIs.',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    }
+                } else {
+                    // Non-200 response from v1 API (should not happen as HttpClient throws exception)
+                    return [
+                        'success' => false,
+                        'message' => 'Connection failed',
+                        'details' => "HTTP {$statusCode}: Unexpected response from Confluence API",
+                        'suggestion' => 'Check the error details and verify your Confluence instance is accessible.',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                }
+            /** @phpstan-ignore-next-line catch.neverThrown */
+            } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+                $response = $e->getResponse();
+                $statusCode = $response->getStatusCode();
+                $testedEndpoints[] = [
+                    'endpoint' => '/rest/api/user/current',
+                    'status' => 'failed',
+                    'http_code' => $statusCode
+                ];
+
+                if ($statusCode === 401) {
+                    return [
+                        'success' => false,
+                        'message' => 'Authentication failed',
+                        'details' => 'Invalid email or API token. Please verify your credentials.',
+                        'suggestion' => 'Check that your email and API token are correct. Create a new API token at https://id.atlassian.com/manage-profile/security/api-tokens',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                } elseif ($statusCode === 403) {
+                    return [
+                        'success' => false,
+                        'message' => 'Access forbidden',
+                        'details' => 'Your API token does not have sufficient permissions.',
+                        'suggestion' => 'Ensure the API token has read and write access to Confluence spaces and pages.',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                } elseif ($statusCode === 404) {
+                    return [
+                        'success' => false,
+                        'message' => 'API endpoint not found',
+                        'details' => 'The URL may not be a valid Confluence instance or the API is not available.',
+                        'suggestion' => 'Verify the URL points to a Confluence Cloud instance (e.g., https://your-domain.atlassian.net)',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => 'Connection failed',
+                        'details' => "HTTP {$statusCode}: " . $e->getMessage(),
+                        'suggestion' => 'Check the error details and verify your Confluence instance is accessible.',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                }
+            } catch (\Symfony\Component\HttpClient\Exception\TransportException $e) {
+                return [
+                    'success' => false,
+                    'message' => 'Cannot reach Confluence server',
+                    'details' => 'Network error: ' . $e->getMessage(),
+                    'suggestion' => 'Check the URL and your network connection. Verify the domain is correct and accessible.',
+                    'tested_endpoints' => $testedEndpoints
+                ];
+            }
+        } catch (InvalidArgumentException $e) {
+            // URL validation error
+            return [
+                'success' => false,
+                'message' => 'Invalid URL',
+                'details' => $e->getMessage(),
+                'suggestion' => 'Enter a valid Confluence URL like https://your-domain.atlassian.net (without /wiki)',
+                'tested_endpoints' => $testedEndpoints
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Unexpected error',
+                'details' => $e->getMessage(),
+                'suggestion' => 'Please check your configuration and try again.',
+                'tested_endpoints' => $testedEndpoints
+            ];
+        }
     }
 
     public function search(array $credentials, string $query, int $limit = 25): array
@@ -370,14 +526,17 @@ class ConfluenceService
             if (!empty($params['spaceId'])) {
                 $body['spaceId'] = $params['spaceId'];
             } elseif (!empty($params['spaceKey'])) {
-                // Get space by key to find the ID
-                $spaceResponse = $this->httpClient->request('GET', $url . '/rest/api/space/' . $params['spaceKey'], [
+                // Get space by key to find the ID using v2 API
+                $spaceResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', [
                     'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                    'query' => [
+                        'keys' => $params['spaceKey'],
+                    ],
                 ]);
 
                 $spaceData = $spaceResponse->toArray();
-                if (!empty($spaceData['id'])) {
-                    $body['spaceId'] = $spaceData['id'];
+                if (!empty($spaceData['results'][0]['id'])) {
+                    $body['spaceId'] = $spaceData['results'][0]['id'];
                 } else {
                     throw new \RuntimeException("Space with key '{$params['spaceKey']}' not found");
                 }

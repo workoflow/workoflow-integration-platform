@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Confluence page creation now works correctly when using space keys (like "AT", "PROJ", "IT") - previously failed with "Space not found" errors
 
+### Improved
+- Confluence URL input now provides instant validation feedback with helpful visual indicators
+- URLs are automatically corrected if entered with /wiki path (e.g., https://domain.atlassian.net/wiki becomes https://domain.atlassian.net)
+- Clear guidance on expected URL format prevents configuration errors
+- Real-time validation shows green checkmark for correct URLs, yellow warning for auto-corrected URLs, and red error for invalid formats
+- "Test Connection" button now performs comprehensive API testing for Confluence integrations
+- Connection tests verify both v1 and v2 API endpoints to ensure all features work correctly
+- Detailed error messages explain exactly what went wrong (authentication failed, wrong permissions, network issues, etc.)
+- Each error includes specific suggestions on how to fix the problem (e.g., "Create a new API token at...")
+- Credential validation during setup now performs actual API calls instead of just checking if fields are filled
+
 ## 2025-10-23
 
 ### Fixed
