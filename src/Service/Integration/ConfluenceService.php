@@ -371,16 +371,13 @@ class ConfluenceService
                 $body['spaceId'] = $params['spaceId'];
             } elseif (!empty($params['spaceKey'])) {
                 // Get space by key to find the ID
-                $spaceResponse = $this->httpClient->request('GET', $url . '/rest/api/space', [
+                $spaceResponse = $this->httpClient->request('GET', $url . '/rest/api/space/' . $params['spaceKey'], [
                     'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                    'query' => [
-                        'spaceKey' => $params['spaceKey'],
-                    ],
                 ]);
 
                 $spaceData = $spaceResponse->toArray();
-                if (!empty($spaceData['results'][0]['id'])) {
-                    $body['spaceId'] = $spaceData['results'][0]['id'];
+                if (!empty($spaceData['id'])) {
+                    $body['spaceId'] = $spaceData['id'];
                 } else {
                     throw new \RuntimeException("Space with key '{$params['spaceKey']}' not found");
                 }

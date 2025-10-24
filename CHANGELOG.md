@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-24
+
+### Fixed
+- Confluence page creation now works correctly when using space keys (like "AT", "PROJ", "IT") - previously failed with "Space not found" errors
+
 ## 2025-10-23
 
 ### Fixed
