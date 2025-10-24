@@ -19,6 +19,10 @@ All notable changes to this project will be documented in this file.
 - Detailed error messages explain exactly what went wrong (authentication failed, wrong permissions, network issues, etc.)
 - Each error includes specific suggestions on how to fix the problem (e.g., "Create a new API token at...")
 - Credential validation during setup now performs actual API calls instead of just checking if fields are filled
+- Test Connection results now display in a beautiful modal dialog instead of browser alerts
+- Modal includes animated success/error icons with smooth transitions for better visual feedback
+- Error messages are now easier to read with better formatting and color coding
+- Modal can be closed by clicking outside, pressing ESC key, or clicking the close button
 
 ## 2025-10-23
 

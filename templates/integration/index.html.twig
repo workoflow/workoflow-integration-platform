@@ -226,6 +226,31 @@
     </div>
 </div>
 
+{# Test Connection Result Modal #}
+<div id="testConnectionModal" class="modal-overlay" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+    <div class="modal-container">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon" id="modalIcon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <button type="button" class="modal-close" onclick="hideTestModal()" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h3 id="modalTitle" class="modal-title">Test Connection</h3>
+                <div id="modalMessage" class="modal-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="hideTestModal()">
+                    {{ 'action.close'|trans|default('Close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Integration page specific overrides */
 .integration-section {
@@ -679,9 +704,246 @@
     font-size: var(--text-sm);
     font-style: italic;
 }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-container {
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    position: relative;
+    padding: var(--space-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    transition: all 0.3s ease;
+}
+
+.modal-icon.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 2px solid rgba(34, 197, 94, 0.3);
+}
+
+.modal-icon.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.modal-icon i {
+    animation: iconPop 0.5s ease-out 0.2s both;
+}
+
+@keyframes iconPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-close {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--secondary-background);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: var(--space-xl);
+    text-align: center;
+}
+
+.modal-title {
+    margin: 0 0 var(--space-md) 0;
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-message {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.modal-message.success {
+    color: #22c55e;
+}
+
+.modal-message.error {
+    color: #ef4444;
+}
+
+.modal-footer {
+    padding: var(--space-lg) var(--space-xl);
+    background: var(--secondary-background);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+.modal-footer .btn {
+    min-width: 120px;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .modal-container {
+        width: 95%;
+        max-width: none;
+    }
+
+    .modal-header,
+    .modal-body {
+        padding: var(--space-lg);
+    }
+
+    .modal-footer {
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .modal-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 28px;
+    }
+}
 </style>
 
 <script>
+// Modal Functions
+function showTestModal(type, title, message) {
+    const modal = document.getElementById('testConnectionModal');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+
+    // Update title
+    modalTitle.textContent = title;
+
+    // Update message
+    modalMessage.textContent = message;
+    modalMessage.className = 'modal-message ' + type;
+
+    // Update icon
+    modalIcon.className = 'modal-icon ' + type;
+    if (type === 'success') {
+        modalIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+    } else {
+        modalIcon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+    }
+
+    // Show modal
+    modal.classList.add('show');
+
+    // Focus trap for accessibility
+    const closeButton = modal.querySelector('.modal-close');
+    if (closeButton) {
+        closeButton.focus();
+    }
+}
+
+function hideTestModal() {
+    const modal = document.getElementById('testConnectionModal');
+    modal.classList.remove('show');
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideTestModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('testConnectionModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideTestModal();
+    }
+});
+
 async function toggleTool(checkbox) {
     const integration = checkbox.dataset.integration;
     const instance = checkbox.dataset.instance || '';
@@ -757,8 +1019,9 @@ document.querySelectorAll('.test-connection').forEach(button => {
         const type = e.currentTarget.dataset.type;
         const instance = e.currentTarget.dataset.instance;
         const btn = e.currentTarget;
+        const originalContent = btn.innerHTML;
         btn.disabled = true;
-        btn.textContent = 'Testing...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ 'integration.testing'|trans|default('Testing...') }}';
 
         try {
             const response = await fetch(`/tools/${type}/test`, {
@@ -773,15 +1036,28 @@ document.querySelectorAll('.test-connection').forEach(button => {
             const data = await response.json();
 
             if (data.success) {
-                alert('{{ 'integration.test_success'|trans }}');
+                showTestModal(
+                    'success',
+                    '{{ 'integration.test_success_title'|trans|default('Connection Successful') }}',
+                    data.message || '{{ 'integration.test_success'|trans|default('The connection test was successful. All API endpoints are reachable.') }}'
+                );
             } else {
-                alert('{{ 'integration.test_failed'|trans }}: ' + data.message);
+                showTestModal(
+                    'error',
+                    '{{ 'integration.test_failed_title'|trans|default('Connection Failed') }}',
+                    data.message || '{{ 'integration.test_failed'|trans|default('The connection test failed. Please check your credentials and try again.') }}'
+                );
             }
         } catch (error) {
-            alert('{{ 'integration.test_error'|trans }}');
+            console.error('Test connection error:', error);
+            showTestModal(
+                'error',
+                '{{ 'integration.test_error_title'|trans|default('Test Error') }}',
+                '{{ 'integration.test_error'|trans|default('An unexpected error occurred while testing the connection. Please try again later.') }}'
+            );
         } finally {
             btn.disabled = false;
-            btn.textContent = '{{ 'integration.test_connection'|trans }}';
+            btn.innerHTML = originalContent;
         }
     });
 });
