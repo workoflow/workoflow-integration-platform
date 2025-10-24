@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-25
+
+### Fixed
+- Connection test modal now displays proper titles instead of technical translation keys
+- Icons now display correctly throughout the application (previously missing due to Font Awesome not being installed)
+
 ## 2025-10-24
 
 ### Fixed

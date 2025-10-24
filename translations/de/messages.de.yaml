@@ -146,9 +146,13 @@ integration:
   active_of: aktiv von
   test_connection: Verbindung testen
   delete_confirm: Sind Sie sicher, dass Sie diese Integration löschen möchten?
+  testing: Teste...
   test_success: Verbindung erfolgreich!
+  test_success_title: Verbindung erfolgreich
   test_failed: Verbindung fehlgeschlagen
+  test_failed_title: Verbindung fehlgeschlagen
   test_error: Ein Fehler ist aufgetreten
+  test_error_title: Test-Fehler
   basic_info: Grundinformationen
   select_type: Integrationstyp auswählen
   name_placeholder: z.B. Your integration name (you can also use your applications URL)
@@ -212,6 +216,7 @@ action:
   edit: Bearbeiten
   delete: Löschen
   cancel: Abbrechen
+  close: Schließen
   actions: Aktionen
   copy: Kopieren
   copied: Kopiert!
