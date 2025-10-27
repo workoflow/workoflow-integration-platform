@@ -198,6 +198,112 @@ Die JiraService Klasse ist der zentrale HTTP Client für alle JIRA API Aufrufe:
 
 **API Call**: `POST /rest/api/3/issue/{issueKey}/comment`
 
+### 6. jira_get_available_transitions
+**Beschreibung**: Verfügbare Status-Übergänge für ein Issue abrufen
+
+Gibt alle möglichen Workflow-Transitionen zurück, die für das aktuelle Issue verfügbar sind. Dies ist wichtig, da JIRA Workflows individuelle Übergangspfade definieren.
+
+**Parameters**:
+- `issueKey` (string, required): Issue Key (z.B. PROJ-123)
+
+**API Call**: `GET /rest/api/3/issue/{issueKey}/transitions`
+
+**Response Beispiel**:
+```json
+{
+  "transitions": [
+    {
+      "id": "21",
+      "name": "Incomplete",
+      "to": {
+        "name": "Incomplete",
+        "id": "10001"
+      }
+    },
+    {
+      "id": "161",
+      "name": "Conceptual Design",
+      "to": {
+        "name": "Conceptual Design",
+        "id": "10002"
+      }
+    }
+  ]
+}
+```
+
+### 7. jira_transition_issue
+**Beschreibung**: Issue-Status ändern durch Workflow-Transition
+
+Führt einen Workflow-Übergang durch, um den Status eines Issues zu ändern. **Wichtig:** Immer zuerst `jira_get_available_transitions` aufrufen, um gültige Transition-IDs zu erhalten.
+
+**Parameters**:
+- `issueKey` (string, required): Issue Key (z.B. PROJ-123)
+- `transitionId` (string, required): Transition ID von `jira_get_available_transitions`
+- `comment` (string, optional): Optionaler Kommentar beim Status-Wechsel
+
+**API Call**: `POST /rest/api/3/issue/{issueKey}/transitions`
+
+**Workflow-Hinweise**:
+- JIRA Workflows definieren erlaubte Übergangspfade
+- Man kann nicht direkt zu jedem Status wechseln
+- Bei komplexen Workflows muss man schrittweise durch mehrere Transitionen gehen
+- Beispiel: `Offen` → `In Arbeit` → `Review` → `Done` (3 Schritte nötig)
+- Die Transition-ID ist **nicht** die Status-ID, sondern die Übergangs-ID
+
+### 8. jira_transition_issue_to_status
+**Beschreibung**: Intelligente Status-Änderung mit automatischer Pfadfindung
+
+Dieses Tool navigiert automatisch durch den JIRA-Workflow, um den Ziel-Status zu erreichen. Der Benutzer kann einfach sagen "Setze Ticket auf Done" und das System findet den richtigen Weg.
+
+**Parameters**:
+- `issueKey` (string, required): Issue Key (z.B. PROJ-123)
+- `targetStatusName` (string, required): Ziel-Status Name (z.B. "Done", "In Progress")
+- `comment` (string, optional): Optionaler Kommentar
+
+**API Call**: Multiple calls zu `/rest/api/3/issue/{issueKey}/transitions`
+
+**Response Beispiel**:
+```json
+{
+  "success": true,
+  "message": "Issue successfully transitioned to 'Done'",
+  "currentStatus": "Done",
+  "path": [
+    {
+      "from": "Offen",
+      "to": "In Arbeit",
+      "transitionId": "4",
+      "transitionName": "Start Progress"
+    },
+    {
+      "from": "In Arbeit",
+      "to": "Done",
+      "transitionId": "5",
+      "transitionName": "Done"
+    }
+  ],
+  "attempts": 2
+}
+```
+
+**Features**:
+- ✅ Automatische Pfadfindung durch komplexe Workflows
+- ✅ Loop-Erkennung zur Vermeidung von Endlosschleifen
+- ✅ Detaillierte Pfad-Dokumentation in der Response
+- ✅ Kommentar wird bei der finalen Transition hinzugefügt
+- ✅ Max. 10 Versuche als Sicherheitsgrenze
+
+**Use Case**:
+```
+User: "Setze GH-72 auf Done"
+Bot: Verwendet jira_transition_issue_to_status(
+       issueKey: "GH-72",
+       targetStatusName: "Done"
+     )
+     → System durchläuft automatisch: Offen → In Arbeit → Done
+```
+
 ## Authentifizierung & Sicherheit
 
 ### Credential Storage

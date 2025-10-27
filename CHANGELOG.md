@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## 2025-10-27
 
 ### Added
+- Intelligent JIRA status transitions - users can now simply say "set ticket to Done" and the system automatically navigates through the entire workflow path
+- JIRA workflow transition support - AI agents can now change ticket statuses following proper workflow paths
+- Automatic workflow path finding - system intelligently determines required intermediate steps to reach target status
+- Loop detection and prevention - safely handles complex workflows without getting stuck in infinite loops
+- Status change capability with automatic workflow validation - prevents invalid status transitions that would normally fail
+- Available transitions discovery - bots can ask which status changes are possible for any ticket
 - End-to-end tests for JIRA integration - automated tests now validate real JIRA API connections and data retrieval
 - JIRA ticket content validation in tests - ensures issue summaries, story points, and acceptance criteria are correctly retrieved
 

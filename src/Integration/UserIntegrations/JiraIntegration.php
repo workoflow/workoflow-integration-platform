@@ -104,6 +104,66 @@ class JiraIntegration implements IntegrationInterface
                         'description' => 'The comment text to add to the issue'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_get_available_transitions',
+                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_transition_issue',
+                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'transitionId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Transition ID from jira_get_available_transitions'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add when transitioning the issue'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_transition_issue_to_status',
+                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'targetStatusName',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Target status name (e.g., "Done", "In Progress", "Closed")'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add during the transition'
+                    ]
+                ]
             )
         ];
     }
@@ -136,6 +196,22 @@ class JiraIntegration implements IntegrationInterface
                 $credentials,
                 $parameters['issueKey'],
                 $parameters['comment']
+            ),
+            'jira_get_available_transitions' => $this->jiraService->getAvailableTransitions(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_transition_issue' => $this->jiraService->transitionIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['transitionId'],
+                $parameters['comment'] ?? null
+            ),
+            'jira_transition_issue_to_status' => $this->jiraService->transitionIssueToStatus(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['targetStatusName'],
+                $parameters['comment'] ?? null
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };

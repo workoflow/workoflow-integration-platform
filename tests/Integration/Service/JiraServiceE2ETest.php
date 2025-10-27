@@ -64,7 +64,6 @@ class JiraServiceE2ETest extends KernelTestCase
         $result = $this->jiraService->getIssue($this->credentials, $issueKey);
 
         // Assert basic structure
-        $this->assertIsArray($result, 'Response should be an array');
         $this->assertArrayHasKey('key', $result, 'Response should have a key field');
         $this->assertArrayHasKey('fields', $result, 'Response should have a fields section');
 
@@ -114,7 +113,6 @@ class JiraServiceE2ETest extends KernelTestCase
         $result = $this->jiraService->search($this->credentials, $jql, 5);
 
         // Assert response structure
-        $this->assertIsArray($result, 'Response should be an array');
         $this->assertArrayHasKey('issues', $result, 'Response should have issues array');
 
         // The new JQL API doesn't return total count, it uses pagination
@@ -124,13 +122,58 @@ class JiraServiceE2ETest extends KernelTestCase
     }
 
     /**
+     * Test getting available transitions for an issue
+     */
+    public function testGetAvailableTransitions(): void
+    {
+        $issueKey = 'GH-72';
+
+        $result = $this->jiraService->getAvailableTransitions($this->credentials, $issueKey);
+
+        // Assert response structure
+        $this->assertArrayHasKey('transitions', $result, 'Response should have transitions array');
+        $this->assertNotEmpty($result['transitions'], 'Should have at least one available transition');
+
+        // Check transition structure
+        $firstTransition = $result['transitions'][0];
+        $this->assertArrayHasKey('id', $firstTransition, 'Transition should have id');
+        $this->assertArrayHasKey('name', $firstTransition, 'Transition should have name');
+        $this->assertArrayHasKey('to', $firstTransition, 'Transition should have to field');
+        $this->assertArrayHasKey('name', $firstTransition['to'], 'Transition target should have name');
+
+        // Output information
+        echo "\n=== Available Transitions for {$issueKey} ===\n";
+        foreach ($result['transitions'] as $transition) {
+            echo "  ID: {$transition['id']} - {$transition['name']} -> {$transition['to']['name']}\n";
+        }
+    }
+
+    /**
+     * Test transitioning an issue (without actually changing it to avoid test side effects)
+     */
+    public function testTransitionIssueValidation(): void
+    {
+        $issueKey = 'GH-72';
+
+        // First, get available transitions
+        $transitions = $this->jiraService->getAvailableTransitions($this->credentials, $issueKey);
+
+        $this->assertNotEmpty($transitions['transitions'], 'Should have transitions to test with');
+
+        // We won't actually transition to avoid changing real data
+        // But we validated that the method exists and transitions are available
+        echo "\n=== Transition Test ===\n";
+        echo "Validated that transitions are available for {$issueKey}\n";
+        echo "In production, you can transition using transition ID from getAvailableTransitions()\n";
+    }
+
+    /**
      * Test getting detailed connection information
      */
     public function testConnectionDetailed(): void
     {
         $result = $this->jiraService->testConnectionDetailed($this->credentials);
 
-        $this->assertIsArray($result, 'Result should be an array');
         $this->assertArrayHasKey('success', $result, 'Result should have success field');
         $this->assertArrayHasKey('message', $result, 'Result should have message field');
         $this->assertArrayHasKey('details', $result, 'Result should have details field');

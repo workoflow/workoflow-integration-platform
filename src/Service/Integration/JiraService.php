@@ -266,4 +266,221 @@ class JiraService
 
         return $response->toArray();
     }
+
+    /**
+     * Get available transitions for an issue
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @return array Available transitions with IDs and target statuses
+     */
+    public function getAvailableTransitions(array $credentials, string $issueKey): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
+            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+        ]);
+
+        return $response->toArray();
+    }
+
+    /**
+     * Transition an issue to a new status
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @param string $transitionId Transition ID (from getAvailableTransitions)
+     * @param string|null $comment Optional comment to add during transition
+     * @return array Transition response
+     */
+    public function transitionIssue(array $credentials, string $issueKey, string $transitionId, ?string $comment = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        $payload = [
+            'transition' => [
+                'id' => $transitionId
+            ]
+        ];
+
+        // Add comment if provided
+        if ($comment !== null) {
+            $payload['update'] = [
+                'comment' => [
+                    [
+                        'add' => [
+                            'body' => [
+                                'type' => 'doc',
+                                'version' => 1,
+                                'content' => [
+                                    [
+                                        'type' => 'paragraph',
+                                        'content' => [
+                                            [
+                                                'text' => $comment,
+                                                'type' => 'text'
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ];
+        }
+
+        $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
+            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ],
+            'json' => $payload
+        ]);
+
+        // Transitions return 204 No Content on success
+        $statusCode = $response->getStatusCode();
+        if ($statusCode === 204) {
+            return ['success' => true, 'message' => 'Issue transitioned successfully'];
+        }
+
+        return $response->toArray();
+    }
+
+    /**
+     * Transition an issue to a target status by automatically finding the path
+     *
+     * This method intelligently navigates through JIRA workflows to reach the target status.
+     * It will perform multiple transitions if necessary.
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @param string $targetStatusName Target status name (e.g., "Done", "In Progress")
+     * @param string|null $comment Optional comment to add during final transition
+     * @param int $maxAttempts Maximum number of transition attempts to prevent infinite loops
+     * @return array Result with success status and path taken
+     */
+    public function transitionIssueToStatus(
+        array $credentials,
+        string $issueKey,
+        string $targetStatusName,
+        ?string $comment = null,
+        int $maxAttempts = 10
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $path = [];
+        $attempt = 0;
+
+        while ($attempt < $maxAttempts) {
+            $attempt++;
+
+            // Get current issue status
+            $issue = $this->getIssue($credentials, $issueKey);
+            $currentStatus = $issue['fields']['status']['name'];
+
+            // Check if we've reached the target
+            if (strcasecmp($currentStatus, $targetStatusName) === 0) {
+                return [
+                    'success' => true,
+                    'message' => "Issue successfully transitioned to '{$targetStatusName}'",
+                    'currentStatus' => $currentStatus,
+                    'path' => $path,
+                    'attempts' => $attempt - 1
+                ];
+            }
+
+            // Get available transitions
+            $transitions = $this->getAvailableTransitions($credentials, $issueKey);
+
+            if (empty($transitions['transitions'])) {
+                return [
+                    'success' => false,
+                    'message' => "No transitions available from status '{$currentStatus}'",
+                    'currentStatus' => $currentStatus,
+                    'path' => $path,
+                    'attempts' => $attempt
+                ];
+            }
+
+            // Look for direct transition to target status
+            $targetTransition = null;
+            foreach ($transitions['transitions'] as $transition) {
+                if (strcasecmp($transition['to']['name'], $targetStatusName) === 0) {
+                    $targetTransition = $transition;
+                    break;
+                }
+            }
+
+            // If direct transition found, use it
+            if ($targetTransition !== null) {
+                $transitionComment = ($comment !== null && strcasecmp($targetTransition['to']['name'], $targetStatusName) === 0)
+                    ? $comment
+                    : null;
+
+                $this->transitionIssue($credentials, $issueKey, $targetTransition['id'], $transitionComment);
+
+                $path[] = [
+                    'from' => $currentStatus,
+                    'to' => $targetTransition['to']['name'],
+                    'transitionId' => $targetTransition['id'],
+                    'transitionName' => $targetTransition['name']
+                ];
+
+                continue;
+            }
+
+            // No direct path found - try first available transition (heuristic approach)
+            // In a more sophisticated version, we could implement path finding algorithms
+            $firstTransition = $transitions['transitions'][0];
+
+            // Avoid going backwards or loops
+            $isLoop = false;
+            foreach ($path as $step) {
+                if ($step['to'] === $firstTransition['to']['name']) {
+                    $isLoop = true;
+                    break;
+                }
+            }
+
+            if ($isLoop) {
+                return [
+                    'success' => false,
+                    'message' => "Cannot find path to '{$targetStatusName}' - workflow loop detected",
+                    'currentStatus' => $currentStatus,
+                    'targetStatus' => $targetStatusName,
+                    'path' => $path,
+                    'attempts' => $attempt,
+                    'availableTransitions' => array_map(
+                        fn($t) => $t['to']['name'],
+                        $transitions['transitions']
+                    )
+                ];
+            }
+
+            // Make the transition
+            $this->transitionIssue($credentials, $issueKey, $firstTransition['id']);
+
+            $path[] = [
+                'from' => $currentStatus,
+                'to' => $firstTransition['to']['name'],
+                'transitionId' => $firstTransition['id'],
+                'transitionName' => $firstTransition['name']
+            ];
+        }
+
+        // Max attempts reached
+        $issue = $this->getIssue($credentials, $issueKey);
+        $currentStatus = $issue['fields']['status']['name'];
+
+        return [
+            'success' => false,
+            'message' => "Could not reach '{$targetStatusName}' after {$maxAttempts} attempts",
+            'currentStatus' => $currentStatus,
+            'targetStatus' => $targetStatusName,
+            'path' => $path,
+            'attempts' => $attempt
+        ];
+    }
 }
