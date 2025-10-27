@@ -12,30 +12,7 @@
         {% if organisation %}
             <div class="organisation-info">
                 <h5>{{ 'general.organisation'|trans }}</h5>
-                {% if is_granted('ROLE_ADMIN') %}
-                    <div class="org-name-editable">
-                        <p class="org-name" id="orgName" contenteditable="false">{{ organisation.name }}</p>
-                        <button type="button" id="editOrgNameBtn" class="btn-icon-edit" title="{{ 'general.edit_org_name'|trans }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                        </button>
-                        <button type="button" id="saveOrgNameBtn" class="btn-icon-save" style="display: none;" title="{{ 'general.save_org_name'|trans }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        </button>
-                        <button type="button" id="cancelOrgNameBtn" class="btn-icon-cancel" style="display: none;" title="{{ 'general.cancel_edit'|trans }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                        </button>
-                    </div>
-                {% else %}
-                    <p class="org-name">{{ organisation.name }}</p>
-                {% endif %}
+                <p class="org-name">{{ organisation.name }}</p>
                 <p class="org-api-url">
                     <span class="label">{{ 'general.integration_api_url'|trans }}:</span>
                     <code>{{ organisation.integrationApiUrl }}</code>
@@ -120,53 +97,6 @@
 </div>
 
 <style>
-.org-name-editable {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.org-name-editable .org-name {
-    margin: 0;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.org-name-editable .org-name[contenteditable="true"] {
-    background-color: #f0f0f0;
-    border: 1px solid #007bff;
-    outline: none;
-}
-
-.btn-icon-edit, .btn-icon-save, .btn-icon-cancel {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.btn-icon-edit:hover, .btn-icon-save:hover, .btn-icon-cancel:hover {
-    background-color: #f0f0f0;
-}
-
-.btn-icon-save {
-    color: #28a745;
-}
-
-.btn-icon-cancel {
-    color: #dc3545;
-}
-
-.btn-icon-edit {
-    color: #6c757d;
-}
-
 .curl-command-section {
     margin-top: 15px;
     display: flex;
@@ -201,108 +131,6 @@
     to { opacity: 1; }
 }
 </style>
-
-{% if is_granted('ROLE_ADMIN') %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const orgNameEl = document.getElementById('orgName');
-    const editBtn = document.getElementById('editOrgNameBtn');
-    const saveBtn = document.getElementById('saveOrgNameBtn');
-    const cancelBtn = document.getElementById('cancelOrgNameBtn');
-    let originalName = orgNameEl.textContent.trim();
-
-    function enterEditMode() {
-        orgNameEl.contentEditable = true;
-        orgNameEl.focus();
-        editBtn.style.display = 'none';
-        saveBtn.style.display = 'flex';
-        cancelBtn.style.display = 'flex';
-        
-        // Select all text
-        const range = document.createRange();
-        range.selectNodeContents(orgNameEl);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-    }
-
-    function exitEditMode(save = false) {
-        orgNameEl.contentEditable = false;
-        editBtn.style.display = 'flex';
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-        
-        if (!save) {
-            orgNameEl.textContent = originalName;
-        }
-    }
-
-    async function saveOrgName() {
-        const newName = orgNameEl.textContent.trim();
-        
-        if (!newName) {
-            alert('{{ 'general.org_name_empty'|trans|default('Organisation name cannot be empty') }}');
-            orgNameEl.textContent = originalName;
-            exitEditMode(false);
-            return;
-        }
-
-        if (newName === originalName) {
-            exitEditMode(true);
-            return;
-        }
-
-        try {
-            const response = await fetch('{{ path('app_organisation_update_name') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ name: newName })
-            });
-
-            const data = await response.json();
-            
-            if (data.success) {
-                originalName = newName;
-                exitEditMode(true);
-                // Show success message
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success';
-                successMsg.textContent = data.message || '{{ 'general.org_name_updated'|trans|default('Organisation name updated successfully') }}';
-                document.querySelector('.dashboard-container').insertBefore(successMsg, document.querySelector('.organisation-info'));
-                setTimeout(() => successMsg.remove(), 3000);
-            } else {
-                alert(data.error || '{{ 'general.org_name_update_error'|trans|default('Failed to update organisation name') }}');
-                orgNameEl.textContent = originalName;
-                exitEditMode(false);
-            }
-        } catch (error) {
-            console.error('Error updating organisation name:', error);
-            alert('{{ 'general.org_name_update_error'|trans|default('Failed to update organisation name') }}');
-            orgNameEl.textContent = originalName;
-            exitEditMode(false);
-        }
-    }
-
-    editBtn.addEventListener('click', enterEditMode);
-    saveBtn.addEventListener('click', saveOrgName);
-    cancelBtn.addEventListener('click', () => exitEditMode(false));
-
-    // Handle Enter and Escape keys
-    orgNameEl.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            saveOrgName();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            exitEditMode(false);
-        }
-    });
-});
-</script>
-{% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

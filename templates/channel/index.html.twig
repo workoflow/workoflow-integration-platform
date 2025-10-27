@@ -1,17 +1,17 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ 'instructions.title'|trans }} - Workoflow{% endblock %}
+{% block title %}{{ 'channel.title'|trans }} - Workoflow{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
     <style>
-        .instructions-page {
+        .channel-page {
             min-height: 100vh;
             background-color: #0a0a0a;
             color: #ffffff;
         }
 
-        .instructions-container {
+        .channel-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem;
@@ -24,7 +24,7 @@
             color: #ffffff;
         }
 
-        .instructions-grid {
+        .channel-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 2rem;
@@ -158,7 +158,7 @@
         }
 
         @media (max-width: 1024px) {
-            .instructions-grid {
+            .channel-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -166,20 +166,40 @@
 {% endblock %}
 
 {% block body %}
-<div class="instructions-page">
+<div class="channel-page">
     {% include '_partials/header.html.twig' %}
 
-    <div class="instructions-container" data-controller="instructions">
-        <h1 class="page-title">{{ 'instructions.title'|trans }}</h1>
+    <div class="channel-container" data-controller="channel">
+        <h1 class="page-title">{{ 'channel.title'|trans }}</h1>
 
-        <form method="post" action="{{ path('app_instructions_update') }}" id="instructions-form" data-action="submit->instructions#submitForm">
-            <div class="instructions-grid">
+        {% if app.user.isAdmin() %}
+            <div style="background-color: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; color: #ff6b35;">
+                            {{ 'channel.management'|trans }}
+                        </h2>
+                        <p style="font-size: 0.875rem; color: #9ca3af; margin: 0;">
+                            {{ 'channel.management.description'|trans }}
+                        </p>
+                    </div>
+                    <a href="{{ path('app_channel_create') }}"
+                       class="btn-primary"
+                       style="text-decoration: none; white-space: nowrap;">
+                        + {{ 'channel.create.button'|trans }}
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="post" action="{{ path('app_channel_update') }}" id="channel-form" data-action="submit->channel#submitForm">
+            <div class="channel-grid">
                 <!-- Left Column -->
                 <div class="left-column">
                     <!-- Organisation Properties -->
                     <div class="form-section">
                         <div class="form-group">
-                            <label for="name" class="form-label">{{ 'instructions.organisation_name'|trans }}</label>
+                            <label for="name" class="form-label">{{ 'channel.organisation_name'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="name"
@@ -189,7 +209,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="uuid" class="form-label">{{ 'instructions.uuid'|trans }}</label>
+                            <label for="uuid" class="form-label">{{ 'channel.uuid'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="uuid"
@@ -198,7 +218,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="workflow_user_id" class="form-label">{{ 'instructions.workflow_user_id'|trans }}</label>
+                            <label for="workflow_user_id" class="form-label">{{ 'channel.workflow_user_id'|trans }}</label>
                             <input type="text"
                                    class="form-control"
                                    id="workflow_user_id"
@@ -209,7 +229,7 @@
 
                     <!-- Agent Settings -->
                     <div class="form-section">
-                        <h2 class="section-title">{{ 'instructions.agent_settings'|trans }}</h2>
+                        <h2 class="section-title">{{ 'channel.agent_settings'|trans }}</h2>
                         <p class="section-subtitle">Describe the agent's role or personality. This sets the tone of how it responds.</p>
 
                         <div class="form-group">
@@ -229,8 +249,8 @@
                             <select class="form-select"
                                     id="webhook_type"
                                     name="webhook_type"
-                                    data-instructions-target="webhookType"
-                                    data-action="change->instructions#onWebhookTypeChange"
+                                    data-channel-target="webhookType"
+                                    data-action="change->channel#onWebhookTypeChange"
                                     {% if not app.user.isAdmin() %}disabled{% endif %}>
                                 <option value="">None</option>
                                 <option value="COMMON" {% if organisation.webhookType == 'COMMON' %}selected{% endif %}>Common</option>
@@ -244,14 +264,14 @@
                                    class="form-control"
                                    id="webhook_url"
                                    name="webhook_url"
-                                   data-instructions-target="webhookUrl"
-                                   data-action="input->instructions#onWebhookUrlChange"
+                                   data-channel-target="webhookUrl"
+                                   data-action="input->channel#onWebhookUrlChange"
                                    value="{{ organisation.webhookUrl ?? '' }}"
                                    placeholder="https://example.com/webhook"
                                    {% if not app.user.isAdmin() %}readonly{% endif %}>
                         </div>
 
-                        <div class="form-group" id="n8n-api-key-group" data-instructions-target="n8nApiKeyGroup" style="{% if organisation.webhookType != 'N8N' %}display: none;{% endif %}">
+                        <div class="form-group" id="n8n-api-key-group" data-channel-target="n8nApiKeyGroup" style="{% if organisation.webhookType != 'N8N' %}display: none;{% endif %}">
                             <label for="n8n_api_key" class="form-label">N8N API Key</label>
                             <input type="password"
                                    class="form-control"
@@ -270,12 +290,12 @@
                 </div>
 
                 <!-- Right Column -->
-                <div class="right-column" id="workflow-column" data-instructions-target="workflowColumn" {% if organisation.webhookType != 'N8N' %}class="hidden"{% endif %}>
-                    <h2 class="section-title">{{ 'instructions.workflow_visualization'|trans }}</h2>
+                <div class="right-column" id="workflow-column" data-channel-target="workflowColumn" {% if organisation.webhookType != 'N8N' %}class="hidden"{% endif %}>
+                    <h2 class="section-title">{{ 'channel.workflow_visualization'|trans }}</h2>
                     <p class="section-subtitle">Visual representation of your workflow (read-only)</p>
 
                     <div class="workflow-canvas">
-                        <div id="reactflow-container" data-instructions-target="reactContainer" data-org-id="{{ organisation.uuid }}" data-webhook-url="{{ organisation.webhookUrl ?? '' }}">
+                        <div id="reactflow-container" data-channel-target="reactContainer" data-org-id="{{ organisation.uuid }}" data-webhook-url="{{ organisation.webhookUrl ?? '' }}">
                             <div class="workflow-placeholder">
                                 {% if organisation.webhookUrl %}
                                     <span>Loading workflow visualization...</span>

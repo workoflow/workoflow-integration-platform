@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-27
 
+### Changed
+- Renamed "Instructions" page to "Channel" - the navigation menu and page title now reflect the new name for better clarity
+
 ### Added
+- Channel creation button on Channel page - administrators can now create multiple channels directly from the Channel page
+- Multi-channel support for administrators - admin users can manage multiple separate channels with independent configurations
+- Comprehensive Channel documentation - detailed guide explaining how channels work as API gateways for third-party integrations
+- GitLab integration for source code management - AI agents can now access GitLab repositories, merge requests, issues, and CI/CD pipelines
+- Browse GitLab projects - view all accessible projects or filter by membership
+- Access repository content - read files, browse directory trees, and navigate branches and tags
+- View commit history - see detailed commit information and track code changes over time
+- Manage merge requests - search, view, create, update, and comment on merge requests with full diff support
+- Work with issues - search, view, create, and update issues within projects
+- Monitor CI/CD pipelines - check pipeline status, view execution details, and track deployment progress
+- Access package registry - search and view packages published to GitLab's package registry
+- Full API integration - all GitLab tools available through REST API for automation platforms
 - Trello integration for project management - AI agents can now access and manage Trello boards, lists, and cards
 - Search across all Trello boards and cards - AI agents can find specific cards using keywords or criteria
 - View all accessible Trello boards - get a complete overview of available project boards
@@ -16,6 +31,9 @@ All notable changes to this project will be documented in this file.
 - Update existing cards - modify card details, move between lists, or change due dates
 - Add comments to cards - AI agents can post updates and responses directly to Trello cards
 - Full workflow automation support - all Trello tools available through REST API for n8n and other automation platforms
+
+### Changed
+- Channel name editing centralized to Instructions page - channel names can now only be changed from the Instructions page for better organization
 
 ## 2025-10-24
 

@@ -7,10 +7,10 @@ nav:
   general: Allgemein
   tools: Tools
   files: Dateien
-  organisation: Organisation
+  organisation: Kanal
   profile: Profil
   logout: Abmelden
-  instructions: Anweisungen
+  channel: Kanal
   members: Mitglieder
   login: Anmelden
 
@@ -64,9 +64,9 @@ auth:
 general:
   title: Allgemein
   welcome: Willkommen, %name%!
-  organisation: Ihre Organisation
+  organisation: Ihr Kanal
   integration_api_url: Integration API URL
-  workflow_user_id: Organisations spezifische ID
+  workflow_user_id: Kanal-spezifische ID
   copy_curl_command: curl-Befehl für /tools Endpunkt kopieren
   copied: Kopiert!
   integrations_count: Integrationen
@@ -78,32 +78,45 @@ general:
 
 organisation:
   create:
-    title: Organisation erstellen
-    description: Bitte geben Sie einen Namen für Ihre Organisation ein, um fortzufahren.
+    title: Kanal erstellen
+    description: Bitte geben Sie einen Namen für Ihren Kanal ein, um fortzufahren.
     placeholder: z.B. Meine Firma GmbH
     help: Sie können den Namen später in den Einstellungen ändern.
-    submit: Organisation erstellen
+    submit: Kanal erstellen
   created:
-    success: Organisation erfolgreich erstellt!
-  name: Organisationsname
-  settings: Organisationseinstellungen
+    success: Kanal erfolgreich erstellt!
+  name: Kanalname
+  settings: Kanaleinstellungen
   members: Mitglieder
   updated:
-    success: Organisation erfolgreich aktualisiert!
+    success: Kanal erfolgreich aktualisiert!
   member:
     role_updated: Rolle erfolgreich aktualisiert!
     cannot_change_own_role: Sie können Ihre eigene Rolle nicht ändern.
   invite:
     invalid_email: Ungültige E-Mail-Adresse.
-    user_has_organisation: Dieser Benutzer gehört bereits einer Organisation an.
+    user_has_organisation: Dieser Benutzer gehört bereits einem Kanal an.
     user_added: Benutzer erfolgreich hinzugefügt!
     user_not_found: Benutzer muss sich zuerst bei Workoflow registrieren.
-  uuid: Organisations-UUID
+
+channel:
+  title: Kanal
+  management: Kanalverwaltung
+  management.description: Erstellen und verwalten Sie Ihre Kanäle
+  create:
+    button: Neuen Kanal erstellen
+    title: Kanal erstellen
+    description: Bitte geben Sie einen Namen für Ihren Kanal ein, um fortzufahren.
+  uuid: Kanal-UUID
   uuid_help: Diese UUID wird für die API-Endpunkte verwendet
   integration_api_help: Verwenden Sie diese API-URL, um AI-Agenten (z.B. n8n) mit Ihren Integrationen zu verbinden
   save: Speichern
   invite_member: Mitglied einladen
   invite_help: Der Benutzer muss sich zuerst bei Workoflow registrieren
+  workflow_user_id: Workoflow Benutzer-ID
+  organisation_name: Kanalname
+  agent_settings: Agenteneinstellungen
+  workflow_visualization: Workflow-Visualisierung
   send_invite: Einladung senden
   make_admin: Zum Admin machen
   make_member: Zum Mitglied machen
@@ -205,6 +218,89 @@ integration:
     reconnect: SharePoint-Konto erneut verbinden
     token_expires: Token läuft ab
   connect_sharepoint: Mit SharePoint verbinden
+  gitlab:
+    name: GitLab
+    description: Verbindung zu GitLab für Projektmanagement, Issue-Tracking, Merge Requests und CI/CD-Pipeline-Integration
+    url: GitLab URL
+    url_placeholder: 'z.B. https://gitlab.nxs360.com'
+    url_help: 'Geben Sie Ihre GitLab-Instanz-URL ein (unterstützt Self-Hosted und GitLab.com). Verwenden Sie nur das https:// Protokoll.'
+    api_token: Personal Access Token
+    api_token_placeholder: 'Geben Sie Ihren GitLab Personal Access Token ein'
+    api_token_help: 'Erstellen Sie ein Personal Access Token in GitLab: Benutzereinstellungen > Access Tokens. Benötigte Scopes: api, read_api, read_repository'
+    tools:
+      get_project:
+        name: Projektdetails abrufen
+        description: Detaillierte Informationen zu einem bestimmten GitLab-Projekt abrufen. Liefert Projekt-Metadaten einschließlich Beschreibung, Statistiken, Standard-Branch, Sichtbarkeitsstufe und Konfiguration. Verwenden Sie Projekt-ID oder Namespace/Projekt-Name Format.
+      list_projects:
+        name: Projekte auflisten
+        description: Alle für den authentifizierten Benutzer zugänglichen GitLab-Projekte abrufen. Liefert eine Liste von Projekten mit Namen, IDs, Beschreibungen, URLs und Sichtbarkeitseinstellungen. Kann nach Mitgliedschaftsstatus gefiltert werden.
+      get_file_content:
+        name: Dateiinhalt abrufen
+        description: Den Inhalt einer bestimmten Datei aus einem GitLab-Repository lesen. Liefert Dateiinhalt, Kodierung, Größe und Metadaten. Geben Sie Dateipfad und optional einen Branch/Tag/Commit-Ref an. Nützlich zum Lesen von Konfigurationsdateien, Code oder Dokumentation.
+      list_repository_tree:
+        name: Repository-Baum auflisten
+        description: Die Verzeichnisstruktur eines GitLab-Repositorys durchsuchen. Liefert Liste von Dateien und Ordnern mit Namen, Pfaden, Typen und Größen. Kann bestimmte Verzeichnispfade, Branches/Tags auflisten und unterstützt rekursives Durchlaufen verschachtelter Ordner.
+      list_tags:
+        name: Tags auflisten
+        description: Alle Git-Tags in einem Projekt-Repository abrufen. Liefert Tag-Namen, Ziel-Commits, Erstellungsdaten und Release-Informationen. Nützlich zur Verfolgung von Releases und Versionshistorie.
+      list_branches:
+        name: Branches auflisten
+        description: Alle Git-Branches in einem Projekt-Repository abrufen. Liefert Branch-Namen, letzte Commit-Information, Schutzstatus und ob es der Standard-Branch ist. Wesentlich zum Verständnis aktiver Entwicklungsstränge.
+      get_commit:
+        name: Commit-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Git-Commit abrufen. Liefert Commit-Nachricht, Autor, Zeitstempel, geänderte Dateien und Diff-Statistiken. Verwenden Sie Commit-SHA um vollständige Commit-Informationen abzurufen.
+      list_commits:
+        name: Commits auflisten
+        description: Commit-Historie für ein Projekt oder einen bestimmten Branch abrufen. Liefert Liste von Commits mit SHAs, Nachrichten, Autoren, Zeitstempeln und übergeordneten Commits. Kann nach Branch/Tag gefiltert und Anzahl der Ergebnisse begrenzt werden.
+      search_merge_requests:
+        name: Merge Requests suchen
+        description: Merge Requests in einem Projekt suchen und auflisten. Kann nach Status (opened, closed, merged, all), Bereich (created_by_me, assigned_to_me, all) und anderen Kriterien gefiltert werden. Liefert MR-Titel, IDs, Status, Autoren und Ziel-Branches.
+      get_merge_request:
+        name: Merge Request Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Merge Request abrufen. Liefert Titel, Beschreibung, Quell-/Ziel-Branches, Status, Autor, Bearbeiter, Labels, Genehmigungen und Merge-Status. Verwenden Sie Merge Request IID (interne ID).
+      get_merge_request_changes:
+        name: Merge Request Änderungen abrufen
+        description: Den Diff und die Dateiänderungen für einen bestimmten Merge Request abrufen. Liefert alle geänderten Dateien mit Vorher/Nachher-Inhalt, hinzugefügten/gelöschten Zeilen und Änderungsstatistiken. Wesentlich für Code-Review und Verständnis der eingeführten Änderungen.
+      get_merge_request_discussions:
+        name: Merge Request Diskussionen abrufen
+        description: Alle Diskussionsstränge und Kommentare zu einem Merge Request abrufen. Liefert Kommentartext, Autoren, Zeitstempel und Thread-Kontext. Beinhaltet Inline-Code-Kommentare und allgemeine Diskussion. Nützlich zum Verständnis von Code-Review-Feedback.
+      get_merge_request_commits:
+        name: Merge Request Commits abrufen
+        description: Alle in einem bestimmten Merge Request enthaltenen Commits abrufen. Liefert Liste von Commits mit SHAs, Nachrichten und Autoren. Zeigt die vollständige Commit-Historie, die gemergt wird.
+      create_merge_request:
+        name: Merge Request erstellen
+        description: Neuen Merge Request in einem Projekt erstellen. Erfordert Quell-Branch, Ziel-Branch und Titel. Kann optional Beschreibung, Bearbeiter und Labels setzen. Liefert erstellte MR-Details einschließlich IID und Web-URL.
+      update_merge_request:
+        name: Merge Request aktualisieren
+        description: Bestehenden Merge Request aktualisieren. Kann Titel, Beschreibung, Ziel-Branch, Bearbeiter, Labels, Meilenstein oder Status (schließen/wiedereröffnen) ändern. Verwenden Sie Merge Request IID um anzugeben, welcher MR aktualisiert werden soll.
+      add_merge_request_note:
+        name: Merge Request Kommentar hinzufügen
+        description: Kommentar oder Notiz zu einem Merge Request hinzufügen. Kommentare unterstützen Markdown-Formatierung und können Benutzer mit @benutzername erwähnen. Nützlich für Code-Review-Feedback, Fragen oder allgemeine Diskussion über die Änderungen.
+      search_issues:
+        name: Issues suchen
+        description: Issues in einem Projekt suchen und auflisten. Kann nach Status (opened, closed, all), Bereich (created_by_me, assigned_to_me, all), Labels und anderen Kriterien gefiltert werden. Liefert Issue-Titel, IDs, Status, Autoren und Bearbeiter.
+      get_issue:
+        name: Issue-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Issue abrufen. Liefert Titel, Beschreibung, Status, Autor, Bearbeiter, Labels, Meilenstein, Fälligkeitsdatum und Zeiterfassungsinformationen. Verwenden Sie Issue IID (interne ID).
+      create_issue:
+        name: Issue erstellen
+        description: Neues Issue in einem Projekt erstellen. Erfordert Titel. Kann optional Beschreibung, Bearbeiter, Labels, Meilenstein und Fälligkeitsdatum setzen. Liefert erstellte Issue-Details einschließlich IID und Web-URL.
+      update_issue:
+        name: Issue aktualisieren
+        description: Bestehendes Issue aktualisieren. Kann Titel, Beschreibung, Bearbeiter, Labels, Meilenstein, Status (schließen/wiedereröffnen) oder Fälligkeitsdatum ändern. Verwenden Sie Issue IID um anzugeben, welches Issue aktualisiert werden soll.
+      search_packages:
+        name: Pakete suchen
+        description: Pakete in einer GitLab-Paketregistrierung suchen und auflisten. Kann nach Paketnamen gefiltert werden. Liefert Paketnamen, Versionen, Typen (npm, maven, nuget, etc.) und Erstellungsdaten. Nützlich für die Verwaltung von Artefakten und Abhängigkeiten.
+      get_package:
+        name: Paket-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Paket in der Paketregistrierung abrufen. Liefert Paket-Metadaten, Version, Typ, Größe und Download-Links. Verwenden Sie Paket-ID um vollständige Paketinformationen abzurufen.
+      list_pipelines:
+        name: CI/CD Pipelines auflisten
+        description: Alle CI/CD-Pipelines für ein Projekt abrufen. Kann nach Branch/Tag-Ref und Status (running, pending, success, failed, canceled, skipped) gefiltert werden. Liefert Pipeline-IDs, Status, Refs und Erstellungszeitstempel. Wesentlich für die Überwachung von Builds und Deployments.
+      get_pipeline:
+        name: Pipeline-Details abrufen
+        description: Detaillierte Informationen zu einer bestimmten CI/CD-Pipeline abrufen. Liefert Pipeline-Status, Stages, Dauer, Commit-SHA, Benutzer der sie ausgelöst hat und detaillierte Job-Informationen. Verwenden Sie Pipeline-ID um vollständige Ausführungsdetails abzurufen.
+  add_gitlab: GitLab-Instanz hinzufügen
   active: Aktiv
   credentials_not_editable: Anmeldedaten können aus Sicherheitsgründen nicht bearbeitet werden.
   credential_exists: Aktueller Wert ist sicher gespeichert. Leer lassen um ihn beizubehalten.
@@ -251,7 +347,7 @@ user:
   email: E-Mail
   role: Rolle
   joined_at: Beigetreten am
-  organisation: Organisation
+  organisation: Kanal
 
 
 profile:
@@ -263,7 +359,7 @@ profile:
   delete_account_confirm: Sind Sie sicher, dass Sie Ihren Account löschen möchten?
   delete_account_consequences: 'Diese Aktion wird:'
   delete_consequence_1: Alle Ihre Integrationen löschen
-  delete_consequence_2: Ihren Zugang zur Organisation entfernen
+  delete_consequence_2: Ihren Zugang zum Kanal entfernen
   delete_consequence_3: Alle Ihre Daten unwiderruflich löschen
   confirm_delete: Ja, Account löschen
 
@@ -279,14 +375,6 @@ footer:
     platform: Integrationsplattform
     pptx: PPTX
     rag: RAG
-
-instructions:
-  title: Anweisungen
-  workflow_user_id: Workoflow Benutzer-ID
-  organisation_name: Organisationsname
-  uuid: UUID
-  agent_settings: Agenteneinstellungen
-  workflow_visualization: Workflow-Visualisierung
 
 validation:
   name_required: Name ist erforderlich

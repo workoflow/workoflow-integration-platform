@@ -30,7 +30,7 @@ class OrganisationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         if ($request->isMethod('POST')) {
@@ -66,7 +66,7 @@ class OrganisationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         $members = $userRepository->findByOrganisation($organisation->getId());

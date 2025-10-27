@@ -41,7 +41,7 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         // Get workflow_user_id from the user's organization relationship
@@ -181,7 +181,7 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         // Find integration in registry
@@ -542,7 +542,7 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);

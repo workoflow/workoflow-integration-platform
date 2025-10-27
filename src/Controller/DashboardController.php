@@ -28,7 +28,7 @@ class DashboardController extends AbstractController
         if (!$organisation) {
             // If user has no organisations at all, redirect to create
             if ($user->getOrganisations()->isEmpty()) {
-                return $this->redirectToRoute('app_organisation_create');
+                return $this->redirectToRoute('app_channel_create');
             }
             // If user has organisations but none selected, select the first one
             $organisation = $user->getOrganisations()->first();
@@ -50,7 +50,8 @@ class DashboardController extends AbstractController
         ]);
     }
 
-    #[Route('/organisation/create', name: 'app_organisation_create', methods: ['GET', 'POST'])]
+    #[Route('/channel/create', name: 'app_channel_create', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function createOrganisation(
         Request $request,
         EntityManagerInterface $em,
@@ -58,11 +59,6 @@ class DashboardController extends AbstractController
     ): Response {
         /** @var User $user */
         $user = $this->getUser();
-
-        // Check if user already has any organisations
-        if (!$user->getOrganisations()->isEmpty()) {
-            return $this->redirectToRoute('app_general');
-        }
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name');

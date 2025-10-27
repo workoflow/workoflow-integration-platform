@@ -1,286 +1,611 @@
-# User to Channel Feature Documentation
+# Channel Documentation
 
 ## Overview
 
-The "User to Channel" feature enables users to be associated with multiple channels within the Workoflow Integration Platform. This feature provides the foundation for future channel-based functionality, such as channel-specific integrations, permissions, or messaging capabilities.
+A **Channel** (implemented as the `Organisation` entity) is the primary entry point to the Workoflow Integration Platform. It serves as a secure, scoped API gateway that enables third-party providers (such as AI agents, automation platforms like n8n, or custom applications) to execute tools on behalf of users.
 
 ## Purpose
 
-This feature allows:
-- Users to belong to multiple channels
-- Channels to contain multiple users (many-to-many relationship)
-- Automatic channel creation and association during user registration via API
-- Foundation for future features that require channel-based organization
+Channels provide:
 
-## Database Schema
+1. **Scoped API Access**: Each channel has a unique UUID that acts as an isolated entry point to a specific set of integrations
+2. **Tool Execution**: Third-party providers can discover and execute user-configured tools (Jira, Confluence, GitLab, Trello, etc.)
+3. **Multi-Tenant Support**: Each channel can have multiple users, with optional per-user scoping via `workflow_user_id`
+4. **Security Boundary**: Basic authentication and channel-specific credentials ensure secure access
+5. **Integration Management**: Channels contain and manage all integration configurations for their members
 
-### Channel Table
-
-The `channel` table stores channel information:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INT (Primary Key) | Auto-incrementing unique identifier |
-| `uuid` | CHAR(36) | Unique UUID for the channel |
-| `name` | VARCHAR(255) | Display name of the channel |
-| `created_at` | DATETIME | Timestamp when the channel was created |
-| `updated_at` | DATETIME | Timestamp of last update |
-
-### UserChannel Table
-
-The `user_channel` table manages the many-to-many relationship between users and channels:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | INT (Primary Key) | Auto-incrementing unique identifier |
-| `user_id` | INT (Foreign Key) | Reference to user table |
-| `channel_id` | INT (Foreign Key) | Reference to channel table |
-| `joined_at` | DATETIME | Timestamp when user joined the channel |
-
-**Unique Constraint**: The combination of `user_id` and `channel_id` must be unique.
-
-## Entity Relationships
+## Conceptual Model
 
 ```
-User (1) ----< (N) UserChannel (N) >---- (1) Channel
-
-- One User can have many UserChannel relations
-- One Channel can have many UserChannel relations
-- UserChannel serves as the join table
+Third-Party Provider (n8n, AI Agent, etc.)
+    ↓
+    Authenticates with Basic Auth
+    ↓
+Channel API Gateway (/api/integrations/{channel-uuid})
+    ↓
+    Discovers available tools (GET /api/integrations/{uuid})
+    Executes tools (POST /api/integrations/{uuid}/execute)
+    ↓
+User Integrations (Jira, Confluence, GitLab, etc.)
+    ↓
+External Services (Jira Server, Confluence Cloud, etc.)
 ```
 
-## API Integration
+## Technical Architecture
 
-### Registration API Enhancement
+### Channel Entity (Organisation)
 
-The `/api/register` endpoint has been enhanced with optional channel parameters:
+Each channel is represented by an `Organisation` entity with:
 
-#### Request Parameters
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | INT | Internal database ID |
+| `uuid` | UUID | Unique identifier for API access (public-facing) |
+| `name` | String | Display name of the channel |
+| `createdAt` | DateTime | Creation timestamp |
+| `updatedAt` | DateTime | Last update timestamp |
 
+### API Base URL
+
+All channel API endpoints follow this pattern:
+
+```
+/api/integrations/{channel-uuid}
+```
+
+The UUID is the public identifier that third-party providers use to access the channel.
+
+## API Endpoints
+
+### 1. List Available Tools
+
+**Endpoint**: `GET /api/integrations/{channel-uuid}`
+
+Retrieves all tools available within the channel that the authenticated user can access.
+
+**Query Parameters**:
+- `workflow_user_id` (optional): Filter tools to a specific user within the channel
+- `tool_type` (optional): Filter by integration type (e.g., `jira`, `confluence`, `system`)
+
+**Authentication**: Basic Auth required
+
+**Response**:
 ```json
 {
-    "name": "John Doe",
-    "org_uuid": "550e8400-e29b-41d4-a716-446655440000",
-    "workflow_user_id": "WF-USER-12345",
-    "org_name": "Acme Corporation",
-    "channel_uuid": "channel-123e4567-e89b-12d3-a456-426614174000",  // Optional
-    "channel_name": "General Channel"  // Optional
-}
-```
-
-#### Channel Creation Logic
-
-1. **If both `channel_uuid` and `channel_name` are provided**:
-   - System searches for existing channel with the UUID
-   - If found: User is added to existing channel
-   - If not found: New channel created with provided UUID and name
-
-2. **If only `channel_uuid` is provided**:
-   - System searches for existing channel with the UUID
-   - If found: User is added to existing channel
-   - If not found: New channel created with UUID and auto-generated name
-
-3. **If only `channel_name` is provided**:
-   - New channel created with auto-generated UUID and provided name
-   - User is added to the new channel
-
-4. **If neither is provided**:
-   - No channel association is created
-   - User registration proceeds normally
-
-#### Response Format
-
-When a channel is created or associated, the response includes channel information:
-
-```json
-{
-    "success": true,
-    "magic_link": "https://...",
-    "user_id": 123,
-    "email": "john.doe@local.local",
-    "organisation": {
-        "id": 456,
-        "uuid": "550e8400-e29b-41d4-a716-446655440000",
-        "name": "Acme Corporation"
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "jira_search_123",
+        "description": "Search for Jira issues using JQL (Production Jira)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "jql": {
+              "type": "string",
+              "description": "JQL query string"
+            },
+            "maxResults": {
+              "type": "integer",
+              "description": "Maximum number of results"
+            }
+          },
+          "required": ["jql"]
+        }
+      }
     },
-    "channel": {
-        "id": 789,
-        "uuid": "channel-123e4567-e89b-12d3-a456-426614174000",
-        "name": "General Channel"
+    {
+      "type": "function",
+      "function": {
+        "name": "confluence_get_page_456",
+        "description": "Get a Confluence page by ID (Team Wiki)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "pageId": {
+              "type": "string",
+              "description": "Confluence page ID"
+            }
+          },
+          "required": ["pageId"]
+        }
+      }
     }
+  ]
 }
 ```
 
-## Bot Integration
+**Tool Naming Convention**:
+- User integrations: `{integration_type}_{tool_name}_{config_id}`
+  - Example: `jira_search_123` (Jira search for config ID 123)
+  - Allows multiple instances of the same integration (e.g., Production Jira + Dev Jira)
+- System integrations: `{integration_type}_{tool_name}`
+  - Example: `system_share_file` (no config ID needed)
 
-The Microsoft Teams bot (`workoflow-bot`) has been updated to support channel parameters when creating magic links:
+### 2. Execute Tool
+
+**Endpoint**: `POST /api/integrations/{channel-uuid}/execute`
+
+Executes a specific tool on behalf of the user.
+
+**Authentication**: Basic Auth required
+
+**Request Body**:
+```json
+{
+  "tool": "jira_search_123",
+  "params": {
+    "jql": "project = PROJ AND status = Open",
+    "maxResults": 10
+  }
+}
+```
+
+**Response** (success):
+```json
+{
+  "success": true,
+  "result": {
+    "issues": [
+      {
+        "key": "PROJ-123",
+        "summary": "Fix login bug",
+        "status": "Open"
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+**Response** (error):
+```json
+{
+  "success": false,
+  "error": "Tool not found: jira_search_999"
+}
+```
+
+## Authentication
+
+### Basic Authentication
+
+All API requests must include Basic Auth credentials:
+
+```bash
+Authorization: Basic base64(username:password)
+```
+
+Credentials are configured in the application's `.env` file:
+```env
+API_AUTH_USER=your_api_user
+API_AUTH_PASSWORD=your_api_password
+```
+
+### Security Considerations
+
+1. **Transport Security**: Always use HTTPS in production
+2. **Credential Rotation**: Regularly rotate API credentials
+3. **Access Logging**: All API access is logged for audit purposes
+4. **Rate Limiting**: Consider implementing rate limiting for production use
+5. **Channel Isolation**: Each channel can only access its own integrations
+
+## Integration Scoping
+
+### User Integrations
+
+User integrations require external credentials (API tokens, OAuth tokens):
+- **Jira Integration**: Requires Jira URL, email, and API token
+- **Confluence Integration**: Requires Confluence URL and authentication
+- **GitLab Integration**: Requires GitLab URL and personal access token
+- **Trello Integration**: Requires Trello API key and token
+
+Each user in a channel can configure their own instances of these integrations.
+
+### System Integrations
+
+System integrations are platform-internal and don't require external credentials:
+- **ShareFile**: File sharing within the platform
+- Must be explicitly requested via `tool_type=system` parameter
+
+### Multi-User Channels
+
+When multiple users belong to a channel:
+- By default, all user integrations are available
+- Use `workflow_user_id` parameter to scope to a specific user
+- Each user's integrations are isolated and use their credentials
+
+## Third-Party Provider Integration
+
+### n8n Workflow Setup
+
+1. **HTTP Request Node** - List Tools:
+```javascript
+{
+  "method": "GET",
+  "url": "https://your-domain.com/api/integrations/{{$node["Channel UUID"].json["uuid"]}}",
+  "authentication": "basicAuth",
+  "options": {
+    "qs": {
+      "workflow_user_id": "{{$json["workflow_user_id"]}}"
+    }
+  }
+}
+```
+
+2. **HTTP Request Node** - Execute Tool:
+```javascript
+{
+  "method": "POST",
+  "url": "https://your-domain.com/api/integrations/{{$json["channel_uuid"]}}/execute",
+  "authentication": "basicAuth",
+  "body": {
+    "tool": "{{$json["tool_name"]}}",
+    "params": "{{$json["tool_params"]}}"
+  }
+}
+```
+
+### Python Client Example
+
+```python
+import requests
+from requests.auth import HTTPBasicAuth
+
+class WorkoflowClient:
+    def __init__(self, base_url, channel_uuid, username, password):
+        self.base_url = base_url
+        self.channel_uuid = channel_uuid
+        self.auth = HTTPBasicAuth(username, password)
+
+    def list_tools(self, workflow_user_id=None, tool_type=None):
+        """List available tools in the channel."""
+        url = f"{self.base_url}/api/integrations/{self.channel_uuid}"
+        params = {}
+        if workflow_user_id:
+            params['workflow_user_id'] = workflow_user_id
+        if tool_type:
+            params['tool_type'] = tool_type
+
+        response = requests.get(url, auth=self.auth, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    def execute_tool(self, tool_name, params):
+        """Execute a tool with given parameters."""
+        url = f"{self.base_url}/api/integrations/{self.channel_uuid}/execute"
+        payload = {
+            "tool": tool_name,
+            "params": params
+        }
+
+        response = requests.post(url, auth=self.auth, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+client = WorkoflowClient(
+    base_url="https://app.workoflow.com",
+    channel_uuid="550e8400-e29b-41d4-a716-446655440000",
+    username="api_user",
+    password="api_password"
+)
+
+# List all tools
+tools = client.list_tools()
+
+# Execute Jira search
+result = client.execute_tool(
+    tool_name="jira_search_123",
+    params={
+        "jql": "project = PROJ AND status = Open",
+        "maxResults": 10
+    }
+)
+```
+
+### JavaScript/Node.js Client Example
 
 ```javascript
-const config = {
-    baseUrl: 'https://app.workoflow.com',
-    apiUser: 'api_user',
-    apiPassword: 'api_password',
-    orgName: 'Example Org',
-    channelUuid: 'channel-uuid-here',  // Optional
-    channelName: 'Team Channel'        // Optional
-};
+const axios = require('axios');
 
-const result = await registerUserAndGetMagicLink(
-    userName,
-    orgUuid,
-    workflowUserId,
-    config
+class WorkoflowClient {
+  constructor(baseURL, channelUuid, username, password) {
+    this.client = axios.create({
+      baseURL: baseURL,
+      auth: {
+        username: username,
+        password: password
+      }
+    });
+    this.channelUuid = channelUuid;
+  }
+
+  async listTools(workflowUserId = null, toolType = null) {
+    const params = {};
+    if (workflowUserId) params.workflow_user_id = workflowUserId;
+    if (toolType) params.tool_type = toolType;
+
+    const response = await this.client.get(
+      `/api/integrations/${this.channelUuid}`,
+      { params }
+    );
+    return response.data;
+  }
+
+  async executeTool(toolName, params) {
+    const response = await this.client.post(
+      `/api/integrations/${this.channelUuid}/execute`,
+      {
+        tool: toolName,
+        params: params
+      }
+    );
+    return response.data;
+  }
+}
+
+// Usage
+const client = new WorkoflowClient(
+  'https://app.workoflow.com',
+  '550e8400-e29b-41d4-a716-446655440000',
+  'api_user',
+  'api_password'
+);
+
+// List all tools
+const tools = await client.listTools();
+
+// Execute Confluence page retrieval
+const result = await client.executeTool(
+  'confluence_get_page_456',
+  { pageId: '123456' }
 );
 ```
 
 ## Use Cases
 
-### Current Implementation
+### 1. AI Agent Integration
 
-1. **Automatic Channel Assignment**: When a bot registers a user, it can immediately assign them to a specific channel based on context (e.g., which Teams channel triggered the bot).
+Enable AI agents (Claude, ChatGPT, etc.) to interact with your team's tools:
 
-2. **Channel-based Organization**: Users can be grouped into channels for organizational purposes.
-
-3. **Audit Trail**: All channel associations are logged for audit purposes.
-
-### Future Possibilities
-
-This feature provides the foundation for:
-
-1. **Channel-specific Integrations**: Different channels could have different sets of enabled integrations.
-
-2. **Channel-based Permissions**: Access control could be managed at the channel level.
-
-3. **Channel Messaging**: Internal messaging or notifications could be scoped to channels.
-
-4. **Channel-specific Workflows**: Automated workflows could be triggered based on channel membership.
-
-5. **Analytics and Reporting**: Usage statistics and reports could be grouped by channel.
-
-## Service Methods
-
-The `UserRegistrationService` provides the following methods for channel management:
-
-### createOrFindChannel()
-```php
-public function createOrFindChannel(?string $channelUuid = null, ?string $channelName = null): ?Channel
 ```
-- Creates a new channel or finds an existing one
-- Returns null if no channel data provided
-- Auto-generates UUID if not provided
-- Auto-generates name if not provided
-
-### addUserToChannel()
-```php
-public function addUserToChannel(User $user, Channel $channel): void
+User: "Show me all open bugs in project PROJ"
+  ↓
+AI Agent (via n8n)
+  ↓
+Workoflow Channel API
+  ↓
+Execute: jira_search (JQL: "project = PROJ AND type = Bug AND status = Open")
+  ↓
+Return results to AI Agent
+  ↓
+AI formats and presents to user
 ```
-- Adds a user to a channel if not already a member
-- Creates UserChannel relationship
-- Logs the association for audit purposes
-- Idempotent operation (safe to call multiple times)
 
-## Entity Methods
+### 2. Automation Platform (n8n, Zapier, Make)
 
-### User Entity
-- `getUserChannels()`: Get all UserChannel relationships
-- `getChannels()`: Get all channels the user belongs to
-- `addUserChannel()`: Add a UserChannel relationship
-- `removeUserChannel()`: Remove a UserChannel relationship
+Create automated workflows that combine multiple tools:
 
-### Channel Entity
-- `getUserChannels()`: Get all UserChannel relationships
-- `getUsers()`: Get all users in the channel
-- `addUserChannel()`: Add a UserChannel relationship
-- `removeUserChannel()`: Remove a UserChannel relationship
+```
+Trigger: New Trello card in "To Do" list
+  ↓
+n8n Workflow
+  ↓
+Channel API: Create Jira issue
+  ↓
+Channel API: Create Confluence page for documentation
+  ↓
+Channel API: Post summary to Trello card
+```
 
-## Database Schema
+### 3. Custom Integration
 
-The database schema is automatically managed through Doctrine entities and creates:
-1. The `channel` table with appropriate indexes
-2. The `user_channel` junction table
-3. Foreign key constraints to maintain referential integrity
-4. Unique constraint on (user_id, channel_id) to prevent duplicates
+Build your own applications that leverage user-configured integrations:
 
-Tables are created/updated using: `doctrine:schema:update --force`
+```python
+# Your custom application
+def sync_jira_to_database():
+    # Get open issues from Jira via Channel API
+    issues = client.execute_tool('jira_search_123', {
+        'jql': 'status = Open',
+        'maxResults': 100
+    })
 
-## Security Considerations
+    # Store in your database
+    for issue in issues['result']['issues']:
+        db.save(issue)
+```
 
-1. **UUID Validation**: Channel UUIDs should be validated to ensure proper format
-2. **Authorization**: Future implementations should verify user has permission to join channels
-3. **Audit Logging**: All channel associations are logged for security audit
-4. **Data Integrity**: Foreign key constraints ensure referential integrity
+### 4. Multi-Tenant Scenarios
 
-## Best Practices
+Support multiple teams with separate channels:
 
-1. **Always use UUIDs**: For external references, always use the channel UUID rather than the internal ID
-2. **Idempotent Operations**: All channel operations are idempotent (safe to retry)
-3. **Logging**: All channel operations are logged for debugging and audit purposes
-4. **Error Handling**: Channel creation/association failures don't block user registration
+```python
+# Team A's channel
+team_a_client = WorkoflowClient(
+    base_url="https://app.workoflow.com",
+    channel_uuid="team-a-uuid",
+    username="api_user",
+    password="api_password"
+)
 
-## Testing
+# Team B's channel
+team_b_client = WorkoflowClient(
+    base_url="https://app.workoflow.com",
+    channel_uuid="team-b-uuid",
+    username="api_user",
+    password="api_password"
+)
 
-To test the channel feature:
+# Each team has isolated integrations
+team_a_tools = team_a_client.list_tools()
+team_b_tools = team_b_client.list_tools()
+```
 
-1. **Create user with new channel**:
+## Channel Management
+
+### Creating Channels
+
+**Admin users** can create multiple channels:
+
+1. Navigate to **Instructions** page
+2. Click **"Create New Channel"** button
+3. Enter channel name
+4. Channel is created with auto-generated UUID
+5. New channel becomes active immediately
+
+### Multi-Channel Support
+
+- Users can belong to multiple channels
+- Admin users can create unlimited channels
+- Channels are independent and isolated
+- Each channel has separate integration configurations
+
+### Channel Switching
+
+When a user belongs to multiple channels:
+
+1. Channel switcher appears in the header
+2. Click dropdown to select active channel
+3. All views (Dashboard, Tools, Instructions) show selected channel's data
+4. API requests use the selected channel's UUID
+
+### Integration Management per Channel
+
+Each channel manages its own integrations:
+
+1. **Tools Page**: Add/configure integrations (Jira, Confluence, GitLab, etc.)
+2. **Test Connection**: Verify credentials work
+3. **Enable/Disable**: Control which integrations are active
+4. **Function Toggle**: Enable/disable specific tools within an integration
+
+## Complete Usage Example
+
+### Scenario: AI Agent searches Jira and creates Confluence documentation
+
+**Step 1**: List available tools
+
 ```bash
-curl -X POST http://localhost:3979/api/register \
+curl -X GET "https://app.workoflow.com/api/integrations/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Basic YXBpX3VzZXI6YXBpX3Bhc3N3b3Jk" \
+  -H "Accept: application/json"
+```
+
+Response identifies: `jira_search_123` and `confluence_create_page_456`
+
+**Step 2**: Search Jira
+
+```bash
+curl -X POST "https://app.workoflow.com/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute" \
+  -H "Authorization: Basic YXBpX3VzZXI6YXBpX3Bhc3N3b3Jk" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic ..." \
   -d '{
-    "name": "Test User",
-    "org_uuid": "test-org-uuid",
-    "workflow_user_id": "TEST-001",
-    "channel_name": "Test Channel"
+    "tool": "jira_search_123",
+    "params": {
+      "jql": "project = PROJ AND status = Open AND priority = High",
+      "maxResults": 10
+    }
   }'
 ```
 
-2. **Add user to existing channel**:
+**Step 3**: Create Confluence documentation
+
 ```bash
-curl -X POST http://localhost:3979/api/register \
+curl -X POST "https://app.workoflow.com/api/integrations/550e8400-e29b-41d4-a716-446655440000/execute" \
+  -H "Authorization: Basic YXBpX3VzZXI6YXBpX3Bhc3N3b3Jk" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic ..." \
   -d '{
-    "name": "Another User",
-    "org_uuid": "test-org-uuid",
-    "workflow_user_id": "TEST-002",
-    "channel_uuid": "channel-123e4567-e89b-12d3-a456-426614174000"
+    "tool": "confluence_create_page_456",
+    "params": {
+      "space": "PROJ",
+      "title": "High Priority Issues - 2025-10-27",
+      "content": "<h1>High Priority Open Issues</h1><ul><li>PROJ-123: Fix login bug</li><li>PROJ-124: Performance issue</li></ul>"
+    }
   }'
-```
-
-3. **Verify in database**:
-```sql
--- Check channels
-SELECT * FROM channel;
-
--- Check user-channel relationships
-SELECT u.email, c.name as channel_name, uc.joined_at
-FROM user_channel uc
-JOIN user u ON uc.user_id = u.id
-JOIN channel c ON uc.channel_id = c.id;
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Channel not created**: Check that either channel_uuid or channel_name is provided
-2. **User not added to channel**: Verify user was created successfully first
-3. **Duplicate channel UUID**: UUIDs must be unique across all channels
+**1. Authentication Failed (401)**
+- Verify Basic Auth credentials in `.env`
+- Ensure credentials are base64 encoded correctly
+- Check that API_AUTH_USER and API_AUTH_PASSWORD are set
+
+**2. Channel Not Found (404)**
+- Verify channel UUID is correct
+- Check that channel exists in database: `SELECT * FROM organisation WHERE uuid = 'your-uuid';`
+
+**3. Tool Not Found**
+- Tool may be disabled in the channel
+- Integration may be inactive
+- Check tool list with `GET /api/integrations/{uuid}`
+
+**4. Tool Execution Failed**
+- Verify integration credentials are valid
+- Check external service (Jira, Confluence) is accessible
+- Review audit logs for detailed error messages
 
 ### Debugging
 
-Check logs for channel-related operations:
+**Check audit logs**:
 ```bash
-docker-compose logs frankenphp | grep -i channel
+docker-compose logs frankenphp | grep -i integration_api
 ```
 
-## Future Enhancements
+**Verify channel**:
+```sql
+SELECT id, uuid, name FROM organisation WHERE uuid = 'your-uuid';
+```
 
-Planned improvements for this feature:
-1. Channel management UI in the admin panel
-2. Bulk channel operations (add/remove multiple users)
-3. Channel hierarchies (parent/child channels)
-4. Channel-specific settings and configurations
-5. RESTful API for channel CRUD operations
-6. Channel invitation system
-7. Channel activity feeds
+**List channel integrations**:
+```sql
+SELECT ic.id, ic.name, ic.integration_type, ic.active
+FROM integration_config ic
+JOIN organisation o ON ic.organisation_id = o.id
+WHERE o.uuid = 'your-uuid';
+```
+
+## Security Best Practices
+
+1. **Use HTTPS**: Always use HTTPS in production to encrypt credentials
+2. **Rotate Credentials**: Regularly rotate API Basic Auth credentials
+3. **Audit Logging**: Monitor API access logs for suspicious activity
+4. **Rate Limiting**: Implement rate limiting to prevent abuse
+5. **Minimal Permissions**: Grant users minimal required integration permissions
+6. **Secure Storage**: Integration credentials stored encrypted with Sodium
+7. **Token Expiration**: Consider implementing token expiration for long-lived sessions
+
+## Performance Considerations
+
+1. **Tool Discovery Caching**: Consider caching tool list responses
+2. **Connection Pooling**: Use connection pooling for external services
+3. **Async Execution**: Long-running tools should be executed asynchronously
+4. **Batch Operations**: Group multiple tool executions when possible
+5. **Timeout Configuration**: Configure appropriate timeouts for external services
+
+## API Reference Summary
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/integrations/{uuid}` | GET | List available tools |
+| `/api/integrations/{uuid}/execute` | POST | Execute a tool |
+
+| Query Parameter | Endpoint | Description |
+|----------------|----------|-------------|
+| `workflow_user_id` | GET | Filter tools by user |
+| `tool_type` | GET | Filter by integration type |
+
+| Authentication | Required | Method |
+|----------------|----------|---------|
+| Basic Auth | Yes | Authorization header |
+
+## Related Documentation
+
+- [Jira Integration](JIRA.md) - Jira-specific tools and configuration
+- [GitLab Integration](GITLAB.md) - GitLab-specific tools and configuration
+- [Trello Integration](TRELLO.md) - Trello-specific tools and configuration
+- [Setup Guide](SETUP_SH.md) - Platform installation and configuration
+- [Testing Guide](TESTING.md) - Testing integrations and API

@@ -13,9 +13,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-#[Route('/instructions')]
+#[Route('/channel')]
 #[IsGranted('ROLE_USER')]
-class InstructionsController extends AbstractController
+class ChannelController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -24,7 +24,7 @@ class InstructionsController extends AbstractController
     ) {
     }
 
-    #[Route('', name: 'app_instructions')]
+    #[Route('', name: 'app_channel')]
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -33,19 +33,19 @@ class InstructionsController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         $userOrganisation = $user->getCurrentUserOrganisation($sessionOrgId);
 
-        return $this->render('instructions/index.html.twig', [
+        return $this->render('channel/index.html.twig', [
             'organisation' => $organisation,
             'userOrganisation' => $userOrganisation,
             'user' => $user,
         ]);
     }
 
-    #[Route('/update', name: 'app_instructions_update', methods: ['POST'])]
+    #[Route('/update', name: 'app_channel_update', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN')]
     public function update(Request $request): Response
     {
@@ -55,7 +55,7 @@ class InstructionsController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         $userOrganisation = $user->getCurrentUserOrganisation($sessionOrgId);
@@ -89,7 +89,7 @@ class InstructionsController extends AbstractController
             $this->entityManager->flush();
 
             $this->auditLogService->log(
-                'instructions.updated',
+                'channel.updated',
                 $user,
                 [
                     'organisation_id' => $organisation->getId(),
@@ -99,15 +99,15 @@ class InstructionsController extends AbstractController
                 ]
             );
 
-            $this->addFlash('success', 'Instructions settings have been saved successfully.');
+            $this->addFlash('success', 'Channel settings have been saved successfully.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Failed to save settings: ' . $e->getMessage());
         }
 
-        return $this->redirectToRoute('app_instructions');
+        return $this->redirectToRoute('app_channel');
     }
 
-    #[Route('/api/n8n-workflow/{orgId}', name: 'app_instructions_n8n_workflow', methods: ['GET'])]
+    #[Route('/api/n8n-workflow/{orgId}', name: 'app_channel_n8n_workflow', methods: ['GET'])]
     public function fetchN8nWorkflow(string $orgId, Request $request): JsonResponse
     {
         /** @var User $user */
