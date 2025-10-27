@@ -1,29 +1,29 @@
 services:
-  frankenphp:
-    build: .
-    restart: unless-stopped
-    env_file:
-      - .env
-    command: frankenphp run --config /etc/caddy/Caddyfile --watch
-    ports:
-      - "3979:80"
-      - "443:443"
-    volumes:
-      - ./:/app
-      - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    environment:
-      - SERVER_NAME=:80
-      - FRANKENPHP_CONFIG=worker ./public/index.php
-      - APP_RUNTIME=Runtime\FrankenPhpSymfony\Runtime
-    depends_on:
-      - mariadb
-      - redis
-    networks:
-      - workoflow
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+#  frankenphp:
+#    build: .
+#    restart: unless-stopped
+#    env_file:
+#      - .env
+#    command: frankenphp run --config /etc/caddy/Caddyfile --watch
+#    ports:
+#      - "3979:80"
+#      - "443:443"
+#    volumes:
+#      - ./:/app
+#      - ./docker/frankenphp/Caddyfile:/etc/caddy/Caddyfile
+#      - caddy_data:/data
+#      - caddy_config:/config
+#    environment:
+#      - SERVER_NAME=:80
+#      - FRANKENPHP_CONFIG=worker ./public/index.php
+#      - APP_RUNTIME=Runtime\FrankenPhpSymfony\Runtime
+#    depends_on:
+#      - mariadb
+#      - redis
+#    networks:
+#      - workoflow
+#    extra_hosts:
+#      - "host.docker.internal:host-gateway"
 
   mariadb:
     image: mariadb:11.2
@@ -34,7 +34,7 @@ services:
       MYSQL_USER: workoflow
       MYSQL_PASSWORD: password
     ports:
-      - "3306:3306"
+      - "3336:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:

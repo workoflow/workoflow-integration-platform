@@ -326,6 +326,68 @@ curl -X POST "http://localhost:3979/api/integrations/{org-uuid}/execute" \
   }'
 ```
 
+### E2E Tests
+
+Die Platform verfügt über End-to-End Tests, die gegen echte JIRA-Instanzen laufen.
+
+**Test-Datei**: `tests/Integration/Service/JiraServiceE2ETest.php`
+
+#### Konfiguration
+
+E2E-Tests benötigen echte JIRA-Credentials in `.env.test.local`:
+
+```env
+TEST_JIRA_URL='https://your-instance.atlassian.net'
+TEST_JIRA_EMAIL='your-email@example.com'
+TEST_JIRA_TOKEN='your-api-token'
+```
+
+#### Test-Ausführung
+
+```bash
+# Alle E2E-Tests ausführen
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php
+
+# Mit Test-Namen Ausgabe
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php --testdox
+
+# Einzelnen Test ausführen
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php --filter testGetIssueAzubi20WithValidation
+```
+
+#### Verfügbare Tests
+
+1. **testConnectionToRealJira()** - Verifiziert Verbindung zur JIRA-Instanz
+2. **testGetIssueAzubi20WithValidation()** - Holt spezifisches Ticket und validiert Inhalt
+3. **testSearchAzubiProject()** - Sucht Issues mit JQL
+4. **testConnectionDetailed()** - Testet Verbindung mit detaillierten Fehlermeldungen
+
+#### Custom Field Mapping
+
+JIRA Custom Fields unterscheiden sich zwischen Instanzen. Die Tests zeigen Beispiele für:
+
+- **Story Points**: `customfield_10004` (instanzspezifisch)
+- **User Story**: `customfield_12700` (custom)
+- **Acceptance Criteria**: `customfield_12903` (custom)
+
+Um Custom Fields für deine Instanz zu finden:
+1. Führe Test mit Debug-Output aus
+2. Prüfe die Feldnamen in der Ausgabe
+3. Passe Test-Validierungen entsprechend an
+
+#### Besonderheiten
+
+**JQL Search API** (`/rest/api/3/search/jql`):
+- Verwendet Pagination mit `nextPageToken` und `isLast`
+- **Kein** `total` count in der Response
+- Unterscheidet sich von der alten Search API
+
+**Atlassian Document Format (ADF)**:
+- Verschachtelte JSON-Struktur für formatierte Texte
+- Enthält oft non-breaking spaces (`\u00a0`)
+- Test-Helper `extractTextFromAdf()` extrahiert Plain-Text rekursiv
+- Normalisierung nötig für String-Vergleiche (`preg_replace('/\s+/u', ' ', $text)`)
+
 ## Konfiguration
 
 ### Environment Variables

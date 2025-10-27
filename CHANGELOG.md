@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-27
 
+### Added
+- End-to-end tests for JIRA integration - automated tests now validate real JIRA API connections and data retrieval
+- JIRA ticket content validation in tests - ensures issue summaries, story points, and acceptance criteria are correctly retrieved
+
 ### Fixed
 - Test suite now properly validates English translations - all automated tests updated to work with the English interface
 
