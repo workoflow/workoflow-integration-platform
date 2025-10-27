@@ -5,7 +5,7 @@ common:
 
 nav:
   general: General
-  tools: Tools
+  skills: Skills
   files: Files
   organisation: Channel
   profile: Profile
@@ -137,14 +137,17 @@ integration:
   type: Type
   status: Status
   last_accessed: Last Accessed
-  title: Integrations
-  add_new: Add Personal Integration
-  no_integrations: No integrations configured yet
-  no_integrations_desc: 'Start by adding your first integration to connect external services'
-  system_tools: System Tools
-  system_tools_description: Built-in tools that are available to all users
-  external_integrations: External Integrations
-  external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint
+  title: Manage Skills
+  skills_page_title: Manage Skills
+  skills_explanation_p1: Skills enable AI agents to perform actions on your behalf by connecting to various platforms and services. Each skill provides specific capabilities that the AI can use when working with your data.
+  skills_explanation_p2: There are two types of skills - Personalized Skills require your credentials to access external services like Jira or Confluence on your behalf, while Platform Skills are built-in capabilities that don't need external authentication, such as generating PDFs or processing data.
+  add_new: Add Personalized Skill
+  no_integrations: No skills configured yet
+  no_integrations_desc: 'Start by adding your first skill to connect external services'
+  platform_skills: Platform Skills
+  platform_skills_description: Built-in capabilities available to all users without external authentication
+  external_integrations: Personalized Skills
+  external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint with your credentials
   available_tools: Available Tools
   setup: Setup
   setup_description: Configure your %name% integration
@@ -176,7 +179,7 @@ integration:
   save: Save Integration
   system_description: Platform tools available to all users
   manage_tools: Manage Tools
-  system_tools_always_active: System tools are always active
+  platform_skills_always_active: Platform skills are always available
   credentials_update_note: Leave fields empty to keep existing credentials
   instance_name: Instance Name
   instance_name_hint: 'A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")'

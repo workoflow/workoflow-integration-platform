@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-27
 
+### Changed
+- Renamed "Tools" to "Skills" - the feature for managing integrations is now called "Skills" throughout the interface for better clarity about AI agent capabilities
+- Updated navigation menu from "Tools" to "Skills" - access your AI agent skills from the main navigation
+- Skills page now includes explanation section - helpful information about personalized and platform skills appears at the top of the Skills page
+- "System Tools" renamed to "Platform Skills" - built-in capabilities that don't require external authentication are now called Platform Skills
+- "Add Personal Integration" renamed to "Add Personalized Skill" - clearer terminology when connecting external services with your credentials
+- Skills page URL changed from /tools to /skills - bookmarks and links will need to be updated
+
+## 2025-10-27
+
 ### Fixed
 - Test suite now properly validates English translations - all automated tests updated to work with the English interface
 

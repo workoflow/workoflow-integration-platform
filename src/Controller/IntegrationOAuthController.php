@@ -30,7 +30,7 @@ class IntegrationOAuthController extends AbstractController
 
         if (!$config || $config->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Integration configuration not found');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         // Store the config ID in session for callback
@@ -80,7 +80,7 @@ class IntegrationOAuthController extends AbstractController
             }
 
             $request->getSession()->remove('microsoft_oauth_config_id');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         // Continue with normal flow
@@ -88,14 +88,14 @@ class IntegrationOAuthController extends AbstractController
 
         if (!$configId) {
             $this->addFlash('error', 'OAuth session expired. Please try again.');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
 
         if (!$config || $config->getUser() !== $this->getUser()) {
             $this->addFlash('error', 'Integration configuration not found');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         try {
@@ -157,7 +157,7 @@ class IntegrationOAuthController extends AbstractController
                 $this->addFlash('success', 'SharePoint integration connected successfully!');
             }
 
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         } catch (\Exception $e) {
             // If this was initial setup and failed, remove the temporary config
             $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
@@ -168,7 +168,7 @@ class IntegrationOAuthController extends AbstractController
             }
 
             $this->addFlash('error', 'Failed to connect to SharePoint: ' . $e->getMessage());
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
     }
 }

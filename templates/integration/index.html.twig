@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ 'integration.title'|trans }} - Workoflow{% endblock %}
+{% block title %}{{ 'integration.skills_page_title'|trans }} - Workoflow{% endblock %}
 
 {% block body %}
 <div class="integrations-page">
@@ -8,7 +8,11 @@
 
     <div class="integrations-container">
         <div class="integrations-header">
-            <h1>{{ 'integration.title'|trans }}</h1>
+            <h1>{{ 'integration.skills_page_title'|trans }}</h1>
+            <div class="skills-explanation">
+                <p>{{ 'integration.skills_explanation_p1'|trans }}</p>
+                <p>{{ 'integration.skills_explanation_p2'|trans }}</p>
+            </div>
         </div>
 
         {% if integrations|length == 0 %}
@@ -176,15 +180,15 @@
             {% set systemIntegrations = integrations|filter(i => i.isSystem) %}
             {% if systemIntegrations|length > 0 %}
                 <div class="integration-section">
-                    <h2>{{ 'integration.system_tools'|trans|default('System Tools') }}</h2>
-                    <p class="section-description">{{ 'integration.system_tools_description'|trans|default('Built-in tools that are available to all users') }}</p>
+                    <h2>{{ 'integration.platform_skills'|trans|default('Platform Skills') }}</h2>
+                    <p class="section-description">{{ 'integration.platform_skills_description'|trans|default('Built-in capabilities available to all users without external authentication') }}</p>
 
                     <div class="integrations-grid">
                         <div class="integration-card system-integration">
                             <div class="integration-content">
                                 <div class="integration-header">
-                                    <span class="badge badge-system">{{ 'badge.system'|trans|default('SYSTEM') }}</span>
-                                    <h3>{{ 'integration.system_tools'|trans|default('System Tools') }}</h3>
+                                    <span class="badge badge-system">{{ 'PLATFORM'|trans|default('PLATFORM') }}</span>
+                                    <h3>{{ 'integration.platform_skills'|trans|default('Platform Skills') }}</h3>
                                 </div>
 
                                 <div class="integration-tools">
@@ -216,7 +220,7 @@
 
                                 <div class="integration-footer">
                                     <div class="integration-status">
-                                        <span class="system-tools-info">{{ 'integration.system_tools_always_active'|trans|default('System tools are always active') }}</span>
+                                        <span class="system-tools-info">{{ 'integration.platform_skills_always_active'|trans|default('Platform skills are always available') }}</span>
                                     </div>
                                 </div>
                             </div>

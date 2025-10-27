@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-#[Route('/tools')]
+#[Route('/skills')]
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 class IntegrationController extends AbstractController
 {
@@ -32,7 +32,7 @@ class IntegrationController extends AbstractController
     ) {
     }
 
-    #[Route('/', name: 'app_tools')]
+    #[Route('/', name: 'app_skills')]
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -188,13 +188,13 @@ class IntegrationController extends AbstractController
         $integration = $this->integrationRegistry->get($type);
         if (!$integration) {
             $this->addFlash('error', 'Integration type not found');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         // System tools don't need setup
         if (!$integration->requiresCredentials()) {
             $this->addFlash('info', 'This integration does not require setup');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         // Get workflow_user_id from the user's organization relationship
@@ -216,7 +216,7 @@ class IntegrationController extends AbstractController
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
             if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
                 $this->addFlash('error', 'Instance not found');
-                return $this->redirectToRoute('app_tools');
+                return $this->redirectToRoute('app_skills');
             }
 
             // Decrypt existing credentials for display (with masking for sensitive fields)
@@ -418,7 +418,7 @@ class IntegrationController extends AbstractController
             );
 
             $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
-            return $this->redirectToRoute('app_tools');
+            return $this->redirectToRoute('app_skills');
         }
 
         return $this->render('integration/setup.html.twig', [
@@ -564,7 +564,7 @@ class IntegrationController extends AbstractController
             $this->addFlash('error', 'Integration not found');
         }
 
-        return $this->redirectToRoute('app_tools');
+        return $this->redirectToRoute('app_skills');
     }
 
     #[Route('/{type}/test', name: 'app_tool_test', methods: ['POST'])]

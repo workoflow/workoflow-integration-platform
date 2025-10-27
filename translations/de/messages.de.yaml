@@ -5,7 +5,7 @@ common:
 
 nav:
   general: Allgemein
-  tools: Tools
+  skills: Skills
   files: Dateien
   organisation: Kanal
   profile: Profil
@@ -134,10 +134,14 @@ PLATFORM: PLATTFORM
 
 integration:
   name: Name
-  system_tools: System-Tools
-  system_tools_description: Eingebaute Tools, die allen Benutzern zur Verfügung stehen
-  external_integrations: Externe Integrationen
-  external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint
+  title: Skills verwalten
+  skills_page_title: Skills verwalten
+  skills_explanation_p1: Skills ermöglichen es KI-Agenten, in Ihrem Namen Aktionen auszuführen, indem sie sich mit verschiedenen Plattformen und Services verbinden. Jeder Skill bietet spezifische Fähigkeiten, die die KI bei der Arbeit mit Ihren Daten nutzen kann.
+  skills_explanation_p2: Es gibt zwei Arten von Skills - Personalisierte Skills benötigen Ihre Zugangsdaten, um auf externe Dienste wie Jira oder Confluence in Ihrem Namen zuzugreifen, während Plattform-Skills integrierte Funktionen sind, die keine externe Authentifizierung benötigen, wie z.B. PDF-Generierung oder Datenverarbeitung.
+  platform_skills: Plattform-Skills
+  platform_skills_description: Integrierte Funktionen für alle Benutzer ohne externe Authentifizierung
+  external_integrations: Personalisierte Skills
+  external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint mit Ihren Zugangsdaten
   available_tools: Verfügbare Tools
   setup: Einrichten
   setup_description: Konfigurieren Sie Ihre %name% Integration
@@ -150,10 +154,9 @@ integration:
   type: Typ
   status: Status
   last_accessed: Letzter Zugriff
-  title: Integrationen
-  add_new: Persönliche Integration hinzufügen
-  no_integrations: Noch keine Integrationen konfiguriert
-  no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihrer ersten Integration, um externe Dienste zu verbinden'
+  add_new: Personalisierten Skill hinzufügen
+  no_integrations: Noch keine Skills konfiguriert
+  no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihres ersten Skills, um externe Dienste zu verbinden'
   workflow_id: Workoflow ID
   functions: Funktionen
   active_of: aktiv von
@@ -176,7 +179,7 @@ integration:
   save: Integration speichern
   system_description: Plattform-Tools für alle Benutzer verfügbar
   manage_tools: Tools verwalten
-  system_tools_always_active: System-Tools sind immer aktiv
+  platform_skills_always_active: Plattform-Skills sind immer verfügbar
   credentials_update_note: Felder leer lassen, um bestehende Anmeldedaten beizubehalten
   instance_name: Instanz-Name
   instance_name_hint: 'Ein freundlicher Name zur Identifizierung dieser Integration (z.B. "Produktiv Jira", "Test SharePoint")'
