@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-27
+
+### Added
+- Trello integration for project management - AI agents can now access and manage Trello boards, lists, and cards
+- Search across all Trello boards and cards - AI agents can find specific cards using keywords or criteria
+- View all accessible Trello boards - get a complete overview of available project boards
+- Read board structure - see all lists and cards organized on any board
+- Extract card details - access card titles, descriptions, members, labels, due dates, and attachments
+- Read card comments - see all discussion threads on cards
+- Access card checklists - view todo items and their completion status within cards
+- Create new cards - AI agents can add tasks to Trello lists based on user requests
+- Update existing cards - modify card details, move between lists, or change due dates
+- Add comments to cards - AI agents can post updates and responses directly to Trello cards
+- Full workflow automation support - all Trello tools available through REST API for n8n and other automation platforms
+
 ## 2025-10-24
 
 ### Fixed
