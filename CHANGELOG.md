@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-27
 
+### Fixed
+- Test suite now properly validates English translations - all automated tests updated to work with the English interface
+
 ### Changed
 - Renamed "Instructions" page to "Channel" - the navigation menu and page title now reflect the new name for better clarity
 

@@ -33,7 +33,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $crawler = $this->client->request('GET', '/tools/');
 
         $this->assertResponseIsSuccessful();
-        $this->assertPageTitleContains('Integrationen');
+        $this->assertPageTitleContains('Integrations');
 
         // Check if integration cards are displayed - look for the integration names from fixtures
         $this->assertSelectorExists('.integration-card');
@@ -45,7 +45,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $crawler = $this->client->request('GET', '/tools/setup/jira');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSelectorTextContains('h1', 'Einrichten Jira');
+        $this->assertSelectorTextContains('h1', 'Setup Jira');
 
         // Check form fields exist with Symfony form namespace
         $form = $crawler->filter('form')->form();
@@ -96,7 +96,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $crawler = $this->client->request('GET', '/tools/setup/jira');
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names (they have namespace)
         $values = $form->getValues();
@@ -167,7 +167,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $crawler = $this->client->request('GET', '/tools/setup/jira');
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names (they have namespace)
         $values = $form->getValues();
@@ -214,7 +214,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertGreaterThan(0, $alerts->count(), 'Should have danger alert');
 
         $errorText = $crawler->filter('body')->text();
-        $this->assertStringContainsString('Verbindung konnte nicht hergestellt werden', $errorText);
+        $this->assertStringContainsString('Could not establish connection', $errorText);
 
         // Verify no config was created
         $config = $this->entityManager
@@ -247,7 +247,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         // Try to create another with the same name
         $crawler = $this->client->request('GET', '/tools/setup/jira');
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names (they have namespace)
         $values = $form->getValues();
@@ -293,7 +293,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertGreaterThan(0, $errors->count(), 'Should have form errors');
 
         $errorText = $errors->text();
-        $this->assertStringContainsString('Eine Integration mit diesem Namen existiert bereits', $errorText);
+        $this->assertStringContainsString('An integration with this name already exists', $errorText);
 
         // Verify only one config exists with this name for this user
         $configs = $this->entityManager
@@ -334,7 +334,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $this->assertResponseIsSuccessful();
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names (they have namespace)
         $values = $form->getValues();
@@ -412,7 +412,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         // Open edit form
         $crawler = $this->client->request('GET', '/tools/setup/jira?instance=' . $config->getId());
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names (they have namespace)
         $values = $form->getValues();
@@ -449,7 +449,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertEquals('', $form[$apiTokenField]->getValue());
 
         // But should show hint that value exists
-        $this->assertSelectorTextContains('.form-text', 'Aktueller Wert ist sicher gespeichert');
+        $this->assertSelectorTextContains('.form-text', 'Current value is stored securely');
     }
 
     public function testUrlNormalizationRemovesTrailingSlash(): void
@@ -469,7 +469,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $crawler = $this->client->request('GET', '/tools/setup/jira');
 
-        $form = $crawler->selectButton('Konfiguration speichern')->form();
+        $form = $crawler->selectButton('Save Configuration')->form();
 
         // Find the correct form field names
         $values = $form->getValues();
@@ -863,7 +863,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $response = json_decode($this->client->getResponse()->getContent(), true);
         $this->assertFalse($response['success'], 'Connection with invalid credentials should fail');
-        $this->assertStringContainsString('Invalid credentials', $response['message']);
+        $this->assertStringContainsString('Connection failed', $response['message']);
 
         // Cleanup - remove our test config
         $testConfigToDelete = $this->entityManager
