@@ -30,10 +30,10 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
     public function testIndexPageDisplaysIntegrations(): void
     {
-        $crawler = $this->client->request('GET', '/tools/');
+        $crawler = $this->client->request('GET', '/skills/');
 
         $this->assertResponseIsSuccessful();
-        $this->assertPageTitleContains('Integrations');
+        $this->assertPageTitleContains('Skills');
 
         // Check if integration cards are displayed - look for the integration names from fixtures
         $this->assertSelectorExists('.integration-card');
@@ -42,7 +42,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
     public function testSetupPageRendersCorrectForm(): void
     {
-        $crawler = $this->client->request('GET', '/tools/setup/jira');
+        $crawler = $this->client->request('GET', '/skills/setup/jira');
 
         $this->assertResponseIsSuccessful();
         $this->assertSelectorTextContains('h1', 'Setup Jira');
@@ -94,7 +94,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
             $this->markTestSkipped('Real JIRA credentials not configured in .env.test.local');
         }
 
-        $crawler = $this->client->request('GET', '/tools/setup/jira');
+        $crawler = $this->client->request('GET', '/skills/setup/jira');
 
         $form = $crawler->selectButton('Save Configuration')->form();
 
@@ -130,7 +130,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->client->submit($form);
 
         // Should redirect to integrations page on success
-        $this->assertResponseRedirects('/tools/');
+        $this->assertResponseRedirects('/skills/');
 
         // Follow the redirect
         $this->client->followRedirect();
@@ -165,7 +165,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
 
         $invalidToken = 'INVALID-TOKEN-WRONG-12345';
 
-        $crawler = $this->client->request('GET', '/tools/setup/jira');
+        $crawler = $this->client->request('GET', '/skills/setup/jira');
 
         $form = $crawler->selectButton('Save Configuration')->form();
 
@@ -245,7 +245,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $existing = $this->createTestIntegrationConfig('jira', 'Duplicate Test Name');
 
         // Try to create another with the same name
-        $crawler = $this->client->request('GET', '/tools/setup/jira');
+        $crawler = $this->client->request('GET', '/skills/setup/jira');
 
         $form = $crawler->selectButton('Save Configuration')->form();
 
@@ -330,7 +330,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $originalToken = $originalCredentials['api_token'];
 
         // Open edit form
-        $crawler = $this->client->request('GET', '/tools/setup/jira?instance=' . $configId);
+        $crawler = $this->client->request('GET', '/skills/setup/jira?instance=' . $configId);
 
         $this->assertResponseIsSuccessful();
 
@@ -368,7 +368,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->client->submit($form);
 
         // Should redirect to integrations page on success
-        $this->assertResponseRedirects('/tools/');
+        $this->assertResponseRedirects('/skills/');
 
         // Follow the redirect
         $this->client->followRedirect();
@@ -410,7 +410,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $config = $this->createTestIntegrationConfig('jira', 'Test Integration');
 
         // Open edit form
-        $crawler = $this->client->request('GET', '/tools/setup/jira?instance=' . $config->getId());
+        $crawler = $this->client->request('GET', '/skills/setup/jira?instance=' . $config->getId());
 
         $form = $crawler->selectButton('Save Configuration')->form();
 
@@ -467,7 +467,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         // Add trailing slash to URL if not already present
         $urlWithSlash = rtrim($jiraUrl, '/') . '/';
 
-        $crawler = $this->client->request('GET', '/tools/setup/jira');
+        $crawler = $this->client->request('GET', '/skills/setup/jira');
 
         $form = $crawler->selectButton('Save Configuration')->form();
 
@@ -503,7 +503,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->client->submit($form);
 
         // Should redirect to integrations page on success
-        $this->assertResponseRedirects('/tools/');
+        $this->assertResponseRedirects('/skills/');
 
         // Verify integration was created and URL is normalized (no trailing slash)
         $config = $this->entityManager
@@ -537,9 +537,9 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $config = $this->createTestIntegrationConfig('jira', 'To Delete');
         $configId = $config->getId();
 
-        $this->client->request('POST', '/tools/delete/' . $configId);
+        $this->client->request('POST', '/skills/delete/' . $configId);
 
-        $this->assertResponseRedirects('/tools/');
+        $this->assertResponseRedirects('/skills/');
 
         // Should be deleted from database
         $deletedConfig = $this->entityManager
@@ -559,9 +559,20 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
             ->getRepository(IntegrationConfig::class)
             ->findOneBy(['name' => 'Test JIRA Active']);
 
-        $this->client->request('POST', '/tools/delete/' . $adminConfig->getId());
+        // Reload fixtures if not found (may have been deleted by previous test)
+        if (!$adminConfig) {
+            $this->reloadFixtures();
+            $this->loginUser('member@test.example.com');
+            $adminConfig = $this->entityManager
+                ->getRepository(IntegrationConfig::class)
+                ->findOneBy(['name' => 'Test JIRA Active']);
+        }
 
-        $this->assertResponseRedirects('/tools/');
+        $this->assertNotNull($adminConfig, 'Test JIRA Active fixture should exist');
+
+        $this->client->request('POST', '/skills/delete/' . $adminConfig->getId());
+
+        $this->assertResponseRedirects('/skills/');
 
         // Config should still exist - reload from database
         $stillExists = $this->entityManager
@@ -581,6 +592,15 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
             ->getRepository(IntegrationConfig::class)
             ->findOneBy(['name' => 'Test JIRA Active']);
 
+        // Reload fixtures if not found (may have been deleted by previous test)
+        if (!$config) {
+            $this->reloadFixtures();
+            $this->loginUser('admin@test.example.com');
+            $config = $this->entityManager
+                ->getRepository(IntegrationConfig::class)
+                ->findOneBy(['name' => 'Test JIRA Active']);
+        }
+
         $this->assertNotNull($config, 'Test JIRA Active fixture should exist');
         $configId = $config->getId();
 
@@ -588,7 +608,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertTrue($config->isActive(), 'Integration should start as active');
 
         // Deactivate the integration - send as form data, not JSON
-        $this->client->request('POST', '/tools/jira/toggle', [
+        $this->client->request('POST', '/skills/jira/toggle', [
             'active' => 'false',
             'instance' => (string) $configId
         ]);
@@ -607,7 +627,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertFalse($config->isActive(), 'Config should be inactive after deactivation');
 
         // Activate it again
-        $this->client->request('POST', '/tools/jira/toggle', [
+        $this->client->request('POST', '/skills/jira/toggle', [
             'active' => 'true',
             'instance' => (string) $configId
         ]);
@@ -633,6 +653,15 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
             ->getRepository(IntegrationConfig::class)
             ->findOneBy(['name' => 'Test JIRA Active']);
 
+        // Reload fixtures if not found (may have been deleted by previous test)
+        if (!$config) {
+            $this->reloadFixtures();
+            $this->loginUser('admin@test.example.com');
+            $config = $this->entityManager
+                ->getRepository(IntegrationConfig::class)
+                ->findOneBy(['name' => 'Test JIRA Active']);
+        }
+
         $this->assertNotNull($config, 'Test JIRA Active fixture should exist');
         $configId = $config->getId();
 
@@ -640,7 +669,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertTrue($config->isToolDisabled('jira_get_sprint_issues'), 'Tool should start as disabled from fixture');
 
         // Enable the tool that is disabled in fixture - send as form data, not JSON
-        $this->client->request('POST', '/tools/jira/toggle-tool', [
+        $this->client->request('POST', '/skills/jira/toggle-tool', [
             'tool' => 'jira_get_sprint_issues',
             'enabled' => 'true',
             'instance' => (string) $configId
@@ -660,7 +689,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertFalse($config->isToolDisabled('jira_get_sprint_issues'), 'Tool should now be enabled');
 
         // Disable it again
-        $this->client->request('POST', '/tools/jira/toggle-tool', [
+        $this->client->request('POST', '/skills/jira/toggle-tool', [
             'tool' => 'jira_get_sprint_issues',
             'enabled' => 'false',
             'instance' => (string) $configId
@@ -683,7 +712,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
     public function testToggleToolRequiresValidInstance(): void
     {
         // Send without instance parameter - form data, not JSON
-        $this->client->request('POST', '/tools/jira/toggle-tool', [
+        $this->client->request('POST', '/skills/jira/toggle-tool', [
             'tool' => 'jira_search',
             'enabled' => 'true'
             // Omit instance parameter
@@ -706,13 +735,24 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
             ->getRepository(IntegrationConfig::class)
             ->findOneBy(['name' => 'Test JIRA Active']);
 
+        // Reload fixtures if not found (may have been deleted by previous test)
+        if (!$testOrgConfig) {
+            $this->reloadFixtures();
+            $this->loginUser('other@test.example.com');
+            $testOrgConfig = $this->entityManager
+                ->getRepository(IntegrationConfig::class)
+                ->findOneBy(['name' => 'Test JIRA Active']);
+        }
+
+        $this->assertNotNull($testOrgConfig, 'Test JIRA Active fixture should exist');
+
         // Try to edit
-        $this->client->request('GET', '/tools/setup/jira?instance=' . $testOrgConfig->getId());
-        $this->assertResponseRedirects('/tools/');
+        $this->client->request('GET', '/skills/setup/jira?instance=' . $testOrgConfig->getId());
+        $this->assertResponseRedirects('/skills/');
 
         // Try to delete
-        $this->client->request('POST', '/tools/delete/' . $testOrgConfig->getId());
-        $this->assertResponseRedirects('/tools/');
+        $this->client->request('POST', '/skills/delete/' . $testOrgConfig->getId());
+        $this->assertResponseRedirects('/skills/');
 
         // Config should still exist
         $stillExists = $this->entityManager
@@ -778,7 +818,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->entityManager->flush();
 
         // Test the connection - send instance ID in POST body
-        $this->client->request('POST', '/tools/jira/test', [
+        $this->client->request('POST', '/skills/jira/test', [
             'instance' => (string) $testConfig->getId()
         ]);
 
@@ -855,7 +895,7 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->entityManager->flush();
 
         // Test the connection - send instance ID in POST body
-        $this->client->request('POST', '/tools/jira/test', [
+        $this->client->request('POST', '/skills/jira/test', [
             'instance' => (string) $testConfig->getId()
         ]);
 
