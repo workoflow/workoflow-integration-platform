@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - End-to-end tests for JIRA integration - automated tests now validate real JIRA API connections and data retrieval
 - JIRA ticket content validation in tests - ensures issue summaries, story points, and acceptance criteria are correctly retrieved
 
+### Fixed
+- Skills page header layout - the heading and explanation text now display properly without overlapping, with improved spacing and readability
 
 ## 2025-10-27
 
