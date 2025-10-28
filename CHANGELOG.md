@@ -16,6 +16,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Skills page header layout - the heading and explanation text now display properly without overlapping, with improved spacing and readability
+- GitLab "Test Connection" button now works correctly - the connection test feature is now accessible and functional
+- Improved GitLab connection test error messages - users now see detailed diagnostics when GitLab connection fails, including specific error reasons and helpful suggestions
+- Fixed API URL in dashboard - the API integration URL now uses the correct endpoint path
 
 ## 2025-10-27
 

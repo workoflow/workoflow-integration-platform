@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const workflowUserId = '{{ userOrganisation.workflowUserId }}';
 
             // Construct the curl command
-            const apiUrl = `${currentDomain}/api/integration/${orgUuid}/tools?id=${workflowUserId}`;
+            const apiUrl = `${currentDomain}/api/integrations/${orgUuid}?workflow_user_id=${workflowUserId}`;
             const curlCommand = `curl -X GET "${apiUrl}" \\
   -H "Accept: application/json" \\
   -H "Authorization: Basic YOUR_AUTH_TOKEN"`;

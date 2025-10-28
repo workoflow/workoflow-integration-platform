@@ -1004,7 +1004,7 @@ async function toggleTool(checkbox) {
     const enabled = checkbox.checked;
 
     try {
-        const response = await fetch(`/tools/${integration}/toggle-tool`, {
+        const response = await fetch(`/skills/${integration}/toggle-tool`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -1029,7 +1029,7 @@ async function toggleIntegration(checkbox) {
     const active = checkbox.checked;
 
     try {
-        const response = await fetch(`/tools/${integration}/toggle`, {
+        const response = await fetch(`/skills/${integration}/toggle`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -1077,7 +1077,7 @@ document.querySelectorAll('.test-connection').forEach(button => {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ 'integration.testing'|trans|default('Testing...') }}';
 
         try {
-            const response = await fetch(`/tools/${type}/test`, {
+            const response = await fetch(`/skills/${type}/test`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

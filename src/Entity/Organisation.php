@@ -255,6 +255,6 @@ class Organisation
 
     public function getIntegrationApiUrl(): string
     {
-        return sprintf('/api/integration/%s', $this->uuid);
+        return sprintf('/api/integrations/%s', $this->uuid);
     }
 }

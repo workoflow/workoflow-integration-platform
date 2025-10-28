@@ -672,6 +672,35 @@ class IntegrationController extends AbstractController
                 }
             }
 
+            // For GitLab, use detailed testing
+            if ($type === 'gitlab') {
+                $gitLabIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($gitLabIntegration);
+                $property = $reflection->getProperty('gitLabService');
+                $property->setAccessible(true);
+                $gitLabService = $property->getValue($gitLabIntegration);
+
+                $result = $gitLabService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
             // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
                 return $this->json(['success' => true, 'message' => 'Connection successful']);
