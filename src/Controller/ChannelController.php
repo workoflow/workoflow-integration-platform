@@ -183,11 +183,9 @@ class ChannelController extends AbstractController
                 }
             }
 
-            // Build base URL - only add port for localhost or if explicitly specified
+            // Build base URL - only add port if explicitly specified in workflow URL
             if (isset($parsedUrl['port'])) {
                 $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':' . $parsedUrl['port'];
-            } elseif ($host === 'localhost' || $host === '127.0.0.1' || $host === 'host.docker.internal') {
-                $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':5678';
             } else {
                 $baseUrl = $parsedUrl['scheme'] . '://' . $host;
             }
