@@ -16,10 +16,16 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class ProfileController extends AbstractController
 {
     #[Route('/', name: 'app_profile')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        /** @var User $user */
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $userOrganisation = $user->getCurrentUserOrganisation($sessionOrgId);
+
         return $this->render('profile/index.html.twig', [
-            'user' => $this->getUser(),
+            'user' => $user,
+            'userOrganisation' => $userOrganisation,
         ]);
     }
 

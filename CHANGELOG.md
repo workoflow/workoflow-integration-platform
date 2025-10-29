@@ -8,8 +8,10 @@ All notable changes to this project will be documented in this file.
 - Workflow URL field in Channel settings - separate field specifically for n8n workflow visualization, with clear placeholder examples showing the difference between webhook URLs and workflow URLs
 - Help text explaining URL differences - tooltips now clarify that Webhook URLs are for AI agents to trigger workflows, while Workflow URLs are for viewing the workflow diagram
 - Enlarge button for workflow visualization - users can now view workflows in a fullscreen modal (90% of screen size) for better visibility of complex workflows with many nodes
+- Workflow User ID in Profile page - users can now easily view their personal workflow identifier in their profile
 
 ### Changed
+- Profile page now displays Workflow User ID - moved from Channel settings to personal profile for better organization
 - Workflow visualization now shows complete n8n workflows - the Channel page displays all nodes and connections from your n8n workflow, giving you a full view of your automation
 - Faster workflow preview loading - workflow diagrams now appear more quickly with improved performance
 - Workflow visualization uses official n8n component - ensures compatibility with all n8n workflow features and updates

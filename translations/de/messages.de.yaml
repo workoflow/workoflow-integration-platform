@@ -351,6 +351,7 @@ user:
   role: Rolle
   joined_at: Beigetreten am
   organisation: Kanal
+  workflow_user_id: Meine Workflow Benutzer-ID
 
 
 profile:

@@ -350,6 +350,7 @@ user:
   role: Role
   joined_at: Joined at
   organisation: Channel
+  workflow_user_id: My Workflow User ID
 
 profile:
   title: My Profile
