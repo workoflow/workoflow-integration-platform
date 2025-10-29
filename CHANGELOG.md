@@ -5,12 +5,18 @@ All notable changes to this project will be documented in this file.
 ## 2025-10-29
 
 ### Added
+- Channel Type selection for organizations - choose between Common, eCommerce, or MS Teams to categorize your channel's purpose
+- Microsoft Teams bot configuration - configure MS Teams bot integration with App Type (MultiTenant/SingleTenant), App ID, App Password, and Tenant ID
 - Workflow URL field in Channel settings - separate field specifically for n8n workflow visualization, with clear placeholder examples showing the difference between webhook URLs and workflow URLs
 - Help text explaining URL differences - tooltips now clarify that Webhook URLs are for AI agents to trigger workflows, while Workflow URLs are for viewing the workflow diagram
 - Enlarge button for workflow visualization - users can now view workflows in a fullscreen modal (90% of screen size) for better visibility of complex workflows with many nodes
 - Workflow User ID in Profile page - users can now easily view their personal workflow identifier in their profile
 
 ### Changed
+- Enhanced security for sensitive credentials - N8N API keys and Microsoft Teams app passwords are now encrypted when stored, providing better protection for your integration credentials
+- Footer GitHub links now point to the official Workoflow organization repositories
+- Channel page now organized with "Channel Settings" section - basic channel configuration fields including Webhook URL are now grouped under a clear section headline for easier navigation
+- Agent Type field renamed from "Webhook Type" - clearer naming that better reflects the purpose of selecting how your AI agent communicates
 - Profile page now displays Workflow User ID - moved from Channel settings to personal profile for better organization
 - Workflow visualization now shows complete n8n workflows - the Channel page displays all nodes and connections from your n8n workflow, giving you a full view of your automation
 - Faster workflow preview loading - workflow diagrams now appear more quickly with improved performance

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\AuditLogService;
+use App\Service\EncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,7 +21,8 @@ class ChannelController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private AuditLogService $auditLogService,
-        private HttpClientInterface $httpClient
+        private HttpClientInterface $httpClient,
+        private EncryptionService $encryptionService
     ) {
     }
 
@@ -80,8 +82,34 @@ class ChannelController extends AbstractController
             $organisation->setWorkflowUrl($data['workflow_url']);
         }
 
-        if (isset($data['n8n_api_key'])) {
-            $organisation->setN8nApiKey($data['n8n_api_key']);
+        // Handle encrypted N8N API Key
+        if (isset($data['n8n_api_key']) && !empty($data['n8n_api_key'])) {
+            $encryptedKey = $this->encryptionService->encrypt($data['n8n_api_key']);
+            $organisation->setEncryptedN8nApiKey($encryptedKey);
+        }
+
+        // Handle organisation type
+        if (isset($data['organisation_type'])) {
+            $organisation->setOrganisationType($data['organisation_type']);
+        }
+
+        // Handle MS Teams fields
+        if (isset($data['microsoft_app_type'])) {
+            $organisation->setMicrosoftAppType($data['microsoft_app_type']);
+        }
+
+        if (isset($data['microsoft_app_id'])) {
+            $organisation->setMicrosoftAppId($data['microsoft_app_id']);
+        }
+
+        // Handle encrypted MS Teams password
+        if (isset($data['microsoft_app_password']) && !empty($data['microsoft_app_password'])) {
+            $encryptedPassword = $this->encryptionService->encrypt($data['microsoft_app_password']);
+            $organisation->setEncryptedMicrosoftAppPassword($encryptedPassword);
+        }
+
+        if (isset($data['microsoft_app_tenant_id'])) {
+            $organisation->setMicrosoftAppTenantId($data['microsoft_app_tenant_id']);
         }
 
         // Update UserOrganisation fields
@@ -159,13 +187,16 @@ class ChannelController extends AbstractController
             $apiUrl = $baseUrl . '/api/v1/workflows/' . $workflowId;
 
             // Fetch workflow from N8N API
-            if (!$organisation->getN8nApiKey()) {
+            if (!$organisation->getEncryptedN8nApiKey()) {
                 return new JsonResponse(['error' => 'N8N API key not configured'], 400);
             }
 
+            // Decrypt N8N API Key
+            $n8nApiKey = $this->encryptionService->decrypt($organisation->getEncryptedN8nApiKey());
+
             $response = $this->httpClient->request('GET', $apiUrl, [
                 'headers' => [
-                    'X-N8N-API-KEY' => $organisation->getN8nApiKey(),
+                    'X-N8N-API-KEY' => $n8nApiKey,
                     'Accept' => 'application/json',
                 ],
                 'timeout' => 10,

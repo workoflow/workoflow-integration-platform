@@ -54,8 +54,23 @@ class Organisation
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $workflowUrl = null;
 
-    #[ORM\Column(length: 500, nullable: true)]
-    private ?string $n8nApiKey = null;
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $encryptedN8nApiKey = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $organisationType = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $microsoftAppType = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $microsoftAppId = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $encryptedMicrosoftAppPassword = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $microsoftAppTenantId = null;
 
 
     public function __construct()
@@ -256,14 +271,69 @@ class Organisation
         return $this;
     }
 
-    public function getN8nApiKey(): ?string
+    public function getEncryptedN8nApiKey(): ?string
     {
-        return $this->n8nApiKey;
+        return $this->encryptedN8nApiKey;
     }
 
-    public function setN8nApiKey(?string $n8nApiKey): static
+    public function setEncryptedN8nApiKey(?string $encryptedN8nApiKey): static
     {
-        $this->n8nApiKey = $n8nApiKey;
+        $this->encryptedN8nApiKey = $encryptedN8nApiKey;
+        return $this;
+    }
+
+    public function getOrganisationType(): ?string
+    {
+        return $this->organisationType;
+    }
+
+    public function setOrganisationType(?string $organisationType): static
+    {
+        $this->organisationType = $organisationType;
+        return $this;
+    }
+
+    public function getMicrosoftAppType(): ?string
+    {
+        return $this->microsoftAppType;
+    }
+
+    public function setMicrosoftAppType(?string $microsoftAppType): static
+    {
+        $this->microsoftAppType = $microsoftAppType;
+        return $this;
+    }
+
+    public function getMicrosoftAppId(): ?string
+    {
+        return $this->microsoftAppId;
+    }
+
+    public function setMicrosoftAppId(?string $microsoftAppId): static
+    {
+        $this->microsoftAppId = $microsoftAppId;
+        return $this;
+    }
+
+    public function getEncryptedMicrosoftAppPassword(): ?string
+    {
+        return $this->encryptedMicrosoftAppPassword;
+    }
+
+    public function setEncryptedMicrosoftAppPassword(?string $encryptedMicrosoftAppPassword): static
+    {
+        $this->encryptedMicrosoftAppPassword = $encryptedMicrosoftAppPassword;
+        return $this;
+    }
+
+    public function getMicrosoftAppTenantId(): ?string
+    {
+        return $this->microsoftAppTenantId;
+    }
+
+    public function setMicrosoftAppTenantId(?string $microsoftAppTenantId): static
+    {
+        $this->microsoftAppTenantId = $microsoftAppTenantId;
         return $this;
     }
 

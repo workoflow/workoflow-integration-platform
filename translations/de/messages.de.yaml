@@ -115,11 +115,27 @@ channel:
   invite_help: Der Benutzer muss sich zuerst bei Workoflow registrieren
   workflow_user_id: Workoflow Benutzer-ID
   organisation_name: Kanalname
+  channel_settings: Kanaleinstellungen
   agent_settings: Agenteneinstellungen
+  agent_type: Agententyp
   workflow_visualization: Workflow-Visualisierung
   send_invite: Einladung senden
   make_admin: Zum Admin machen
   make_member: Zum Mitglied machen
+  organisation_type: Kanaltyp
+  type:
+    common: Allgemein
+    ecommerce: E-Commerce
+    msteams: MS Teams
+
+msteams:
+  configuration: MS Teams Konfiguration
+  configuration.description: Konfigurieren Sie die Microsoft Teams Bot-Integrationseinstellungen
+  app_type: Microsoft App-Typ
+  app_id: Microsoft App-ID
+  app_password: Microsoft App-Passwort
+  app_password.hint: Dieses Passwort wird verschlüsselt gespeichert
+  tenant_id: Microsoft Mandanten-ID
 
 status:
   active: Aktiv
