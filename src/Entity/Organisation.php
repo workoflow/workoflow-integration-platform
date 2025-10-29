@@ -52,6 +52,9 @@ class Organisation
     private ?string $webhookUrl = null;
 
     #[ORM\Column(length: 500, nullable: true)]
+    private ?string $workflowUrl = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
     private ?string $n8nApiKey = null;
 
 
@@ -239,6 +242,17 @@ class Organisation
     public function setWebhookUrl(?string $webhookUrl): static
     {
         $this->webhookUrl = $webhookUrl;
+        return $this;
+    }
+
+    public function getWorkflowUrl(): ?string
+    {
+        return $this->workflowUrl;
+    }
+
+    public function setWorkflowUrl(?string $workflowUrl): static
+    {
+        $this->workflowUrl = $workflowUrl;
         return $this;
     }
 

@@ -4,11 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-29
 
+### Added
+- Workflow URL field in Channel settings - separate field specifically for n8n workflow visualization, with clear placeholder examples showing the difference between webhook URLs and workflow URLs
+- Help text explaining URL differences - tooltips now clarify that Webhook URLs are for AI agents to trigger workflows, while Workflow URLs are for viewing the workflow diagram
+- Enlarge button for workflow visualization - users can now view workflows in a fullscreen modal (90% of screen size) for better visibility of complex workflows with many nodes
+
+### Changed
+- Workflow visualization now shows complete n8n workflows - the Channel page displays all nodes and connections from your n8n workflow, giving you a full view of your automation
+- Faster workflow preview loading - workflow diagrams now appear more quickly with improved performance
+- Workflow visualization uses official n8n component - ensures compatibility with all n8n workflow features and updates
+- Improved error messages for workflow visualization - more specific feedback when workflow URLs are misconfigured
+- Workflow visualization now displays in dark mode - matches the application's dark theme for a consistent visual experience
+- Larger workflow canvas - increased from 600px to 800px height for better visibility of complex workflows
+- Cleaner workflow view - removed instructional text overlay for a more professional, streamlined appearance
+- Workflow viewer supports full interaction - users can pan, zoom, and explore node details for better workflow understanding
+
 ### Fixed
 - Status messages now appear at the top of the page - success, error, and info messages are now displayed consistently right below the navigation bar across all pages
 - Added close button to status messages - users can now dismiss messages by clicking the X button
 - Status messages auto-dismiss after 5 seconds - messages automatically fade out for better user experience
 - Improved status message styling - all message types (success, error, warning, info) now have consistent, modern styling with smooth animations
+- Workflow visualization loading error resolved - fixed browser module resolution issue that prevented the N8N workflow viewer from rendering
+- Workflow visualization now loads properly on all browsers - resolved "module specifier" error that appeared in browser console
+- All workflow connections now visible - node connections in the workflow visualization are now displayed properly
 
 ## 2025-10-28
 

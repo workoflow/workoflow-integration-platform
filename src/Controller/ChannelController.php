@@ -76,6 +76,10 @@ class ChannelController extends AbstractController
             $organisation->setWebhookUrl($data['webhook_url']);
         }
 
+        if (isset($data['workflow_url'])) {
+            $organisation->setWorkflowUrl($data['workflow_url']);
+        }
+
         if (isset($data['n8n_api_key'])) {
             $organisation->setN8nApiKey($data['n8n_api_key']);
         }
@@ -119,286 +123,70 @@ class ChannelController extends AbstractController
             return new JsonResponse(['error' => 'Invalid organisation'], 403);
         }
 
-        if ($organisation->getWebhookType() !== 'N8N' || !$organisation->getWebhookUrl()) {
+        if ($organisation->getWebhookType() !== 'N8N') {
             return new JsonResponse(['error' => 'N8N not configured'], 400);
         }
 
         try {
-            // Parse N8N webhook URL to get workflow ID
-            $webhookUrl = $organisation->getWebhookUrl();
+            // Use workflowUrl if available, fallback to webhookUrl for backward compatibility
+            $workflowUrl = $organisation->getWorkflowUrl() ?? $organisation->getWebhookUrl();
 
-            // Try to extract workflow ID from URL
+            if (!$workflowUrl) {
+                return new JsonResponse(['error' => 'Workflow URL not configured'], 400);
+            }
+
+            // Extract workflow ID from URL
             // Example: http://localhost:5678/workflow/xRYAqofSE2ljb0d5
-            preg_match('/\/workflow\/([a-zA-Z0-9]+)/', $webhookUrl, $matches);
+            preg_match('/\/workflow\/([a-zA-Z0-9]+)/', $workflowUrl, $matches);
             $workflowId = $matches[1] ?? null;
 
             if (!$workflowId) {
-                return new JsonResponse(['error' => 'Invalid N8N webhook URL format'], 400);
+                return new JsonResponse(['error' => 'Invalid workflow URL format. URL must contain /workflow/{id}'], 400);
             }
 
-            // Parse base URL from webhook URL
-            $parsedUrl = parse_url($webhookUrl);
+            // Parse base URL from workflow URL
+            $parsedUrl = parse_url($workflowUrl);
             $host = $parsedUrl['host'];
 
             // If localhost and running in Docker, use host.docker.internal
             if ($host === 'localhost' || $host === '127.0.0.1') {
-                // Check if we're running in Docker
                 if (file_exists('/.dockerenv') || is_file('/proc/self/cgroup') && strpos(file_get_contents('/proc/self/cgroup'), 'docker') !== false) {
                     $host = 'host.docker.internal';
                 }
             }
 
             $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':' . ($parsedUrl['port'] ?? 5678);
-
-            // Fetch workflow data from N8N API
             $apiUrl = $baseUrl . '/api/v1/workflows/' . $workflowId;
 
-            // Try to fetch real N8N data if API key is available
-            if ($organisation->getN8nApiKey()) {
-                try {
-                    $response = $this->httpClient->request('GET', $apiUrl, [
-                        'headers' => [
-                            'X-N8N-API-KEY' => $organisation->getN8nApiKey(),
-                            'Accept' => 'application/json',
-                        ],
-                        'timeout' => 10,  // Increased timeout
-                    ]);
-
-                    if ($response->getStatusCode() === 200) {
-                        $workflowData = $response->toArray();
-
-                        // Transform N8N nodes to ReactFlow format with filtering
-                        $reactFlowNodes = [];
-                        $reactFlowEdges = [];
-                        $filteredNodeIds = [];
-                        $nodeMap = [];
-
-                        // First, build a map of all nodes for easy access
-                        if (isset($workflowData['nodes'])) {
-                            foreach ($workflowData['nodes'] as $node) {
-                                $nodeId = $node['id'] ?? $node['name'];
-                                $nodeMap[$node['name']] = [
-                                    'id' => $nodeId,
-                                    'name' => $node['name'],
-                                    'type' => $node['type'] ?? 'unknown',
-                                    'position' => $node['position'] ?? [0, 0]
-                                ];
-                            }
-                        }
-
-                        // Identify nodes to include based on type and connections
-                        $nodesToInclude = [];
-                        $aiAgentNodes = [];
-                        $toolNodes = [];
-                        $webhookNodes = [];
-                        $responseNodes = [];
-
-                        // Find webhook nodes, AI agent nodes, and response nodes by type
-                        foreach ($nodeMap as $nodeName => $nodeData) {
-                            $nodeType = $nodeData['type'];
-
-                            // Webhook nodes
-                            if ($nodeType === 'n8n-nodes-base.webhook') {
-                                $webhookNodes[] = $nodeName;
-                                $nodesToInclude[$nodeName] = $nodeData;
-                            } elseif (strpos($nodeType, 'agent') !== false) {
-                                // AI Agent nodes
-                                $aiAgentNodes[] = $nodeName;
-                                $nodesToInclude[$nodeName] = $nodeData;
-                            } elseif ($nodeType === 'n8n-nodes-base.respondToWebhook') {
-                                // Response nodes
-                                $responseNodes[] = $nodeName;
-                                $nodesToInclude[$nodeName] = $nodeData;
-                            }
-                        }
-
-                        // Find nodes connected to AI Agent via ai_tool, ai_languageModel, ai_memory, ai_outputParser
-                        if (isset($workflowData['connections'])) {
-                            foreach ($workflowData['connections'] as $sourceName => $connectionTypes) {
-                                foreach ($connectionTypes as $connectionType => $connections) {
-                                    if (in_array($connectionType, ['ai_tool', 'ai_languageModel', 'ai_memory', 'ai_outputParser'])) {
-                                        foreach ($connections as $connectionArray) {
-                                            foreach ($connectionArray as $connection) {
-                                                if (in_array($connection['node'], $aiAgentNodes)) {
-                                                    $toolNodes[] = $sourceName;
-                                                    if (isset($nodeMap[$sourceName])) {
-                                                        $nodesToInclude[$sourceName] = $nodeMap[$sourceName];
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Calculate positions for vertical layout
-                        $xCenter = 400;
-                        $ySpacing = 150;
-                        $xSpacing = 200;
-                        $currentY = 100;
-
-                        // Position webhook nodes at the top
-                        foreach ($webhookNodes as $i => $nodeName) {
-                            $nodesToInclude[$nodeName]['position'] = [
-                                'x' => $xCenter,
-                                'y' => $currentY
-                            ];
-                        }
-                        $currentY += $ySpacing * 1.5;
-
-                        // Position AI Agent in the middle with its dependencies around it
-                        $aiAgentY = $currentY;
-                        foreach ($aiAgentNodes as $i => $nodeName) {
-                            $nodesToInclude[$nodeName]['position'] = [
-                                'x' => $xCenter,
-                                'y' => $aiAgentY
-                            ];
-                        }
-
-                        // Position tool nodes in a grid pattern below AI Agent
-                        $toolCount = count($toolNodes);
-                        if ($toolCount > 0) {
-                            $currentY += $ySpacing;
-                            $toolsPerRow = 3;
-                            $rows = ceil($toolCount / $toolsPerRow);
-
-                            foreach ($toolNodes as $i => $nodeName) {
-                                $row = floor($i / $toolsPerRow);
-                                $col = $i % $toolsPerRow;
-                                $totalInRow = min($toolsPerRow, $toolCount - $row * $toolsPerRow);
-                                $xOffset = ($col - ($totalInRow - 1) / 2) * $xSpacing;
-
-                                if (isset($nodesToInclude[$nodeName])) {
-                                    $nodesToInclude[$nodeName]['position'] = [
-                                        'x' => $xCenter + $xOffset,
-                                        'y' => $currentY + ($row * $ySpacing * 0.8)
-                                    ];
-                                }
-                            }
-                            $currentY += $rows * $ySpacing;
-                        }
-
-                        // Position response nodes at the bottom
-                        $currentY += $ySpacing * 0.5;
-                        foreach ($responseNodes as $i => $nodeName) {
-                            $xOffset = ($i - (count($responseNodes) - 1) / 2) * $xSpacing * 1.2;
-                            $nodesToInclude[$nodeName]['position'] = [
-                                'x' => $xCenter + $xOffset,
-                                'y' => $currentY
-                            ];
-                        }
-
-                        // Create ReactFlow nodes from filtered list
-                        foreach ($nodesToInclude as $nodeName => $nodeData) {
-                            $filteredNodeIds[] = $nodeData['id'];
-                            $reactFlowNodes[] = [
-                                'id' => $nodeData['id'],
-                                'data' => [
-                                    'label' => $nodeData['name'],
-                                    'type' => $nodeData['type']
-                                ],
-                                'position' => [
-                                    'x' => $nodeData['position']['x'],
-                                    'y' => $nodeData['position']['y']
-                                ],
-                                'type' => 'default'
-                            ];
-                        }
-
-                        // Filter edges to only include connections between filtered nodes
-                        if (isset($workflowData['connections'])) {
-                            $edgeIndex = 0;
-                            foreach ($workflowData['connections'] as $sourceNode => $connections) {
-                                if (!isset($nodesToInclude[$sourceNode])) {
-                                    continue;
-                                }
-                                $sourceId = $nodesToInclude[$sourceNode]['id'];
-
-                                foreach ($connections as $outputType => $outputs) {
-                                    foreach ($outputs as $outputIndex => $targets) {
-                                        foreach ($targets as $target) {
-                                            if (isset($nodesToInclude[$target['node']])) {
-                                                $targetId = $nodesToInclude[$target['node']]['id'];
-                                                $reactFlowEdges[] = [
-                                                    'id' => 'e' . (++$edgeIndex),
-                                                    'source' => $sourceId,
-                                                    'target' => $targetId,
-                                                    'type' => 'default'
-                                                ];
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        return new JsonResponse([
-                            'nodes' => $reactFlowNodes,
-                            'edges' => $reactFlowEdges
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    // Fall back to mock data if API fails
-                    error_log('N8N API error: ' . $e->getMessage());
-                }
+            // Fetch workflow from N8N API
+            if (!$organisation->getN8nApiKey()) {
+                return new JsonResponse(['error' => 'N8N API key not configured'], 400);
             }
 
-            // Return mock data if no API key or API fails
-            $mockNodes = [
-                [
-                    'id' => 'node1',
-                    'name' => 'Webhook Trigger',
-                    'type' => 'n8n-nodes-base.webhook',
-                    'position' => ['x' => 250, 'y' => 100]
+            $response = $this->httpClient->request('GET', $apiUrl, [
+                'headers' => [
+                    'X-N8N-API-KEY' => $organisation->getN8nApiKey(),
+                    'Accept' => 'application/json',
                 ],
-                [
-                    'id' => 'node2',
-                    'name' => 'Transform Data',
-                    'type' => 'n8n-nodes-base.set',
-                    'position' => ['x' => 500, 'y' => 100]
-                ],
-                [
-                    'id' => 'node3',
-                    'name' => 'Send Response',
-                    'type' => 'n8n-nodes-base.respondToWebhook',
-                    'position' => ['x' => 750, 'y' => 100]
-                ]
-            ];
+                'timeout' => 10,
+            ]);
 
-            $mockEdges = [
-                ['source' => 'node1', 'target' => 'node2'],
-                ['source' => 'node2', 'target' => 'node3']
-            ];
+            if ($response->getStatusCode() !== 200) {
+                return new JsonResponse(['error' => 'Failed to fetch workflow from N8N'], $response->getStatusCode());
+            }
 
-            // Transform to ReactFlow format
-            $reactFlowNodes = array_map(function ($node) {
-                return [
-                    'id' => $node['id'],
-                    'data' => [
-                        'label' => $node['name'],
-                        'type' => $node['type']
-                    ],
-                    'position' => $node['position'],
-                    'type' => 'default'
-                ];
-            }, $mockNodes);
+            $workflowData = $response->toArray();
 
-            $reactFlowEdges = array_map(function ($edge, $index) {
-                return [
-                    'id' => 'e' . ($index + 1),
-                    'source' => $edge['source'],
-                    'target' => $edge['target'],
-                    'type' => 'default'
-                ];
-            }, $mockEdges, array_keys($mockEdges));
-
+            // Return raw workflow JSON for n8n-demo component
             return new JsonResponse([
-                'nodes' => $reactFlowNodes,
-                'edges' => $reactFlowEdges
+                'workflow' => $workflowData,
+                'error' => null
             ]);
         } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Failed to fetch workflow: ' . $e->getMessage()], 500);
+            return new JsonResponse([
+                'workflow' => null,
+                'error' => 'Failed to fetch workflow: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

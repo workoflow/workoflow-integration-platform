@@ -2808,6 +2808,28 @@ body {
     gap: var(--space-md);
     justify-content: flex-end;
   }
+
+  // Fullscreen modal variant
+  &.modal-fullscreen {
+    .modal-content {
+      width: 90vw;
+      height: 90vh;
+      max-width: 90vw;
+      max-height: 90vh;
+    }
+
+    .modal-body {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    n8n-demo {
+      width: 100%;
+      height: 100%;
+      display: block;
+      --n8n-workflow-min-height: calc(90vh - 80px);
+    }
+  }
 }
 
 // Dropzone styles
