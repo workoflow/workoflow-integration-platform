@@ -7,6 +7,10 @@ const application = Application.start();
 import instructionsController from './controllers/instructions_controller';
 application.register('instructions', instructionsController);
 
+// Register the flash message controller
+import flashMessageController from './controllers/flash_message_controller';
+application.register('flash-message', flashMessageController);
+
 // Export for debugging
 window.Stimulus = application;
 
