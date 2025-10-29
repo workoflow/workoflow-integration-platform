@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-29
+
+### Fixed
+- Status messages now appear at the top of the page - success, error, and info messages are now displayed consistently right below the navigation bar across all pages
+- Added close button to status messages - users can now dismiss messages by clicking the X button
+- Status messages auto-dismiss after 5 seconds - messages automatically fade out for better user experience
+- Improved status message styling - all message types (success, error, warning, info) now have consistent, modern styling with smooth animations
+
 ## 2025-10-28
 
 ### Added
