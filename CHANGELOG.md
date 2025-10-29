@@ -28,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - Workflow viewer supports full interaction - users can pan, zoom, and explore node details for better workflow understanding
 
 ### Fixed
+- Production workflow URLs now work correctly - workflow visualization no longer incorrectly adds port numbers to production domain URLs, resolving "Idle timeout" errors on hosted environments
 - Status messages now appear at the top of the page - success, error, and info messages are now displayed consistently right below the navigation bar across all pages
 - Added close button to status messages - users can now dismiss messages by clicking the X button
 - Status messages auto-dismiss after 5 seconds - messages automatically fade out for better user experience

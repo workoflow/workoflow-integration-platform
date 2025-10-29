@@ -183,7 +183,14 @@ class ChannelController extends AbstractController
                 }
             }
 
-            $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':' . ($parsedUrl['port'] ?? 5678);
+            // Build base URL - only add port for localhost or if explicitly specified
+            if (isset($parsedUrl['port'])) {
+                $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':' . $parsedUrl['port'];
+            } elseif ($host === 'localhost' || $host === '127.0.0.1' || $host === 'host.docker.internal') {
+                $baseUrl = $parsedUrl['scheme'] . '://' . $host . ':5678';
+            } else {
+                $baseUrl = $parsedUrl['scheme'] . '://' . $host;
+            }
             $apiUrl = $baseUrl . '/api/v1/workflows/' . $workflowId;
 
             // Fetch workflow from N8N API
