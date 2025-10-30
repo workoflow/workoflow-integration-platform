@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="integrations-page">
-    {% include '_partials/header.html.twig' %}
 
     <div class="setup-container">
         <div class="setup-card">
@@ -116,6 +115,33 @@
                         </div>
                     {% endif %}
                 {% endfor %}
+
+                {% if isEdit and config %}
+                    <h3>{{ 'integration.available_tools'|trans|default('Available Tools') }}</h3>
+                    <p class="field-hint">{{ 'integration.tools_hint'|trans|default('Enable or disable specific tools that this integration provides') }}</p>
+
+                    <div class="tools-management">
+                        {% for tool in integration.getTools() %}
+                            <div class="tool-item">
+                                <div class="tool-toggle-wrapper">
+                                    <label class="tool-toggle">
+                                        <input type="checkbox"
+                                               {% if not config.isToolDisabled(tool.getName()) %}checked{% endif %}
+                                               data-integration="{{ integration.getType() }}"
+                                               data-instance="{{ config.id }}"
+                                               data-tool="{{ tool.getName() }}"
+                                               onchange="toggleTool(this)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="tool-details">
+                                    <div class="tool-name">{{ tool.getName() }}</div>
+                                    <div class="tool-description">{{ tool.getDescription() }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
 
                 <div class="form-actions">
                     {% if hasOAuthField and not config %}
@@ -311,6 +337,100 @@ label.required {
 .badge-success {
     background: var(--success-color, #10b981);
     color: white;
+}
+
+/* Tools management section */
+.tools-management {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-background);
+    transition: background-color 0.2s;
+}
+
+.tool-item:last-child {
+    border-bottom: none;
+}
+
+.tool-item:hover {
+    background: var(--secondary-background);
+}
+
+.tool-toggle-wrapper {
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.tool-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.tool-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    border-radius: 24px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.tool-toggle input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+.tool-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.tool-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+}
+
+.tool-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
 }
 
 .oauth-section {
@@ -608,5 +728,32 @@ document.addEventListener('DOMContentLoaded', function() {
         updateValidationFeedback(result);
     }
 });
+
+// Tool toggle functionality
+async function toggleTool(checkbox) {
+    const integration = checkbox.dataset.integration;
+    const instance = checkbox.dataset.instance || '';
+    const tool = checkbox.dataset.tool;
+    const enabled = checkbox.checked;
+
+    try {
+        const response = await fetch(`/skills/${integration}/toggle-tool`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `tool=${encodeURIComponent(tool)}&enabled=${enabled}&instance=${encodeURIComponent(instance)}`
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle tool');
+        }
+    } catch (error) {
+        console.error('Error toggling tool:', error);
+        checkbox.checked = !checkbox.checked;
+        alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
+    }
+}
 </script>
 {% endblock %}

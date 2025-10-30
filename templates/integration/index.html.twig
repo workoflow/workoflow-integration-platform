@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="integrations-page">
-    {% include '_partials/header.html.twig' %}
 
     <div class="integrations-container">
         <div class="integrations-header">
@@ -88,39 +87,11 @@
                                         </div>
                                     </div>
 
-                                    {% if integration.hasCredentials %}
-                                        <div class="integration-tools">
-                                            <div class="tools-table">
-                                                {% for tool in integration.tools %}
-                                                    <div class="tool-row">
-                                                        <div class="tool-toggle-cell">
-                                                            <label class="tool-toggle">
-                                                                <input type="checkbox"
-                                                                       {% if tool.enabled %}checked{% endif %}
-                                                                       data-integration="{{ integration.type }}"
-                                                                       data-instance="{{ integration.instanceId }}"
-                                                                       data-tool="{{ tool.name }}"
-                                                                       onchange="toggleTool(this)">
-                                                                <span class="toggle-slider"></span>
-                                                            </label>
-                                                        </div>
-                                                        <div class="tool-name-cell">
-                                                            <span class="tool-name">{{ tool.name }}</span>
-                                                        </div>
-                                                        <div class="tool-desc-cell">
-                                                            <span class="tool-description">{{ tool.description }}</span>
-                                                        </div>
-                                                    </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-
-                                        {% if integration.lastAccessedAt %}
-                                            <p class="last-accessed">
-                                                <i class="fas fa-clock"></i>
-                                                {{ 'integration.last_accessed'|trans }}: {{ integration.lastAccessedAt|date('d.m.Y H:i') }}
-                                            </p>
-                                        {% endif %}
+                                    {% if integration.hasCredentials and integration.lastAccessedAt %}
+                                        <p class="last-accessed">
+                                            <i class="fas fa-clock"></i>
+                                            {{ 'integration.last_accessed'|trans }}: {{ integration.lastAccessedAt|date('d.m.Y H:i') }}
+                                        </p>
                                     {% endif %}
 
                                     <div class="integration-footer">
@@ -191,36 +162,15 @@
                                     <h3>{{ 'integration.platform_skills'|trans|default('Platform Skills') }}</h3>
                                 </div>
 
-                                <div class="integration-tools">
-                                    <div class="tools-table">
-                                        {% for integration in systemIntegrations %}
-                                            {% for tool in integration.tools %}
-                                                <div class="tool-row">
-                                                    <div class="tool-toggle-cell">
-                                                        <label class="tool-toggle">
-                                                            <input type="checkbox"
-                                                                   {% if tool.enabled %}checked{% endif %}
-                                                                   data-integration="{{ integration.type }}"
-                                                                   data-tool="{{ tool.name }}"
-                                                                   onchange="toggleTool(this)">
-                                                            <span class="toggle-slider"></span>
-                                                        </label>
-                                                    </div>
-                                                    <div class="tool-name-cell">
-                                                        <span class="tool-name">{{ tool.name }}</span>
-                                                    </div>
-                                                    <div class="tool-desc-cell">
-                                                        <span class="tool-description">{{ tool.description }}</span>
-                                                    </div>
-                                                </div>
-                                            {% endfor %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
+                                <p class="platform-skills-description">
+                                    {{ 'integration.platform_skills_info'|trans|default('Built-in tools that provide essential capabilities for your AI agents. Manage which tools are available to your organization.') }}
+                                </p>
 
                                 <div class="integration-footer">
-                                    <div class="integration-status">
-                                        <span class="system-tools-info">{{ 'integration.platform_skills_always_active'|trans|default('Platform skills are always available') }}</span>
+                                    <div class="integration-actions">
+                                        <a href="{{ path('app_platform_skills_edit') }}" class="btn btn-primary">
+                                            <i class="fas fa-cog"></i> {{ 'action.manage_tools'|trans|default('Manage Tools') }}
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -299,6 +249,13 @@
 .integration-card.system-integration {
     border-left: 4px solid var(--color-primary);
     grid-column: 1 / -1;  /* Span full width */
+}
+
+.platform-skills-description {
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
 }
 
 .integration-card.user-integration {
@@ -996,32 +953,6 @@ document.getElementById('testConnectionModal')?.addEventListener('click', functi
         hideTestModal();
     }
 });
-
-async function toggleTool(checkbox) {
-    const integration = checkbox.dataset.integration;
-    const instance = checkbox.dataset.instance || '';
-    const tool = checkbox.dataset.tool;
-    const enabled = checkbox.checked;
-
-    try {
-        const response = await fetch(`/skills/${integration}/toggle-tool`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: `tool=${encodeURIComponent(tool)}&enabled=${enabled}&instance=${encodeURIComponent(instance)}`
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to toggle tool');
-        }
-    } catch (error) {
-        console.error('Error toggling tool:', error);
-        checkbox.checked = !checkbox.checked;
-        alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
-    }
-}
 
 async function toggleIntegration(checkbox) {
     const integration = checkbox.dataset.integration;

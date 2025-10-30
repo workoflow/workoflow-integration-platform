@@ -162,9 +162,13 @@ integration:
   no_integrations_desc: 'Start by adding your first skill to connect external services'
   platform_skills: Platform Skills
   platform_skills_description: Built-in capabilities available to all users without external authentication
+  platform_skills_info: Built-in tools that provide essential capabilities for your AI agents. Manage which tools are available to your organization.
+  platform_skills_edit: Manage Platform Skills
+  platform_skills_edit_description: Enable or disable platform tools that are available to all users in your organization
   external_integrations: Personalized Skills
   external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint with your credentials
   available_tools: Available Tools
+  tools_hint: Enable or disable specific tools that this integration provides
   setup: Setup
   setup_description: Configure your %name% integration
   save_configuration: Save Configuration
@@ -332,10 +336,13 @@ action:
   delete: Delete
   cancel: Cancel
   close: Close
+  done: Done
   actions: Actions
   copy: Copy
   copied: Copied!
   download: Download
+  manage_tools: Manage Tools
+  back_to_skills: Back to Skills
 
 file:
   title: Files

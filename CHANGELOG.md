@@ -4,9 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-30
 
+### Fixed
+- Notification bar positioning - status messages now correctly appear below the top navigation bar instead of covering it
+
 ### Changed
 - Simplified notification messages - status messages now appear as a clean, full-width bar directly under the navigation instead of an animated overlay, making them less disruptive and easier to read
 - Notifications now require manual dismissal - messages stay visible until you close them with the X button, ensuring you don't miss important information
+- Improved skill management workflow - tool toggles for Personalized Skills moved to dedicated edit pages, allowing you to manage skill tools when editing credentials instead of from the skills list page
+- Enhanced Platform Skills management - all platform tool settings now managed through a dedicated "Manage Tools" page, providing a centralized location to enable or disable built-in capabilities for your organization
 
 ## 2025-10-29
 

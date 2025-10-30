@@ -12,6 +12,8 @@
     {% endblock %}
 </head>
 <body class="min-h-screen flex flex-col">
+    {% include '_partials/header.html.twig' %}
+
     {# Flash Messages Container - Global #}
     <div class="flash-messages-container">
         {% include '_partials/flash_messages.html.twig' %}

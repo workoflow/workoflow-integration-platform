@@ -711,4 +711,61 @@ class IntegrationController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Connection test failed: ' . $e->getMessage()]);
         }
     }
+
+    #[Route('/skills/platform-skills/edit', name: 'app_platform_skills_edit', methods: ['GET'])]
+    public function editPlatformSkills(): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $organisation = $user->getOrganisation();
+
+        if (!$organisation) {
+            $this->addFlash('error', 'You must be part of an organisation to manage platform skills');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Get all system integrations
+        $systemIntegrations = $this->integrationRegistry->getSystemIntegrations();
+
+        // Get existing configs for system integrations
+        $integrationConfigs = $this->integrationConfigRepository->findBy([
+            'organisation' => $organisation,
+            'user' => null // System integrations have no user association
+        ], ['integrationType' => 'ASC']);
+
+        // Build config map by integration type
+        $configMap = [];
+        foreach ($integrationConfigs as $config) {
+            $configMap[$config->getIntegrationType()] = $config;
+        }
+
+        // Build display data for all system integrations
+        $platformSkills = [];
+        foreach ($systemIntegrations as $integration) {
+            $config = $configMap[$integration->getType()] ?? null;
+
+            // Build tools array with enabled/disabled status
+            $tools = [];
+            foreach ($integration->getTools() as $tool) {
+                $tools[] = [
+                    'name' => $tool->getName(),
+                    'description' => $tool->getDescription(),
+                    'enabled' => !($config && $config->isToolDisabled($tool->getName()))
+                ];
+            }
+
+            $platformSkills[] = [
+                'type' => $integration->getType(),
+                'name' => $integration->getName(),
+                'instanceId' => $config?->getId(),
+                'config' => $config,
+                'tools' => $tools
+            ];
+        }
+
+        return $this->render('integration/platform_skills_edit.html.twig', [
+            'platformSkills' => $platformSkills,
+            'organisation' => $organisation
+        ]);
+    }
 }
