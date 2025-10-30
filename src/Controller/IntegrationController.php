@@ -46,7 +46,7 @@ class IntegrationController extends AbstractController
         $logoMap = [
             'jira' => '/images/logos/jira-icon.svg',
             'confluence' => '/images/logos/confluence-icon.svg',
-            'gitlab' => '/images/logos/gitlab-logo.svg',
+            'gitlab' => '/images/logos/gitlab-icon.svg',
             'trello' => '/images/logos/trello-logo.png',
             'sharepoint' => '/images/logos/sharepoint-logo.svg',
         ];

@@ -35,8 +35,8 @@ class IntegrationControllerTest extends AbstractIntegrationTestCase
         $this->assertResponseIsSuccessful();
         $this->assertPageTitleContains('Skills');
 
-        // Check if integration cards are displayed - look for the integration names from fixtures
-        $this->assertSelectorExists('.integration-card');
+        // Check if integration table is displayed - look for the integration names from fixtures
+        $this->assertSelectorExists('.integration-logo-small');
         $this->assertSelectorTextContains('body', 'Test JIRA Active');
     }
 

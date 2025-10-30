@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Better use of screen space with condensed table view showing more integrations at once
 - Streamlined interface reduces clutter while keeping all functionality easily accessible
 - Jira and Confluence integration icons now display larger and clearer for better visibility
+- GitLab integration icon simplified to show only the tanuki logo for better consistency with Jira and Confluence icon styles
 - Last accessed dates now appear more compact and fit better on screen without line breaks
 - Delete button now has proper styling with consistent appearance across all integrations
 - Test Connection modal now displays properly centered on screen instead of appearing at bottom-left
