@@ -201,6 +201,7 @@ integration:
   system_description: Plattform-Tools für alle Benutzer verfügbar
   manage_tools: Tools verwalten
   platform_skills_always_active: Plattform-Skills sind immer verfügbar
+  platform: Plattform
   credentials_update_note: Felder leer lassen, um bestehende Anmeldedaten beizubehalten
   instance_name: Instanz-Name
   instance_name_hint: 'Ein freundlicher Name zur Identifizierung dieser Integration (z.B. "Produktiv Jira", "Test SharePoint")'

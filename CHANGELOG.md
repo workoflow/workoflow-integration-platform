@@ -30,6 +30,8 @@ All notable changes to this project will be documented in this file.
 - Modal dialogs now feature smooth animations, enhanced shadows, and status-based color accents (green left border for success, red for errors)
 
 ### Fixed
+- "Add Personalized Skill" dropdown now displays correctly as a vertical menu instead of showing skill badges in a horizontal row
+- Platform badge translation now displays correctly without missing translation key errors
 - Platform Skills configuration is now user-specific - each user can now independently enable/disable platform tools for their own account without affecting other users in the organization
 - Integration type badges on General page now display with orange styling matching the Skills page
 - Notification bar positioning - status messages now correctly appear below the top navigation bar instead of covering it

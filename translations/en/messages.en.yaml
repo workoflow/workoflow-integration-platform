@@ -201,6 +201,7 @@ integration:
   system_description: Platform tools available to all users
   manage_tools: Manage Tools
   platform_skills_always_active: Platform skills are always available
+  platform: Platform
   credentials_update_note: Leave fields empty to keep existing credentials
   instance_name: Instance Name
   instance_name_hint: 'A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")'

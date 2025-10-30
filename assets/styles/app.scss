@@ -3275,6 +3275,47 @@ body {
   }
 }
 
+// Add Personalized Skill dropdown
+.add-integration-dropdown {
+  position: relative;
+
+  .dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: var(--space-xs);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-sm);
+    min-width: 200px;
+    display: none;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+    // Style for dropdown items (links)
+    a {
+      display: block;
+      width: 100%;
+      padding: var(--space-sm) var(--space-md);
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      border-radius: var(--border-radius);
+      transition: var(--transition);
+
+      i {
+        margin-right: var(--space-sm);
+        width: 16px;
+      }
+
+      &:hover {
+        background: var(--bg-secondary);
+      }
+    }
+  }
+}
+
 // Search box
 .search-box {
   position: relative;
