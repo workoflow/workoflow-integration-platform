@@ -1,10 +1,7 @@
 {# Flash Messages - Global #}
 {% for label, messages in app.flashes %}
     {% for message in messages %}
-        <div class="alert alert-{{ label }}"
-             role="alert"
-             data-controller="flash-message"
-             data-action="mouseenter->flash-message#pauseAutoDismiss mouseleave->flash-message#resumeAutoDismiss">
+        <div class="alert alert-{{ label }}" role="alert" data-controller="flash-message">
             <div class="alert-content">
                 <span class="alert-message">{{ message }}</span>
                 <button type="button" class="alert-close" data-action="click->flash-message#close" aria-label="Close">

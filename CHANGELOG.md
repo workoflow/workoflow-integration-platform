@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-30
+
+### Changed
+- Simplified notification messages - status messages now appear as a clean, full-width bar directly under the navigation instead of an animated overlay, making them less disruptive and easier to read
+- Notifications now require manual dismissal - messages stay visible until you close them with the X button, ensuring you don't miss important information
+
 ## 2025-10-29
 
 ### Added
