@@ -156,7 +156,7 @@ integration:
   skills_explanation_p1: Skills ermöglichen es KI-Agenten, in Ihrem Namen Aktionen auszuführen, indem sie sich mit verschiedenen Plattformen und Services verbinden. Jeder Skill bietet spezifische Fähigkeiten, die die KI bei der Arbeit mit Ihren Daten nutzen kann.
   skills_explanation_p2: Es gibt zwei Arten von Skills - Personalisierte Skills benötigen Ihre Zugangsdaten, um auf externe Dienste wie Jira oder Confluence in Ihrem Namen zuzugreifen, während Plattform-Skills integrierte Funktionen sind, die keine externe Authentifizierung benötigen, wie z.B. PDF-Generierung oder Datenverarbeitung.
   platform_skills: Plattform-Skills
-  platform_skills_description: Integrierte Funktionen für alle Benutzer ohne externe Authentifizierung
+  platform_skills_description: Integrierte Plattform-Funktionen, die keine externen Dienst-Zugangsdaten benötigen. Jeder Benutzer kann diese unabhängig konfigurieren.
   platform_skills_info: Integrierte Tools, die wesentliche Funktionen für Ihre KI-Agenten bereitstellen. Verwalten Sie, welche Tools für Ihre Organisation verfügbar sind.
   platform_skills_edit: Plattform-Skills verwalten
   platform_skills_edit_description: Aktivieren oder deaktivieren Sie Plattform-Tools, die allen Benutzern in Ihrer Organisation zur Verfügung stehen

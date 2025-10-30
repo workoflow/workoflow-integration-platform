@@ -2005,8 +2005,9 @@ body {
       text-transform: uppercase;
       
       &.badge-type {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--text-secondary);
+        background: rgba(255, 107, 53, 0.1);
+        color: var(--color-primary);
+        border: 1px solid rgba(255, 107, 53, 0.2);
       }
       
       &.badge-active {

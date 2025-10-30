@@ -27,6 +27,8 @@ All notable changes to this project will be documented in this file.
 - Simpler workflow for managing skills - delete integrations you no longer use instead of toggling them on and off
 
 ### Fixed
+- Platform Skills configuration is now user-specific - each user can now independently enable/disable platform tools for their own account without affecting other users in the organization
+- Integration type badges on General page now display with orange styling matching the Skills page
 - Notification bar positioning - status messages now correctly appear below the top navigation bar instead of covering it
 - Test Connection modal positioning - connection test results now appear in the center of the screen as expected
 - Integration icons for Jira and Confluence now show clearly at proper size without text overflow

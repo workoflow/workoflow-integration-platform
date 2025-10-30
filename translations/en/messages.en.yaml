@@ -162,7 +162,7 @@ integration:
   no_integrations: No skills configured yet
   no_integrations_desc: 'Start by adding your first skill to connect external services'
   platform_skills: Platform Skills
-  platform_skills_description: Built-in capabilities available to all users without external authentication
+  platform_skills_description: Built-in platform features that don't require external service credentials. Each user can configure these independently.
   platform_skills_info: Built-in tools that provide essential capabilities for your AI agents. Manage which tools are available to your organization.
   platform_skills_edit: Manage Platform Skills
   platform_skills_edit_description: Enable or disable platform tools that are available to all users in your organization

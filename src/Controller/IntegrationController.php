@@ -482,8 +482,13 @@ class IntegrationController extends AbstractController
 
         // Get specific instance and verify ownership
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
+        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId()) {
             return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verify user ownership (system tools should have user set, user integrations must match)
+        if ($config->getUser() === null || $config->getUser()->getId() !== $user->getId()) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
         // Update tool state
@@ -753,10 +758,10 @@ class IntegrationController extends AbstractController
         // Get all system integrations
         $systemIntegrations = $this->integrationRegistry->getSystemIntegrations();
 
-        // Get existing configs for system integrations
+        // Get existing configs for system integrations (per user)
         $integrationConfigs = $this->integrationConfigRepository->findBy([
             'organisation' => $organisation,
-            'user' => null // System integrations have no user association
+            'user' => $user // System integrations are user-specific
         ], ['integrationType' => 'ASC']);
 
         // Build config map by integration type

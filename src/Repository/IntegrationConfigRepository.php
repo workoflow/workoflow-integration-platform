@@ -44,8 +44,8 @@ class IntegrationConfigRepository extends ServiceEntityRepository
             ->setParameter('organisation', $organisation);
 
         if ($workflowUserId !== null) {
-            // Filter by workflow_user_id from UserOrganisation or configs without a user (system configs)
-            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
+            // Filter by workflow_user_id from UserOrganisation (all configs are user-specific)
+            $qb->andWhere('uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation')
                 ->setParameter('workflowUserId', $workflowUserId);
         }
 
@@ -77,11 +77,10 @@ class IntegrationConfigRepository extends ServiceEntityRepository
         }
 
         if ($workflowUserId !== null) {
-            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
+            $qb->andWhere('uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation')
                 ->setParameter('workflowUserId', $workflowUserId);
-        } else {
-            $qb->andWhere('ic.user IS NULL');
         }
+        // Note: If workflowUserId is null, no additional user filter is applied
 
         return $qb->setMaxResults(1)
             ->getQuery()
@@ -180,8 +179,8 @@ class IntegrationConfigRepository extends ServiceEntityRepository
             ->setParameter('type', $integrationType);
 
         if ($workflowUserId !== null) {
-            // Filter by workflow_user_id from UserOrganisation or configs without a user (system configs)
-            $qb->andWhere('(uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation) OR ic.user IS NULL')
+            // Filter by workflow_user_id from UserOrganisation (all configs are user-specific)
+            $qb->andWhere('uo.workflowUserId = :workflowUserId AND uo.organisation = :organisation')
                 ->setParameter('workflowUserId', $workflowUserId);
         } else {
             $qb->andWhere('ic.user IS NULL');
