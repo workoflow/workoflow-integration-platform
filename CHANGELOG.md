@@ -25,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - Test Connection modal now displays properly centered on screen instead of appearing at bottom-left
 - Action buttons (Edit, Test Connection, Delete) now stay on the same line without wrapping for cleaner table layout
 - Simpler workflow for managing skills - delete integrations you no longer use instead of toggling them on and off
+- Connection test results modal redesigned with modern minimalist style, larger animated icons, and color-matched close buttons for better visual feedback
+- Modal dialogs now feature smooth animations, enhanced shadows, and status-based color accents (green left border for success, red for errors)
 
 ### Fixed
 - Platform Skills configuration is now user-specific - each user can now independently enable/disable platform tools for their own account without affecting other users in the organization

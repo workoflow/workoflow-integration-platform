@@ -11,6 +11,14 @@ application.register('channel', channelController);
 import flashMessageController from './controllers/flash_message_controller';
 application.register('flash-message', flashMessageController);
 
+// Register the skills table controller
+import skillsTableController from './controllers/skills_table_controller';
+application.register('skills-table', skillsTableController);
+
+// Register the integration dropdown controller
+import integrationDropdownController from './controllers/integration_dropdown_controller';
+application.register('integration-dropdown', integrationDropdownController);
+
 // Export for debugging
 window.Stimulus = application;
 

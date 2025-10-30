@@ -126,31 +126,39 @@ export default class extends Controller {
             return;
         }
 
+        const modalContentWrapper = document.getElementById('modalContentWrapper');
         const modalIcon = document.getElementById('modalIcon');
         const modalTitle = document.getElementById('modalTitle');
         const modalMessage = document.getElementById('modalMessage');
         const modalDetails = document.getElementById('modalDetails');
         const modalSuggestion = document.getElementById('modalSuggestion');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
 
         // Update content
         modalTitle.textContent = title;
         modalMessage.textContent = message;
         modalMessage.className = 'modal-message ' + type;
 
-        // Update details
+        // Update modal content wrapper with status class for left border accent
+        modalContentWrapper.className = 'modal-content status-' + type;
+
+        // Update close button with status class for color matching
+        modalCloseBtn.className = 'btn btn-status-' + type;
+
+        // Update details - use classList instead of inline styles
         if (details) {
             modalDetails.textContent = details;
-            modalDetails.style.display = 'block';
+            modalDetails.classList.remove('hidden');
         } else {
-            modalDetails.style.display = 'none';
+            modalDetails.classList.add('hidden');
         }
 
-        // Update suggestion
+        // Update suggestion - use classList instead of inline styles
         if (suggestion) {
             modalSuggestion.textContent = suggestion;
-            modalSuggestion.style.display = 'block';
+            modalSuggestion.classList.remove('hidden');
         } else {
-            modalSuggestion.style.display = 'none';
+            modalSuggestion.classList.add('hidden');
         }
 
         // Update icon

@@ -32,10 +32,10 @@
     </div>
 </div>
 
-{# Test Connection Result Modal #}
+{# Test Connection Result Modal - Minimalist Elegant Design #}
 <div id="testConnectionModal" class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
     <div class="modal-container">
-        <div class="modal-content">
+        <div class="modal-content" id="modalContentWrapper">
             <div class="modal-header">
                 <div class="modal-icon" id="modalIcon">
                     <i class="fas fa-check-circle"></i>
@@ -47,11 +47,11 @@
             <div class="modal-body">
                 <h3 id="modalTitle" class="modal-title">Test Connection</h3>
                 <div id="modalMessage" class="modal-message"></div>
-                <div id="modalDetails" class="modal-details" style="display: none;"></div>
-                <div id="modalSuggestion" class="modal-suggestion" style="display: none;"></div>
+                <div id="modalDetails" class="modal-details hidden"></div>
+                <div id="modalSuggestion" class="modal-suggestion hidden"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="hideTestModal()">
+                <button type="button" class="btn" id="modalCloseBtn" onclick="hideTestModal()">
                     {{ 'action.close'|trans|default('Close') }}
                 </button>
             </div>
