@@ -32,6 +32,29 @@ class IntegrationController extends AbstractController
     ) {
     }
 
+    /**
+     * Get logo path for integration type
+     */
+    private function getLogoPath(string $type, bool $isSystem): string
+    {
+        // System integrations get the Workoflow logo
+        if ($isSystem) {
+            return '/images/logos/workoflow-logo.png';
+        }
+
+        // Map integration types to logo paths
+        $logoMap = [
+            'jira' => '/images/logos/jira-logo.svg',
+            'confluence' => '/images/logos/confluence-logo.svg',
+            'gitlab' => '/images/logos/gitlab-logo.svg',
+            'trello' => '/images/logos/trello-logo.png',
+            'sharepoint' => '/images/logos/sharepoint-logo.svg',
+        ];
+
+        // Return mapped logo or default to Workoflow logo
+        return $logoMap[$type] ?? '/images/logos/workoflow-logo.png';
+    }
+
     #[Route('/', name: 'app_skills')]
     public function index(Request $request): Response
     {
@@ -100,7 +123,8 @@ class IntegrationController extends AbstractController
                     'tools' => $tools,
                     'hasCredentials' => false,
                     'active' => $config ? $config->isActive() : true,
-                    'lastAccessedAt' => $config?->getLastAccessedAt()
+                    'lastAccessedAt' => $config?->getLastAccessedAt(),
+                    'logoPath' => $this->getLogoPath($integration->getType(), true)
                 ];
             } else {
                 // For user integrations, show each instance
@@ -116,7 +140,8 @@ class IntegrationController extends AbstractController
                         'tools' => [],
                         'hasCredentials' => false,
                         'active' => false,
-                        'lastAccessedAt' => null
+                        'lastAccessedAt' => null,
+                        'logoPath' => $this->getLogoPath($integration->getType(), false)
                     ];
                 } else {
                     // Show each configured instance
@@ -141,7 +166,8 @@ class IntegrationController extends AbstractController
                             'tools' => $tools,
                             'hasCredentials' => $config->hasCredentials(),
                             'active' => $config->isActive(),
-                            'lastAccessedAt' => $config->getLastAccessedAt()
+                            'lastAccessedAt' => $config->getLastAccessedAt(),
+                            'logoPath' => $this->getLogoPath($integration->getType(), false)
                         ];
                     }
                 }
