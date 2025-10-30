@@ -4,10 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-30
 
+### Changed
+- Redesigned Skills page from card layout to table layout for better overview and information density
+- Improved mobile responsiveness with adaptive table design that transforms into stacked cards on small screens
+- Modernized architecture using component-based design (Twig Components, Stimulus controllers) for better maintainability
+- Skills page now loads faster and provides better visual hierarchy for managing multiple integrations
+- Simplified Skills page by removing search functionality - all integrations now displayed in a clean, organized table without search distractions
+- Simplified Personalized Skills management - removed toggle switches from skills list, simply delete skills you no longer need
+- Unified table design - both Personalized Skills and Platform Skills now use the same consistent column layout for easier navigation
+- Platform Skills table now matches the look and feel of Personalized Skills with consistent columns: Instance Name, Type, Status, Last Accessed, and Actions
+- "Manage Platform Skills" button moved to prominent header position with orange styling for better visibility
+
+### Improved
+- Cleaner action buttons layout in table format with consistent spacing and alignment
+- Better use of screen space with condensed table view showing more integrations at once
+- Streamlined interface reduces clutter while keeping all functionality easily accessible
+- Jira and Confluence integration icons now display larger and clearer for better visibility
+- Last accessed dates now appear more compact and fit better on screen without line breaks
+- Delete button now has proper styling with consistent appearance across all integrations
+- Test Connection modal now displays properly centered on screen instead of appearing at bottom-left
+- Action buttons (Edit, Test Connection, Delete) now stay on the same line without wrapping for cleaner table layout
+- Simpler workflow for managing skills - delete integrations you no longer use instead of toggling them on and off
+
 ### Fixed
 - Notification bar positioning - status messages now correctly appear below the top navigation bar instead of covering it
+- Test Connection modal positioning - connection test results now appear in the center of the screen as expected
+- Integration icons for Jira and Confluence now show clearly at proper size without text overflow
 
-### Changed
+### Changed (Earlier)
 - Simplified notification messages - status messages now appear as a clean, full-width bar directly under the navigation instead of an animated overlay, making them less disruptive and easier to read
 - Notifications now require manual dismissal - messages stay visible until you close them with the X button, ensuring you don't miss important information
 - Improved skill management workflow - tool toggles for Personalized Skills moved to dedicated edit pages, allowing you to manage skill tools when editing credentials instead of from the skills list page

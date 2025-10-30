@@ -1,0 +1,76 @@
+{# @var \App\Twig\Components\PlatformSkillsCardComponent this #}
+
+{% if this.hasSystemIntegrations %}
+<div class="platform-skills-section">
+    <div class="section-header-with-actions">
+        <div class="section-header-content">
+            <h2>{{ 'integration.platform_skills'|trans|default('Platform Skills') }}</h2>
+            <p class="section-description">{{ 'integration.platform_skills_description'|trans|default('Built-in capabilities available to all users without external authentication') }}</p>
+        </div>
+
+        <div class="section-actions">
+            <a href="{{ path('app_platform_skills_edit') }}" class="btn btn-primary">
+                <i class="fas fa-cog"></i>
+                {{ 'action.manage_platform_skills'|trans|default('Manage Platform Skills') }}
+            </a>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="skills-table platform-skills-table">
+            <thead>
+                <tr>
+                    <th>{{ 'integration.instance_name'|trans|default('Instance Name') }}</th>
+                    <th>{{ 'integration.type'|trans|default('Type') }}</th>
+                    <th>{{ 'integration.status'|trans|default('Status') }}</th>
+                    <th class="hide-mobile">{{ 'integration.last_accessed'|trans|default('Last Accessed') }}</th>
+                    <th>{{ 'integration.actions'|trans|default('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="table-row platform-row">
+                    {# Instance Name #}
+                    <td class="table-cell-primary">
+                        <div class="cell-with-logo">
+                            <img src="/images/logos/workoflow-logo.png" alt="Platform Skills" class="integration-logo-small">
+                            <span class="integration-name">{{ 'integration.platform_skills'|trans|default('Platform Skills') }}</span>
+                        </div>
+                    </td>
+
+                    {# Type Badge #}
+                    <td>
+                        <span class="badge badge-system">{{ 'PLATFORM'|trans|default('PLATFORM') }}</span>
+                    </td>
+
+                    {# Status Badge #}
+                    <td>
+                        <span class="badge badge-connected">
+                            <i class="fas fa-check-circle"></i>
+                            {{ 'status.active'|trans|default('Active') }}
+                        </span>
+                    </td>
+
+                    {# Last Accessed #}
+                    <td class="hide-mobile text-secondary">
+                        -
+                    </td>
+
+                    {# Actions #}
+                    <td class="table-actions">
+                        <div class="action-group">
+                            <a
+                                href="{{ path('app_platform_skills_edit') }}"
+                                class="btn btn-sm btn-secondary"
+                                title="{{ 'action.configure'|trans|default('Configure') }}"
+                            >
+                                <i class="fas fa-cog"></i>
+                                <span class="btn-text">{{ 'action.configure'|trans|default('Configure') }}</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}

@@ -150,6 +150,7 @@ PLATFORM: PLATTFORM
 
 integration:
   name: Name
+  actions: Aktionen
   title: Skills verwalten
   skills_page_title: Skills verwalten
   skills_explanation_p1: Skills ermöglichen es KI-Agenten, in Ihrem Namen Aktionen auszuführen, indem sie sich mit verschiedenen Plattformen und Services verbinden. Jeder Skill bietet spezifische Fähigkeiten, die die KI bei der Arbeit mit Ihren Daten nutzen kann.
@@ -343,6 +344,8 @@ action:
   download: Herunterladen
   manage_tools: Tools verwalten
   back_to_skills: Zurück zu Skills
+  configure: Konfigurieren
+  manage_platform_skills: Platform Skills verwalten
 
 file:
   title: Dateien

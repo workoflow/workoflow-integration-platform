@@ -44,8 +44,8 @@ class IntegrationController extends AbstractController
 
         // Map integration types to logo paths
         $logoMap = [
-            'jira' => '/images/logos/jira-logo.svg',
-            'confluence' => '/images/logos/confluence-logo.svg',
+            'jira' => '/images/logos/jira-icon.svg',
+            'confluence' => '/images/logos/confluence-icon.svg',
             'gitlab' => '/images/logos/gitlab-logo.svg',
             'trello' => '/images/logos/trello-logo.png',
             'sharepoint' => '/images/logos/sharepoint-logo.svg',

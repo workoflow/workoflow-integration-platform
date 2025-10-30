@@ -153,6 +153,7 @@ integration:
   type: Type
   status: Status
   last_accessed: Last Accessed
+  actions: Actions
   title: Manage Skills
   skills_page_title: Manage Skills
   skills_explanation_p1: Skills enable AI agents to perform actions on your behalf by connecting to various platforms and services. Each skill provides specific capabilities that the AI can use when working with your data.
@@ -343,6 +344,8 @@ action:
   download: Download
   manage_tools: Manage Tools
   back_to_skills: Back to Skills
+  configure: Configure
+  manage_platform_skills: Manage Platform Skills
 
 file:
   title: Files
