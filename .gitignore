@@ -55,3 +55,4 @@ composer.phar
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
 /.phpunit.cache/
+.playwright-mcp
