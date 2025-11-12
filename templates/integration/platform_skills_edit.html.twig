@@ -1,0 +1,325 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'integration.platform_skills_edit'|trans|default('Manage Platform Skills') }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="integrations-page">
+
+    <div class="platform-skills-container">
+        <div class="platform-skills-header">
+            <h1>{{ 'integration.platform_skills_edit'|trans|default('Manage Platform Skills') }}</h1>
+            <p class="page-description">
+                {{ 'integration.platform_skills_edit_description'|trans|default('Enable or disable platform tools that are available to all users in your organization') }}
+            </p>
+        </div>
+
+        <div class="back-link">
+            <a href="{{ path('app_skills') }}" class="btn-link">
+                <i class="fas fa-arrow-left"></i> {{ 'action.back_to_skills'|trans|default('Back to Skills') }}
+            </a>
+        </div>
+
+        <div class="platform-skills-list">
+            {% for skill in platformSkills %}
+                <div class="platform-skill-card">
+                    <div class="skill-header">
+                        <h2>{{ skill.name }}</h2>
+                        <span class="badge badge-platform">{{ 'integration.platform'|trans|default('Platform') }}</span>
+                    </div>
+
+                    <div class="tools-management">
+                        {% for tool in skill.tools %}
+                            <div class="tool-item">
+                                <div class="tool-toggle-wrapper">
+                                    <label class="tool-toggle">
+                                        <input type="checkbox"
+                                               {% if tool.enabled %}checked{% endif %}
+                                               data-integration="{{ skill.type }}"
+                                               data-instance="{{ skill.instanceId|default('') }}"
+                                               data-tool="{{ tool.name }}"
+                                               onchange="toggleTool(this)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="tool-details">
+                                    <div class="tool-name">{{ tool.name }}</div>
+                                    <div class="tool-description">{{ tool.description }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ path('app_skills') }}" class="btn btn-primary">
+                <i class="fas fa-check"></i> {{ 'action.done'|trans|default('Done') }}
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.platform-skills-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.platform-skills-header {
+    margin-bottom: 2rem;
+}
+
+.platform-skills-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.page-description {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.back-link {
+    margin-bottom: 1.5rem;
+}
+
+.btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.2s;
+}
+
+.btn-link:hover {
+    color: var(--primary-color-dark);
+}
+
+.platform-skills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.platform-skill-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.skill-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.skill-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-platform {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Tools management section */
+.tools-management {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.tool-item:last-child {
+    border-bottom: none;
+}
+
+.tool-item:hover {
+    background: var(--secondary-background);
+}
+
+.tool-toggle-wrapper {
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.tool-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.tool-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    border-radius: 24px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.tool-toggle input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+.tool-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.tool-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+}
+
+.tool-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-color-dark);
+}
+
+@media (max-width: 768px) {
+    .platform-skills-container {
+        padding: 0 0.5rem;
+    }
+
+    .skill-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .tool-item {
+        padding: 0.75rem;
+    }
+
+    .tool-name {
+        font-size: 0.85rem;
+    }
+
+    .tool-description {
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<script>
+// Tool toggle functionality
+async function toggleTool(checkbox) {
+    const integration = checkbox.dataset.integration;
+    const instance = checkbox.dataset.instance || '';
+    const tool = checkbox.dataset.tool;
+    const enabled = checkbox.checked;
+
+    try {
+        const response = await fetch(`/skills/${integration}/toggle-tool`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `tool=${encodeURIComponent(tool)}&enabled=${enabled}&instance=${encodeURIComponent(instance)}`
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle tool');
+        }
+    } catch (error) {
+        console.error('Error toggling tool:', error);
+        checkbox.checked = !checkbox.checked;
+        alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
+    }
+}
+</script>
+{% endblock %}

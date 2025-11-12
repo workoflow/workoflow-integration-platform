@@ -1,0 +1,177 @@
+{# @var \App\Twig\Components\SkillsTableComponent this #}
+
+<div class="skills-table-section" data-controller="skills-table">
+    <div class="section-header-with-actions">
+        <div class="section-header-content">
+            <h2>{{ 'integration.external_integrations'|trans|default('Personalized Skills') }}</h2>
+            <p class="section-description">{{ 'integration.external_integrations_description'|trans|default('Connect to external services like Jira, Confluence, and SharePoint with your credentials') }}</p>
+        </div>
+
+        <div class="section-actions">
+            {# Add Integration Dropdown #}
+            <div class="add-integration-dropdown" data-controller="integration-dropdown">
+                <button
+                    class="btn btn-primary dropdown-toggle"
+                    data-action="click->integration-dropdown#toggle"
+                    data-integration-dropdown-target="button"
+                >
+                    <i class="fas fa-plus"></i> {{ 'integration.add_new'|trans|default('Add New Integration') }}
+                </button>
+                <div
+                    class="dropdown-menu"
+                    data-integration-dropdown-target="menu"
+                    style="display: none;"
+                >
+                    {% for availableType in availableTypes %}
+                        <a href="{{ path('app_tool_setup', {type: availableType.type}) }}" class="dropdown-item">
+                            {% if availableType.type == 'jira' %}
+                                <i class="fab fa-jira"></i>
+                            {% elseif availableType.type == 'confluence' %}
+                                <i class="fab fa-confluence"></i>
+                            {% elseif availableType.type == 'sharepoint' %}
+                                <i class="fab fa-microsoft"></i>
+                            {% elseif availableType.type == 'gitlab' %}
+                                <i class="fab fa-gitlab"></i>
+                            {% elseif availableType.type == 'trello' %}
+                                <i class="fab fa-trello"></i>
+                            {% else %}
+                                <i class="fas fa-plug"></i>
+                            {% endif %}
+                            {{ availableType.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if this.hasConfiguredIntegrations %}
+        {# Skills Table #}
+        <div class="table-container">
+            <table class="skills-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'integration.instance_name'|trans|default('Instance Name') }}</th>
+                        <th>{{ 'integration.type'|trans|default('Type') }}</th>
+                        <th>{{ 'integration.status'|trans|default('Status') }}</th>
+                        <th class="hide-mobile">{{ 'integration.last_accessed'|trans|default('Last Accessed') }}</th>
+                        <th>{{ 'integration.actions'|trans|default('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody data-skills-table-target="tableBody">
+                    {% for integration in this.getUserIntegrations %}
+                        <tr
+                            class="table-row"
+                            data-skills-table-target="row"
+                            data-integration-name="{{ integration.instanceName|default(integration.name)|lower }}"
+                            data-integration-type="{{ integration.type|lower }}"
+                        >
+                            {# Instance Name #}
+                            <td class="table-cell-primary">
+                                <div class="cell-with-logo">
+                                    <img src="{{ integration.logoPath }}" alt="{{ integration.name }}" class="integration-logo-small">
+                                    <span class="integration-name">{{ integration.instanceName|default(integration.name) }}</span>
+                                </div>
+                            </td>
+
+                            {# Type Badge #}
+                            <td>
+                                <span class="badge badge-type">{{ integration.type|upper }}</span>
+                            </td>
+
+                            {# Status Badge #}
+                            <td>
+                                {% if integration.hasCredentials %}
+                                    {% if integration.active %}
+                                        <span class="badge badge-connected">
+                                            <i class="fas fa-check-circle"></i>
+                                            {{ 'status.connected'|trans|default('Connected') }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">
+                                            <i class="fas fa-pause-circle"></i>
+                                            {{ 'status.inactive'|trans|default('Inactive') }}
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-disconnected">
+                                        <i class="fas fa-times-circle"></i>
+                                        {{ 'status.not_connected'|trans|default('Not Connected') }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {# Last Accessed #}
+                            <td class="hide-mobile text-secondary">
+                                {% if integration.lastAccessedAt %}
+                                    <i class="fas fa-clock"></i>
+                                    {{ this.formatLastAccessed(integration.lastAccessedAt) }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            {# Actions #}
+                            <td class="table-actions">
+                                <div class="action-group">
+                                    {# Edit Button #}
+                                    <a
+                                        href="{{ path('app_tool_setup', {type: integration.type, instance: integration.instanceId}) }}"
+                                        class="btn btn-sm btn-secondary"
+                                        title="{{ 'action.edit'|trans|default('Edit') }}"
+                                    >
+                                        <i class="fas fa-edit"></i>
+                                        <span class="btn-text">{{ 'action.edit'|trans|default('Edit') }}</span>
+                                    </a>
+
+                                    {# Test Connection Button #}
+                                    <button
+                                        class="btn btn-sm btn-secondary"
+                                        data-type="{{ integration.type }}"
+                                        data-instance="{{ integration.instanceId }}"
+                                        data-action="click->skills-table#testConnection"
+                                        title="{{ 'integration.test_connection'|trans|default('Test Connection') }}"
+                                    >
+                                        <i class="fas fa-plug"></i>
+                                        <span class="btn-text">{{ 'integration.test_connection'|trans|default('Test') }}</span>
+                                    </button>
+
+                                    {# Delete Button #}
+                                    <button
+                                        class="btn btn-sm btn-danger"
+                                        data-instance-id="{{ integration.instanceId }}"
+                                        data-instance-name="{{ integration.instanceName|default(integration.name) }}"
+                                        data-action="click->skills-table#deleteIntegration"
+                                        title="{{ 'action.delete'|trans|default('Delete') }}"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                        <span class="btn-text">{{ 'action.delete'|trans|default('Delete') }}</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# No Results Message (hidden by default) #}
+        <div class="no-results-message" data-skills-table-target="noResults" style="display: none;">
+            <div class="empty-state">
+                <i class="fas fa-search empty-icon"></i>
+                <h3>{{ 'integration.no_results'|trans|default('No integrations found') }}</h3>
+                <p>{{ 'integration.no_results_desc'|trans|default('Try adjusting your search terms') }}</p>
+            </div>
+        </div>
+
+    {% else %}
+        {# Empty State - No Integrations Configured #}
+        <div class="no-integrations-message">
+            <div class="empty-state">
+                <i class="fas fa-plug empty-icon"></i>
+                <h3>{{ 'integration.no_integrations'|trans|default('No integrations configured yet') }}</h3>
+                <p>{{ 'integration.no_integrations_desc'|trans|default('Start by adding your first integration to connect external services') }}</p>
+            </div>
+        </div>
+    {% endif %}
+</div>

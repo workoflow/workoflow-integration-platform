@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="integrations-page">
-    {% include '_partials/header.html.twig' %}
 
     <div class="setup-container">
         <div class="setup-card">
@@ -64,7 +63,7 @@
                                         <i class="fas fa-check-circle"></i>
                                         <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
                                     </div>
-                                    <a href="{{ path('app_integration_oauth_microsoft_start', {configId: config.id}) }}"
+                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
                                        class="btn btn-secondary"
                                        onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
                                         <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
@@ -74,7 +73,7 @@
                                         <i class="fas fa-times-circle"></i>
                                         <span>{{ 'status.not_connected'|trans|default('Not connected') }}</span>
                                     </div>
-                                    <a href="{{ path('app_integration_oauth_microsoft_start', {configId: config.id}) }}"
+                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
                                        class="btn btn-primary">
                                         <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
                                     </a>
@@ -117,6 +116,33 @@
                     {% endif %}
                 {% endfor %}
 
+                {% if isEdit and config %}
+                    <h3>{{ 'integration.available_tools'|trans|default('Available Tools') }}</h3>
+                    <p class="field-hint">{{ 'integration.tools_hint'|trans|default('Enable or disable specific tools that this integration provides') }}</p>
+
+                    <div class="tools-management">
+                        {% for tool in integration.getTools() %}
+                            <div class="tool-item">
+                                <div class="tool-toggle-wrapper">
+                                    <label class="tool-toggle">
+                                        <input type="checkbox"
+                                               {% if not config.isToolDisabled(tool.getName()) %}checked{% endif %}
+                                               data-integration="{{ integration.getType() }}"
+                                               data-instance="{{ config.id }}"
+                                               data-tool="{{ tool.getName() }}"
+                                               onchange="toggleTool(this)">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <div class="tool-details">
+                                    <div class="tool-name">{{ tool.getName() }}</div>
+                                    <div class="tool-description">{{ tool.getDescription() }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <div class="form-actions">
                     {% if hasOAuthField and not config %}
                         {# For new OAuth integrations, change the button to "Connect with Microsoft" #}
@@ -128,7 +154,7 @@
                             {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
                         </button>
                     {% endif %}
-                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                    <a href="{{ path('app_skills') }}" class="btn btn-secondary">
                         {{ 'action.cancel'|trans }}
                     </a>
                 </div>
@@ -313,6 +339,100 @@ label.required {
     color: white;
 }
 
+/* Tools management section */
+.tools-management {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-background);
+    transition: background-color 0.2s;
+}
+
+.tool-item:last-child {
+    border-bottom: none;
+}
+
+.tool-item:hover {
+    background: var(--secondary-background);
+}
+
+.tool-toggle-wrapper {
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.tool-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.tool-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    border-radius: 24px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.tool-toggle input:checked + .toggle-slider {
+    background-color: var(--primary-color);
+}
+
+.tool-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.tool-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-name {
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+}
+
+.tool-description {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
 .oauth-section {
     margin: 1.5rem 0;
 }
@@ -443,5 +563,197 @@ ul.form-errors li {
     line-height: 1.4;
     margin-bottom: 0.25rem;
 }
+
+/* URL Validation Feedback */
+.url-validation-feedback {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.url-validation-feedback.valid {
+    display: flex;
+    background: var(--success-background, rgba(16, 185, 129, 0.1));
+    border: 1px solid var(--success-color, #10b981);
+    color: var(--success-color, #10b981);
+}
+
+.url-validation-feedback.warning {
+    display: flex;
+    background: var(--warning-background, rgba(251, 191, 36, 0.1));
+    border: 1px solid var(--warning-color, #fbbf24);
+    color: var(--warning-color, #fbbf24);
+}
+
+.url-validation-feedback.error {
+    display: flex;
+    background: var(--danger-background, rgba(239, 68, 68, 0.1));
+    border: 1px solid var(--danger-color, #ef4444);
+    color: var(--danger-color, #ef4444);
+}
+
+.url-validation-feedback i {
+    font-size: 1rem;
+}
+
+.form-control.url-valid {
+    border-color: var(--success-color, #10b981);
+}
+
+.form-control.url-warning {
+    border-color: var(--warning-color, #fbbf24);
+}
+
+.form-control.url-error {
+    border-color: var(--danger-color, #ef4444);
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Find the URL input field for Confluence integration
+    const urlInput = document.querySelector('input[id*="url"]');
+    if (!urlInput) return;
+
+    // Create feedback element
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'url-validation-feedback';
+    urlInput.parentNode.insertBefore(feedbackDiv, urlInput.nextSibling);
+
+    function validateConfluenceUrl(url) {
+        if (!url || url.trim() === '') {
+            return { valid: false, message: '', type: 'none' };
+        }
+
+        // Check if it's a valid URL format
+        try {
+            const urlObj = new URL(url);
+
+            // Must be HTTPS
+            if (urlObj.protocol !== 'https:') {
+                return {
+                    valid: false,
+                    message: 'Confluence URL must use HTTPS protocol',
+                    type: 'error'
+                };
+            }
+
+            // Must have a hostname
+            if (!urlObj.hostname) {
+                return {
+                    valid: false,
+                    message: 'Please enter a valid domain name',
+                    type: 'error'
+                };
+            }
+
+            // Check if URL contains /wiki path - this is incorrect
+            const haswiki = urlObj.pathname.includes('/wiki');
+
+            if (haswiki) {
+                return {
+                    valid: false,
+                    message: 'Please remove /wiki from the URL - enter only the base URL (e.g., https://your-domain.atlassian.net)',
+                    type: 'error'
+                };
+            }
+
+            // Valid URL without /wiki
+            return {
+                valid: true,
+                message: 'URL format is correct',
+                type: 'valid'
+            };
+
+        } catch (e) {
+            return {
+                valid: false,
+                message: 'Please enter a valid URL (e.g., https://your-domain.atlassian.net)',
+                type: 'error'
+            };
+        }
+    }
+
+    function updateValidationFeedback(result) {
+        // Remove all validation classes
+        urlInput.classList.remove('url-valid', 'url-warning', 'url-error');
+        feedbackDiv.classList.remove('valid', 'warning', 'error');
+        feedbackDiv.style.display = 'none';
+
+        if (result.type === 'none') {
+            return;
+        }
+
+        // Add appropriate classes
+        if (result.type === 'valid') {
+            urlInput.classList.add('url-valid');
+            feedbackDiv.classList.add('valid');
+            feedbackDiv.innerHTML = '<i class="fas fa-check-circle"></i><span>' + result.message + '</span>';
+        } else if (result.type === 'warning') {
+            urlInput.classList.add('url-warning');
+            feedbackDiv.classList.add('warning');
+            feedbackDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>' + result.message + '</span>';
+        } else if (result.type === 'error') {
+            urlInput.classList.add('url-error');
+            feedbackDiv.classList.add('error');
+            feedbackDiv.innerHTML = '<i class="fas fa-times-circle"></i><span>' + result.message + '</span>';
+        }
+
+        feedbackDiv.style.display = 'flex';
+    }
+
+    // Validate on blur
+    urlInput.addEventListener('blur', function() {
+        const result = validateConfluenceUrl(this.value);
+        updateValidationFeedback(result);
+    });
+
+    // Validate on input (with debounce)
+    let inputTimeout;
+    urlInput.addEventListener('input', function() {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(() => {
+            const result = validateConfluenceUrl(this.value);
+            updateValidationFeedback(result);
+        }, 500);
+    });
+
+    // Validate on page load if there's an existing value
+    if (urlInput.value) {
+        const result = validateConfluenceUrl(urlInput.value);
+        updateValidationFeedback(result);
+    }
+});
+
+// Tool toggle functionality
+async function toggleTool(checkbox) {
+    const integration = checkbox.dataset.integration;
+    const instance = checkbox.dataset.instance || '';
+    const tool = checkbox.dataset.tool;
+    const enabled = checkbox.checked;
+
+    try {
+        const response = await fetch(`/skills/${integration}/toggle-tool`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: `tool=${encodeURIComponent(tool)}&enabled=${enabled}&instance=${encodeURIComponent(instance)}`
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle tool');
+        }
+    } catch (error) {
+        console.error('Error toggling tool:', error);
+        checkbox.checked = !checkbox.checked;
+        alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
+    }
+}
+</script>
 {% endblock %}

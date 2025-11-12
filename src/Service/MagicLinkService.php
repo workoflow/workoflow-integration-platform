@@ -21,7 +21,7 @@ class MagicLinkService
         $this->logger = $logger;
     }
 
-    public function generateToken(string $name, string $orgUuid, string $workflowUserId): string
+    public function generateToken(string $name, string $orgUuid, string $workflowUserId, ?string $email = null): string
     {
         $payload = [
             'name' => $name,
@@ -32,10 +32,16 @@ class MagicLinkService
             'type' => 'magic_link'
         ];
 
+        // Add email to payload if provided
+        if ($email !== null && $email !== '') {
+            $payload['email'] = $email;
+        }
+
         $this->logger->info('Generating magic link token', [
             'name' => $name,
             'org_uuid' => $orgUuid,
-            'workflow_user_id' => $workflowUserId
+            'workflow_user_id' => $workflowUserId,
+            'email' => $email ?? 'not_provided'
         ]);
 
         return JWT::encode($payload, $this->secret, $this->algorithm);
@@ -76,9 +82,9 @@ class MagicLinkService
         }
     }
 
-    public function generateMagicLink(string $name, string $orgUuid, string $baseUrl, string $workflowUserId): string
+    public function generateMagicLink(string $name, string $orgUuid, string $baseUrl, string $workflowUserId, ?string $email = null): string
     {
-        $token = $this->generateToken($name, $orgUuid, $workflowUserId);
+        $token = $this->generateToken($name, $orgUuid, $workflowUserId, $email);
         return $baseUrl . '/auth/magic-link?token=' . $token;
     }
 }

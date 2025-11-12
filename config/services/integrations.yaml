@@ -60,3 +60,9 @@ services:
 
     App\Integration\UserIntegrations\SharePointIntegration:
         tags: ['app.integration']
+
+    App\Integration\UserIntegrations\TrelloIntegration:
+        tags: ['app.integration']
+
+    App\Integration\UserIntegrations\GitLabIntegration:
+        tags: ['app.integration']

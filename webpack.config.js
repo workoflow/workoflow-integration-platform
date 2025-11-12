@@ -71,6 +71,11 @@ Encore
 
     // uncomment if you're having problems with a jQuery plugin
     //.autoProvidejQuery()
+
+    // Add alias for controllers.json
+    .addAliases({
+        '@symfony/stimulus-bridge/controllers.json': './controllers.json'
+    })
 ;
 
 module.exports = Encore.getWebpackConfig();

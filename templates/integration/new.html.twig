@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="dashboard-page">
-    {% include '_partials/header.html.twig' %}
 
     <div class="dashboard-container">
         <h1 class="dashboard-title">{{ 'integration.add_new'|trans }}</h1>
@@ -50,7 +49,7 @@
                     <button type="submit" class="btn btn-primary">
                         {{ 'integration.create'|trans }}
                     </button>
-                    <a href="{{ path('app_integrations') }}" class="btn btn-secondary">
+                    <a href="{{ path('app_skills') }}" class="btn btn-secondary">
                         {{ 'common.cancel'|trans }}
                     </a>
                 </div>

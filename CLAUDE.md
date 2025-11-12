@@ -52,7 +52,6 @@ workoflow-promopage-v2/
 ├── config/           # Symfony Configuration
 │   └── services/    # Service definitions
 │       └── integrations.yaml # Integration registry config
-├── migrations/       # Doctrine Migrations
 ├── public/          # Web Root
 ├── src/
 │   ├── Command/     # Console Commands
@@ -168,6 +167,7 @@ The REST API dynamically provides tools based on activated user integrations.
 - `jira_get_issue_{integration_id}` - Get Issue Details
 - `jira_get_sprints_from_board_{integration_id}` - Board Sprints
 - `jira_get_sprint_issues_{integration_id}` - Sprint Issues
+- `jira_add_comment_{integration_id}` - Add Comment to Issue
 
 #### Confluence Tools
 - `confluence_search_{integration_id}` - CQL Search
@@ -261,9 +261,10 @@ All critical configurations via .env:
 - S3/MinIO Config
 - Encryption Keys
 
-### Migration Strategy
-- Development: Single migration overwritable
-- Production: New migration files
+### Database Schema Management
+- **Automatic Schema Updates**: Database schema is updated directly from entity definitions
+- **No Migration Files**: Simplified workflow using `doctrine:schema:update --force`
+- **Single Source of Truth**: PHP Entities define the database structure
 
 ### Monitoring
 - Audit Logs in `/var/log/audit.log`
@@ -282,8 +283,11 @@ All critical configurations via .env:
 # Update dependencies
 docker-compose exec frankenphp composer update
 
-# Run migrations
-docker-compose exec frankenphp php bin/console doctrine:migrations:migrate
+# Update database schema from entities
+docker-compose exec frankenphp php bin/console doctrine:schema:update --force
+
+# View pending schema changes (without applying)
+docker-compose exec frankenphp php bin/console doctrine:schema:update --dump-sql
 
 # Clear cache
 docker-compose exec frankenphp php bin/console cache:clear

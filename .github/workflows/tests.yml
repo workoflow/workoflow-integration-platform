@@ -1,0 +1,158 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11.2
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: workoflow_test
+          MYSQL_USER: workoflow_test
+          MYSQL_PASSWORD: workoflow_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start MinIO
+        run: |
+          docker run -d \
+            --name minio \
+            -p 9000:9000 \
+            -p 9001:9001 \
+            -e MINIO_ROOT_USER=workoflow \
+            -e MINIO_ROOT_PASSWORD=workoflow123 \
+            minio/minio:latest \
+            server /data --console-address ":9001"
+
+          # Wait for MinIO to be ready
+          echo "Waiting for MinIO to start..."
+          for i in {1..30}; do
+            if curl -f http://127.0.0.1:9000/minio/health/live > /dev/null 2>&1; then
+              echo "MinIO is ready"
+              break
+            fi
+            echo "Waiting for MinIO... ($i/30)"
+            sleep 2
+          done
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, sodium, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Create .env.test.local
+        run: |
+          cat > .env.test.local << EOF
+          APP_ENV=test
+          APP_SECRET=test-secret-key-for-github-actions
+          DATABASE_URL=mysql://workoflow_test:workoflow_test@127.0.0.1:3306/workoflow?serverVersion=11.2.2-MariaDB&charset=utf8mb4
+          REDIS_URL=redis://127.0.0.1:6379
+          MINIO_ENDPOINT=http://127.0.0.1:9000
+          MINIO_ROOT_USER=workoflow
+          MINIO_ROOT_PASSWORD=workoflow123
+          MINIO_BUCKET=workoflow-files
+          MINIO_PUBLIC_BUCKET=workoflow-shared
+          MINIO_REGION=us-east-1
+          MINIO_USE_PATH_STYLE=true
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          TEST_JIRA_URL=${{ secrets.TEST_JIRA_URL }}
+          TEST_JIRA_EMAIL=${{ secrets.TEST_JIRA_EMAIL }}
+          TEST_JIRA_TOKEN=${{ secrets.TEST_JIRA_TOKEN }}
+          EOF
+
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..30}; do
+            if mysql -h 127.0.0.1 -u workoflow_test -pworkoflow_test -e "SELECT 1" > /dev/null 2>&1; then
+              echo "MariaDB is ready"
+              break
+            fi
+            echo "Waiting for MariaDB... ($i/30)"
+            sleep 2
+          done
+
+      - name: Setup MinIO
+        run: |
+          # Install MinIO Client
+          wget -q https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          sudo mv mc /usr/local/bin/
+
+          # Wait for MinIO to be ready
+          for i in {1..30}; do
+            if mc alias set local http://127.0.0.1:9000 workoflow workoflow123 > /dev/null 2>&1; then
+              echo "MinIO is ready"
+              break
+            fi
+            echo "Waiting for MinIO... ($i/30)"
+            sleep 2
+          done
+
+          # Create buckets
+          mc mb local/workoflow-files --ignore-existing
+          mc mb local/workoflow-shared --ignore-existing
+          mc anonymous set download local/workoflow-shared
+          echo "MinIO buckets created successfully"
+
+      - name: migrations
+        run: php bin/console doctrine:schema:update --force --env=test --no-interaction
+
+      - name: Run fixtures
+        run: php bin/console doctrine:fixtures:load --env=test --no-interaction
+
+      - name: Run PHPUnit tests
+        run: vendor/bin/phpunit
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Run PHP CodeSniffer
+        run: vendor/bin/phpcs

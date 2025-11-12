@@ -15,7 +15,7 @@ use App\Entity\User;
 
 class DashboardController extends AbstractController
 {
-    #[Route('/dashboard', name: 'app_dashboard')]
+    #[Route('/general', name: 'app_general')]
     #[IsGranted('ROLE_USER')]
     public function index(Request $request, IntegrationConfigRepository $integrationConfigRepository): Response
     {
@@ -28,7 +28,7 @@ class DashboardController extends AbstractController
         if (!$organisation) {
             // If user has no organisations at all, redirect to create
             if ($user->getOrganisations()->isEmpty()) {
-                return $this->redirectToRoute('app_organisation_create');
+                return $this->redirectToRoute('app_channel_create');
             }
             // If user has organisations but none selected, select the first one
             $organisation = $user->getOrganisations()->first();
@@ -50,7 +50,8 @@ class DashboardController extends AbstractController
         ]);
     }
 
-    #[Route('/organisation/create', name: 'app_organisation_create', methods: ['GET', 'POST'])]
+    #[Route('/channel/create', name: 'app_channel_create', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_ADMIN')]
     public function createOrganisation(
         Request $request,
         EntityManagerInterface $em,
@@ -58,11 +59,6 @@ class DashboardController extends AbstractController
     ): Response {
         /** @var User $user */
         $user = $this->getUser();
-
-        // Check if user already has any organisations
-        if (!$user->getOrganisations()->isEmpty()) {
-            return $this->redirectToRoute('app_dashboard');
-        }
 
         if ($request->isMethod('POST')) {
             $name = $request->request->get('name');
@@ -87,7 +83,7 @@ class DashboardController extends AbstractController
                 );
 
                 $this->addFlash('success', 'organisation.created.success');
-                return $this->redirectToRoute('app_dashboard');
+                return $this->redirectToRoute('app_general');
             }
         }
 

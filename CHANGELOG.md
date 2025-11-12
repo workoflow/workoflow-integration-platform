@@ -2,6 +2,291 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-10-30
+
+### Changed
+- Redesigned Skills page from card layout to table layout for better overview and information density
+- Improved mobile responsiveness with adaptive table design that transforms into stacked cards on small screens
+- Modernized architecture using component-based design (Twig Components, Stimulus controllers) for better maintainability
+- Skills page now loads faster and provides better visual hierarchy for managing multiple integrations
+- Simplified Skills page by removing search functionality - all integrations now displayed in a clean, organized table without search distractions
+- Simplified Personalized Skills management - removed toggle switches from skills list, simply delete skills you no longer need
+- Unified table design - both Personalized Skills and Platform Skills now use the same consistent column layout for easier navigation
+- Platform Skills table now matches the look and feel of Personalized Skills with consistent columns: Instance Name, Type, Status, Last Accessed, and Actions
+- "Manage Platform Skills" button moved to prominent header position with orange styling for better visibility
+
+### Improved
+- Cleaner action buttons layout in table format with consistent spacing and alignment
+- Better use of screen space with condensed table view showing more integrations at once
+- Streamlined interface reduces clutter while keeping all functionality easily accessible
+- Jira and Confluence integration icons now display larger and clearer for better visibility
+- GitLab integration icon simplified to show only the tanuki logo for better consistency with Jira and Confluence icon styles
+- Last accessed dates now appear more compact and fit better on screen without line breaks
+- Delete button now has proper styling with consistent appearance across all integrations
+- Test Connection modal now displays properly centered on screen instead of appearing at bottom-left
+- Action buttons (Edit, Test Connection, Delete) now stay on the same line without wrapping for cleaner table layout
+- Simpler workflow for managing skills - delete integrations you no longer use instead of toggling them on and off
+- Connection test results modal redesigned with modern minimalist style, larger animated icons, and color-matched close buttons for better visual feedback
+- Modal dialogs now feature smooth animations, enhanced shadows, and status-based color accents (green left border for success, red for errors)
+
+### Fixed
+- "Add Personalized Skill" dropdown now displays correctly as a vertical menu instead of showing skill badges in a horizontal row
+- Platform badge translation now displays correctly without missing translation key errors
+- Platform Skills configuration is now user-specific - each user can now independently enable/disable platform tools for their own account without affecting other users in the organization
+- Integration type badges on General page now display with orange styling matching the Skills page
+- Notification bar positioning - status messages now correctly appear below the top navigation bar instead of covering it
+- Test Connection modal positioning - connection test results now appear in the center of the screen as expected
+- Integration icons for Jira and Confluence now show clearly at proper size without text overflow
+
+### Changed (Earlier)
+- Simplified notification messages - status messages now appear as a clean, full-width bar directly under the navigation instead of an animated overlay, making them less disruptive and easier to read
+- Notifications now require manual dismissal - messages stay visible until you close them with the X button, ensuring you don't miss important information
+- Improved skill management workflow - tool toggles for Personalized Skills moved to dedicated edit pages, allowing you to manage skill tools when editing credentials instead of from the skills list page
+- Enhanced Platform Skills management - all platform tool settings now managed through a dedicated "Manage Tools" page, providing a centralized location to enable or disable built-in capabilities for your organization
+
+## 2025-10-29
+
+### Added
+- Channel Type selection for organizations - choose between Common, eCommerce, or MS Teams to categorize your channel's purpose
+- Microsoft Teams bot configuration - configure MS Teams bot integration with App Type (MultiTenant/SingleTenant), App ID, App Password, and Tenant ID
+- Workflow URL field in Channel settings - separate field specifically for n8n workflow visualization, with clear placeholder examples showing the difference between webhook URLs and workflow URLs
+- Help text explaining URL differences - tooltips now clarify that Webhook URLs are for AI agents to trigger workflows, while Workflow URLs are for viewing the workflow diagram
+- Enlarge button for workflow visualization - users can now view workflows in a fullscreen modal (90% of screen size) for better visibility of complex workflows with many nodes
+- Workflow User ID in Profile page - users can now easily view their personal workflow identifier in their profile
+
+### Changed
+- Enhanced security for sensitive credentials - N8N API keys and Microsoft Teams app passwords are now encrypted when stored, providing better protection for your integration credentials
+- Footer GitHub links now point to the official Workoflow organization repositories
+- Channel page now organized with "Channel Settings" section - basic channel configuration fields including Webhook URL are now grouped under a clear section headline for easier navigation
+- Agent Type field renamed from "Webhook Type" - clearer naming that better reflects the purpose of selecting how your AI agent communicates
+- Profile page now displays Workflow User ID - moved from Channel settings to personal profile for better organization
+- Workflow visualization now shows complete n8n workflows - the Channel page displays all nodes and connections from your n8n workflow, giving you a full view of your automation
+- Faster workflow preview loading - workflow diagrams now appear more quickly with improved performance
+- Workflow visualization uses official n8n component - ensures compatibility with all n8n workflow features and updates
+- Improved error messages for workflow visualization - more specific feedback when workflow URLs are misconfigured
+- Workflow visualization now displays in dark mode - matches the application's dark theme for a consistent visual experience
+- Larger workflow canvas - increased from 600px to 800px height for better visibility of complex workflows
+- Cleaner workflow view - removed instructional text overlay for a more professional, streamlined appearance
+- Workflow viewer supports full interaction - users can pan, zoom, and explore node details for better workflow understanding
+
+### Fixed
+- Production workflow URLs now work correctly - workflow visualization no longer incorrectly adds port numbers to production domain URLs, resolving "Idle timeout" errors on hosted environments
+- Status messages now appear at the top of the page - success, error, and info messages are now displayed consistently right below the navigation bar across all pages
+- Added close button to status messages - users can now dismiss messages by clicking the X button
+- Status messages auto-dismiss after 5 seconds - messages automatically fade out for better user experience
+- Improved status message styling - all message types (success, error, warning, info) now have consistent, modern styling with smooth animations
+- Workflow visualization loading error resolved - fixed browser module resolution issue that prevented the N8N workflow viewer from rendering
+- Workflow visualization now loads properly on all browsers - resolved "module specifier" error that appeared in browser console
+- All workflow connections now visible - node connections in the workflow visualization are now displayed properly
+
+## 2025-10-28
+
+### Added
+- Intelligent JIRA status transitions - users can now simply say "set ticket to Done" and the system automatically navigates through the entire workflow path
+- JIRA workflow transition support - AI agents can now change ticket statuses following proper workflow paths
+- Automatic workflow path finding - system intelligently determines required intermediate steps to reach target status
+- Loop detection and prevention - safely handles complex workflows without getting stuck in infinite loops
+- Status change capability with automatic workflow validation - prevents invalid status transitions that would normally fail
+- Available transitions discovery - bots can ask which status changes are possible for any ticket
+- End-to-end tests for JIRA integration - automated tests now validate real JIRA API connections and data retrieval
+- JIRA ticket content validation in tests - ensures issue summaries, story points, and acceptance criteria are correctly retrieved
+
+### Fixed
+- Skills page header layout - the heading and explanation text now display properly without overlapping, with improved spacing and readability
+- GitLab "Test Connection" button now works correctly - the connection test feature is now accessible and functional
+- Improved GitLab connection test error messages - users now see detailed diagnostics when GitLab connection fails, including specific error reasons and helpful suggestions
+- Fixed API URL in dashboard - the API integration URL now uses the correct endpoint path
+
+## 2025-10-27
+
+### Changed
+- Renamed "Tools" to "Skills" - the feature for managing integrations is now called "Skills" throughout the interface for better clarity about AI agent capabilities
+- Updated navigation menu from "Tools" to "Skills" - access your AI agent skills from the main navigation
+- Skills page now includes explanation section - helpful information about personalized and platform skills appears at the top of the Skills page
+- "System Tools" renamed to "Platform Skills" - built-in capabilities that don't require external authentication are now called Platform Skills
+- "Add Personal Integration" renamed to "Add Personalized Skill" - clearer terminology when connecting external services with your credentials
+- Skills page URL changed from /tools to /skills - bookmarks and links will need to be updated
+
+### Fixed
+- Test suite now properly validates English translations - all automated tests updated to work with the English interface
+
+### Changed
+- Renamed "Instructions" page to "Channel" - the navigation menu and page title now reflect the new name for better clarity
+
+### Added
+- Channel creation button on Channel page - administrators can now create multiple channels directly from the Channel page
+- Multi-channel support for administrators - admin users can manage multiple separate channels with independent configurations
+- Comprehensive Channel documentation - detailed guide explaining how channels work as API gateways for third-party integrations
+- GitLab integration for source code management - AI agents can now access GitLab repositories, merge requests, issues, and CI/CD pipelines
+- Browse GitLab projects - view all accessible projects or filter by membership
+- Access repository content - read files, browse directory trees, and navigate branches and tags
+- View commit history - see detailed commit information and track code changes over time
+- Manage merge requests - search, view, create, update, and comment on merge requests with full diff support
+- Work with issues - search, view, create, and update issues within projects
+- Monitor CI/CD pipelines - check pipeline status, view execution details, and track deployment progress
+- Access package registry - search and view packages published to GitLab's package registry
+- Full API integration - all GitLab tools available through REST API for automation platforms
+- Trello integration for project management - AI agents can now access and manage Trello boards, lists, and cards
+- Search across all Trello boards and cards - AI agents can find specific cards using keywords or criteria
+- View all accessible Trello boards - get a complete overview of available project boards
+- Read board structure - see all lists and cards organized on any board
+- Extract card details - access card titles, descriptions, members, labels, due dates, and attachments
+- Read card comments - see all discussion threads on cards
+- Access card checklists - view todo items and their completion status within cards
+- Create new cards - AI agents can add tasks to Trello lists based on user requests
+- Update existing cards - modify card details, move between lists, or change due dates
+- Add comments to cards - AI agents can post updates and responses directly to Trello cards
+- Full workflow automation support - all Trello tools available through REST API for n8n and other automation platforms
+
+### Changed
+- Channel name editing centralized to Instructions page - channel names can now only be changed from the Instructions page for better organization
+
+## 2025-10-24
+
+### Fixed
+- Jira connection test now works correctly and no longer shows false permission errors when credentials are valid
+
+### Improved
+- Connection test error messages now provide detailed explanations instead of generic "Connection failed" messages
+- Each error includes specific suggestions on how to fix the problem (e.g., "Check your API token", "Verify the URL is correct")
+- Test connection results now show technical details about what went wrong (authentication failed, network timeout, wrong permissions, etc.)
+- Error messages help troubleshoot integration issues faster with clear guidance
+- Both Jira and Confluence integrations now provide comprehensive error feedback during connection testing
+
+## 2025-10-25
+
+### Fixed
+- Connection test modal now displays proper titles instead of technical translation keys
+- Icons now display correctly throughout the application (previously missing due to Font Awesome not being installed)
+
+## 2025-10-24
+
+### Fixed
+- Confluence page creation now works correctly when using space keys (like "AT", "PROJ", "IT") - previously failed with "Space not found" errors
+- Confluence API connections now work correctly - fixed incorrect API endpoint paths that caused "404 Not Found" errors
+- All Confluence features (search, page retrieval, comments, page creation) now use correct API paths
+
+### Improved
+- Confluence URL input now provides instant validation feedback with helpful visual indicators
+- Clear guidance on expected URL format prevents configuration errors (base URL without /wiki path)
+- Real-time validation shows green checkmark for correct URLs and red error for invalid formats
+- Validation now prevents users from entering URLs with /wiki path (which causes API errors)
+- "Test Connection" button now performs comprehensive API testing for Confluence integrations
+- Connection tests verify both v1 and v2 API endpoints to ensure all features work correctly
+- Detailed error messages explain exactly what went wrong (authentication failed, wrong permissions, network issues, etc.)
+- Each error includes specific suggestions on how to fix the problem (e.g., "Create a new API token at...")
+- Credential validation during setup now performs actual API calls instead of just checking if fields are filled
+- Test Connection results now display in a beautiful modal dialog instead of browser alerts
+- Modal includes animated success/error icons with smooth transitions for better visual feedback
+- Error messages are now easier to read with better formatting and color coding
+- Modal can be closed by clicking outside, pressing ESC key, or clicking the close button
+
+## 2025-10-23
+
+### Fixed
+- Tool toggle buttons on integration management page now work correctly - fixed incorrect API endpoint URLs
+
+## 2025-10-21
+
+### Added
+- Language switcher in header - easily switch between German and English with flag indicators
+- Tagline "EFFICIENCY IS YOURS" displayed under platform title for brand reinforcement
+
+### Changed
+- Default language changed from German to English for wider accessibility
+
+### Fixed
+- Instructions page workflow visualization no longer gets stuck on "Loading..." when N8N webhook URL is not configured - now shows helpful message to configure the webhook URL
+- Non-admin users on Instructions page now see clear guidance to contact an administrator when workflow configuration is needed
+- Language switching now works properly across all pages - selected language persists when navigating between pages
+- All navigation menu items now properly translate when switching languages (Instructions, Profile, Members, Login, Logout)
+- Instructions page content now fully translates including labels and section headings
+- Test suite now works correctly after integration management URL structure update
+
+## 2025-10-20 (Latest)
+
+### Improved
+- Workflow visualization now shows only essential nodes for clearer understanding - displays webhooks, AI agent with connected tools, and response nodes in an organized layout
+- N8N workflow visualization automatically filters out intermediate processing nodes to focus on the main workflow structure
+- Workflow nodes are now arranged vertically for better readability with tools grouped below the AI agent
+- Docker compatibility for N8N API connections - workflow visualizations now work correctly when running in containerized environments
+
+## 2025-10-20
+
+### Added
+- New Instructions page for managing AI agent configuration and workflow settings
+- Agent personality customization through system prompts - define how your AI agent responds
+- Webhook integration support for connecting external workflow systems (Common and N8N)
+- Visual workflow viewer for N8N integrations - see your automation workflows at a glance
+- N8N API key authentication for secure workflow data access
+- Organization-wide agent settings management
+- Workflow user ID display on Instructions page for easy reference
+
+### Changed
+- Button to add integrations now labeled "Persönliche Integration" to better distinguish user integrations from system tools
+- Profile page layout improved to a cleaner 2-column grid design for better readability
+
+### Fixed
+- Workflow visualization on Instructions page now displays correctly - interactive controls are visible with proper dark theme styling
+- User registration API now correctly uses the real email address from external systems (like Microsoft Teams) instead of generating placeholder emails
+- Magic link authentication now correctly redirects to the general overview page after successful login
+- Magic link authentication now correctly identifies users when their display name changes - prevents duplicate accounts and authentication failures
+
+## 2025-10-18
+
+### Added
+- Jira integration can now add comments to issues - AI agents can post comments directly to Jira tickets
+
+## 2025-10-17
+
+### Added
+- New command to export all integration tools to XML format - provides complete documentation of all available tools with descriptions and parameters
+- Tool export command supports filtering by category (system tools or user integrations) for targeted documentation
+- New channel system allowing users to belong to multiple channels for future feature expansion
+- Channel association during user registration - external systems can now assign users to specific channels when creating accounts
+- Automatic channel creation through the registration API - channels are created on-demand when users are registered
+- Optional channel parameters in registration API for seamless channel assignment during onboarding
+- New automated user registration API for seamless onboarding - external systems can now create users instantly via API call
+- Registration API returns magic links for immediate user authentication - no waiting for users to click links first
+- Users and organizations are now created immediately when registration API is called - improves integration with external workflow systems
+- Comprehensive API documentation for the new registration endpoint with examples in multiple programming languages
+- Comprehensive documentation about magic link authentication lifecycle and session management
+- Confluence page creation capability for AI agents - can now create new pages directly in Confluence spaces
+- Confluence page update capability for AI agents - can now update existing pages with new content while handling version conflicts automatically
+- Support for multiple content formats when creating or updating Confluence pages - AI agents can use familiar markdown, plain text, or HTML instead of Confluence's native format
+- Intelligent space identification for Confluence pages - accepts both human-readable space keys (like 'PROJ') and technical space IDs
+- AI-friendly error messages for Confluence operations - provides clear guidance when page creation or update fails, helping AI agents correct and retry
+- Automatic content format conversion - markdown and plain text are automatically converted to Confluence's storage format
+- Version conflict detection and handling for page updates - automatically retrieves current version to prevent update conflicts
+- MinIO service now included in automated testing workflows to prevent test failures
+
+### Fixed
+- Application startup error that prevented the platform from loading properly
+- Authentication system configuration issue that blocked user login functionality
+- Login page styling for Magic Link authentication instructions box
+- Corrected magic link validity display from "15 minutes" to actual "24 hours" on login page
+- Fixed incorrect "single-use" claim - magic links can be used multiple times within validity period
+- Database field size for channel UUIDs increased to support Microsoft Teams channel IDs
+- Removed deprecated database update option to prepare for future compatibility
+- Fixed git repository permission warnings in Docker container environment
+- Updated frontend dependencies to fix security vulnerability
+- File storage service startup issues that prevented application from loading when MinIO was unavailable
+- Automated test workflow now builds frontend assets before running tests
+
+### Changed
+- Login page now displays instructions for Magic Link authentication instead of Google login
+- Users are directed to use Magic Links sent via Microsoft Teams or other connected chat applications
+- Magic link authentication now supports both immediate registration (new API flow) and deferred registration (existing flow) for backward compatibility
+- User creation logic centralized into reusable service for consistent behavior across registration methods
+- Extended user session duration from default (~24 minutes) to 24 hours for better user experience
+- Sessions now remain active for full 24 hours regardless of user activity
+- **Simplified database management** - removed migration files in favor of automatic schema updates directly from entity definitions
+- Database updates now use automatic schema synchronization for faster development workflow
+
+### Improved
+- Login page layout now uses wider design for better readability
+- Magic Link authentication channels displayed side-by-side for cleaner presentation
+
 ## 2025-10-15
 
 ### Added

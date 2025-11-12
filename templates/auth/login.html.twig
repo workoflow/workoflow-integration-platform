@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="login-page">
-    {% include '_partials/header.html.twig' %}
     
     <div class="login-container">
         <div class="login-card">
@@ -19,6 +18,8 @@
                     </div>
                 {% endif %}
 
+                {# Google login temporarily disabled - replaced with Magic Link authentication #}
+                {#
                 <a href="{{ path('connect_google_start') }}" class="login-button">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -28,6 +29,46 @@
                     </svg>
                     {{ 'auth.login.google'|trans }}
                 </a>
+                #}
+
+                {# Magic Link Authentication Info #}
+                <div class="magic-link-info">
+                    <div class="info-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 16v-4"></path>
+                            <path d="M12 8h.01"></path>
+                        </svg>
+                    </div>
+
+                    <h3>Magic Link Authentication</h3>
+
+                    <p class="info-text">
+                        To access Workoflow, please use the <strong>Magic Link</strong> sent to you via:
+                    </p>
+
+                    <div class="channels-list">
+                        <div class="channel-item">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.5 3C6.81 3 3 6.81 3 11.5S6.81 20 11.5 20h.5v3c4.86-2.34 8-7 8-11.5C20 6.81 16.19 3 11.5 3zm1 14.5h-2v-6h2v6zm0-8h-2v-2h2v2z"/>
+                            </svg>
+                            <span>Microsoft Teams</span>
+                        </div>
+                        <div class="channel-item">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                            </svg>
+                            <span>Other connected chat applications</span>
+                        </div>
+                    </div>
+
+                    <div class="info-note">
+                        <p>
+                            The Magic Link will be valid for <strong>24 hours</strong> and can be used multiple times within that period.
+                            If you haven't received your link, please contact your administrator.
+                        </p>
+                    </div>
+                </div>
 
                 <div class="login-footer">
                     {{ 'auth.login.privacy'|trans }}

@@ -53,13 +53,16 @@ services:
     App\Security\MagicLinkAuthenticator:
         arguments:
             $userRepository: '@App\Repository\UserRepository'
-            $organisationRepository: '@App\Repository\OrganisationRepository'
-            $userOrganisationRepository: '@App\Repository\UserOrganisationRepository'
-            $entityManager: '@doctrine.orm.entity_manager'
+            $userRegistrationService: '@App\Service\UserRegistrationService'
             $magicLinkService: '@App\Service\MagicLinkService'
             $auditLogService: '@App\Service\AuditLogService'
             $router: '@router'
             $logger: '@logger'
+
+    App\Controller\RegisterApiController:
+        arguments:
+            $apiAuthUser: '%env(API_AUTH_USER)%'
+            $apiAuthPassword: '%env(API_AUTH_PASSWORD)%'
 
     App\EventListener\TokenRefreshSubscriber:
         arguments:

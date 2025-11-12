@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="dashboard-page">
-    {% include '_partials/header.html.twig' %}
     
     <div class="dashboard-container">
         <h1 class="dashboard-title">{{ 'profile.title'|trans }}</h1>
@@ -17,12 +16,22 @@
                     <span class="info-label">{{ 'user.name'|trans }}</span>
                     <span class="info-value">{{ user.name }}</span>
                 </div>
-                
+
                 <div class="info-item">
                     <span class="info-label">{{ 'user.email'|trans }}</span>
                     <span class="info-value">{{ user.email }}</span>
                 </div>
-                
+
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.organisation'|trans }}</span>
+                    <span class="info-value">{{ user.organisation ? user.organisation.name : '-' }}</span>
+                </div>
+
+                <div class="info-item">
+                    <span class="info-label">{{ 'user.joined_at'|trans }}</span>
+                    <span class="info-value">{{ user.createdAt|date('d.m.Y H:i') }}</span>
+                </div>
+
                 <div class="info-item">
                     <span class="info-label">{{ 'user.role'|trans }}</span>
                     <span class="info-value">
@@ -31,15 +40,10 @@
                         </span>
                     </span>
                 </div>
-                
+
                 <div class="info-item">
-                    <span class="info-label">{{ 'user.organisation'|trans }}</span>
-                    <span class="info-value">{{ user.organisation ? user.organisation.name : '-' }}</span>
-                </div>
-                
-                <div class="info-item">
-                    <span class="info-label">{{ 'user.joined_at'|trans }}</span>
-                    <span class="info-value">{{ user.createdAt|date('d.m.Y H:i') }}</span>
+                    <span class="info-label">{{ 'user.workflow_user_id'|trans }}</span>
+                    <span class="info-value">{{ userOrganisation.workflowUserId ?? 'Not set' }}</span>
                 </div>
             </div>
         </div>

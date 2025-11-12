@@ -86,6 +86,84 @@ class JiraIntegration implements IntegrationInterface
                         'description' => 'Maximum number of results (default: 50)'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_add_comment',
+                'Add a comment to a Jira issue',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'The comment text to add to the issue'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_available_transitions',
+                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_transition_issue',
+                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'transitionId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Transition ID from jira_get_available_transitions'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add when transitioning the issue'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_transition_issue_to_status',
+                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'targetStatusName',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Target status name (e.g., "Done", "In Progress", "Closed")'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add during the transition'
+                    ]
+                ]
             )
         ];
     }
@@ -114,6 +192,27 @@ class JiraIntegration implements IntegrationInterface
                 $credentials,
                 $parameters['sprintId']
             ),
+            'jira_add_comment' => $this->jiraService->addComment(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['comment']
+            ),
+            'jira_get_available_transitions' => $this->jiraService->getAvailableTransitions(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_transition_issue' => $this->jiraService->transitionIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['transitionId'],
+                $parameters['comment'] ?? null
+            ),
+            'jira_transition_issue_to_status' => $this->jiraService->transitionIssueToStatus(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['targetStatusName'],
+                $parameters['comment'] ?? null
+            ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };
     }
@@ -130,27 +229,9 @@ class JiraIntegration implements IntegrationInterface
             return false;
         }
 
-        // Make a simple API call to validate credentials
+        // Use JiraService to validate credentials
         try {
-            $url = rtrim($credentials['url'], '/') . '/rest/api/3/myself';
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json',
-                'Content-Type: application/json'
-            ]);
-            curl_setopt($ch, CURLOPT_USERPWD, $credentials['username'] . ':' . $credentials['api_token']);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            // 200 means successful authentication
-            return $httpCode === 200;
+            return $this->jiraService->testConnection($credentials);
         } catch (\Exception $e) {
             return false;
         }

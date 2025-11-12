@@ -4,7 +4,6 @@
 
 {% block body %}
 <div class="organisation-settings-page">
-    {% include '_partials/header.html.twig' %}
     
     <div class="organisation-container">
         <h1 class="page-title">{{ 'organisation.settings'|trans }}</h1>
@@ -38,7 +37,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">{{ 'dashboard.integration_api_url'|trans }}</label>
+                    <label class="form-label">{{ 'general.integration_api_url'|trans }}</label>
                     <div class="input-with-copy">
                         <input type="text" 
                                class="form-control" 

@@ -4,12 +4,15 @@ common:
   optional: optional
 
 nav:
-  dashboard: Dashboard
-  integrations: Integrations
+  general: General
+  skills: Skills
   files: Files
-  organisation: Organisation
+  organisation: Channel
   profile: Profile
   logout: Logout
+  channel: Channel
+  members: Members
+  login: Login
 
 home:
   title: Welcome to Workoflow
@@ -58,12 +61,12 @@ auth:
     google: Sign in with Google
     privacy: By signing in, you agree to our privacy policy.
 
-dashboard:
-  title: Dashboard
+general:
+  title: General
   welcome: Welcome, %name%!
-  organisation: Your Organisation
+  organisation: Your Channel
   integration_api_url: Integration API URL
-  workflow_user_id: Organisation Specific ID
+  workflow_user_id: Channel Specific ID
   copy_curl_command: Copy curl command for tools
   copied: Copied!
   integrations_count: Integrations
@@ -75,35 +78,64 @@ dashboard:
 
 organisation:
   create:
-    title: Create Organisation
-    description: Please enter a name for your organisation to continue.
+    title: Create Channel
+    description: Please enter a name for your channel to continue.
     placeholder: e.g. My Company Inc.
     help: You can change the name later in settings.
-    submit: Create Organisation
+    submit: Create Channel
   created:
-    success: Organisation created successfully!
-  name: Organisation Name
-  settings: Organisation Settings
+    success: Channel created successfully!
+  name: Channel Name
+  settings: Channel Settings
   members: Members
   updated:
-    success: Organisation updated successfully!
+    success: Channel updated successfully!
   member:
     role_updated: Role updated successfully!
     cannot_change_own_role: You cannot change your own role.
   invite:
     invalid_email: Invalid email address.
-    user_has_organisation: This user already belongs to an organisation.
+    user_has_organisation: This user already belongs to a channel.
     user_added: User added successfully!
     user_not_found: User must register with Workoflow first.
-  uuid: Organisation UUID
+
+channel:
+  title: Channel
+  management: Channel Management
+  management.description: Create and manage your channels
+  create:
+    button: Create New Channel
+    title: Create Channel
+    description: Please enter a name for your channel to continue.
+  uuid: Channel UUID
   uuid_help: This UUID is used for the API endpoints
   integration_api_help: Use this API URL to connect AI agents (e.g. n8n) to your integrations
   save: Save
   invite_member: Invite Member
   invite_help: The user must register with Workoflow first
+  workflow_user_id: Workoflow User ID
+  organisation_name: Channel Name
+  channel_settings: Channel Settings
+  agent_settings: Agent Settings
+  agent_type: Agent Type
+  workflow_visualization: Workflow Visualization
   send_invite: Send Invite
   make_admin: Make Admin
   make_member: Make Member
+  organisation_type: Channel Type
+  type:
+    common: Common
+    ecommerce: eCommerce
+    msteams: MS Teams
+
+msteams:
+  configuration: MS Teams Configuration
+  configuration.description: Configure Microsoft Teams bot integration settings
+  app_type: Microsoft App Type
+  app_id: Microsoft App ID
+  app_password: Microsoft App Password
+  app_password.hint: This password will be stored encrypted for security
+  tenant_id: Microsoft Tenant ID
 
 status:
   active: Active
@@ -121,15 +153,23 @@ integration:
   type: Type
   status: Status
   last_accessed: Last Accessed
-  title: Integrations
-  add_new: Add New Integration
-  no_integrations: No integrations configured yet
-  no_integrations_desc: 'Start by adding your first integration to connect external services'
-  system_tools: System Tools
-  system_tools_description: Built-in tools that are available to all users
-  external_integrations: External Integrations
-  external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint
+  actions: Actions
+  title: Manage Skills
+  skills_page_title: Manage Skills
+  skills_explanation_p1: Skills enable AI agents to perform actions on your behalf by connecting to various platforms and services. Each skill provides specific capabilities that the AI can use when working with your data.
+  skills_explanation_p2: There are two types of skills - Personalized Skills require your credentials to access external services like Jira or Confluence on your behalf, while Platform Skills are built-in capabilities that don't need external authentication, such as generating PDFs or processing data.
+  add_new: Add Personalized Skill
+  no_integrations: No skills configured yet
+  no_integrations_desc: 'Start by adding your first skill to connect external services'
+  platform_skills: Platform Skills
+  platform_skills_description: Built-in platform features that don't require external service credentials. Each user can configure these independently.
+  platform_skills_info: Built-in tools that provide essential capabilities for your AI agents. Manage which tools are available to your organization.
+  platform_skills_edit: Manage Platform Skills
+  platform_skills_edit_description: Enable or disable platform tools that are available to all users in your organization
+  external_integrations: Personalized Skills
+  external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint with your credentials
   available_tools: Available Tools
+  tools_hint: Enable or disable specific tools that this integration provides
   setup: Setup
   setup_description: Configure your %name% integration
   save_configuration: Save Configuration
@@ -143,9 +183,13 @@ integration:
   active_of: active of
   test_connection: Test Connection
   delete_confirm: Are you sure you want to delete this integration?
+  testing: Testing...
   test_success: Connection successful!
+  test_success_title: Connection Successful
   test_failed: Connection failed
+  test_failed_title: Connection Failed
   test_error: An error occurred
+  test_error_title: Test Error
   basic_info: Basic Information
   select_type: Select Integration Type
   name_placeholder: e.g. My Jira Workspace
@@ -156,7 +200,8 @@ integration:
   save: Save Integration
   system_description: Platform tools available to all users
   manage_tools: Manage Tools
-  system_tools_always_active: System tools are always active
+  platform_skills_always_active: Platform skills are always available
+  platform: Platform
   credentials_update_note: Leave fields empty to keep existing credentials
   instance_name: Instance Name
   instance_name_hint: 'A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")'
@@ -198,6 +243,89 @@ integration:
     reconnect: Reconnect SharePoint Account
     token_expires: Token expires
   connect_sharepoint: Connect to SharePoint
+  gitlab:
+    name: GitLab
+    description: Connect to GitLab for project management, issue tracking, merge requests, and CI/CD pipeline integration
+    url: GitLab URL
+    url_placeholder: 'e.g., https://gitlab.nxs360.com'
+    url_help: 'Enter your GitLab instance URL (supports self-hosted and GitLab.com). Use https:// protocol only.'
+    api_token: Personal Access Token
+    api_token_placeholder: 'Enter your GitLab Personal Access Token'
+    api_token_help: 'Create a Personal Access Token in GitLab: User Settings > Access Tokens. Required scopes: api, read_api, read_repository'
+    tools:
+      get_project:
+        name: Get Project Details
+        description: Get detailed information about a specific GitLab project. Returns project metadata including description, statistics, default branch, visibility level, and configuration. Use project ID or namespace/project-name format.
+      list_projects:
+        name: List Projects
+        description: Get all GitLab projects accessible to the authenticated user. Returns a list of projects with names, IDs, descriptions, URLs, and visibility settings. Can filter by membership status.
+      get_file_content:
+        name: Get File Content
+        description: Read the contents of a specific file from a GitLab repository. Returns file content, encoding, size, and metadata. Specify file path and optionally a branch/tag/commit ref. Useful for reading configuration files, code, or documentation.
+      list_repository_tree:
+        name: List Repository Tree
+        description: Browse the directory structure of a GitLab repository. Returns list of files and folders with names, paths, types, and sizes. Can list specific directory paths, branches/tags, and supports recursive traversal of nested folders.
+      list_tags:
+        name: List Tags
+        description: Get all Git tags in a project repository. Returns tag names, target commits, creation dates, and release information. Useful for tracking releases and version history.
+      list_branches:
+        name: List Branches
+        description: Get all Git branches in a project repository. Returns branch names, last commit information, protection status, and whether it is the default branch. Essential for understanding active development streams.
+      get_commit:
+        name: Get Commit Details
+        description: Get detailed information about a specific Git commit. Returns commit message, author, timestamp, changed files, and diff statistics. Use commit SHA to retrieve full commit information.
+      list_commits:
+        name: List Commits
+        description: Get commit history for a project or specific branch. Returns list of commits with SHAs, messages, authors, timestamps, and parent commits. Can filter by branch/tag and limit number of results.
+      search_merge_requests:
+        name: Search Merge Requests
+        description: Search and list merge requests in a project. Can filter by state (opened, closed, merged, all), scope (created_by_me, assigned_to_me, all), and other criteria. Returns MR titles, IDs, states, authors, and target branches.
+      get_merge_request:
+        name: Get Merge Request Details
+        description: Get detailed information about a specific merge request. Returns title, description, source/target branches, state, author, assignees, labels, approvals, and merge status. Use merge request IID (internal ID).
+      get_merge_request_changes:
+        name: Get Merge Request Changes
+        description: Get the diff and file changes for a specific merge request. Returns all modified files with before/after content, added/deleted lines, and change statistics. Essential for code review and understanding what changes the MR introduces.
+      get_merge_request_discussions:
+        name: Get Merge Request Discussions
+        description: Get all discussion threads and comments on a merge request. Returns comment text, authors, timestamps, and thread context. Includes inline code comments and general discussion. Useful for understanding code review feedback.
+      get_merge_request_commits:
+        name: Get Merge Request Commits
+        description: Get all commits included in a specific merge request. Returns list of commits with SHAs, messages, and authors. Shows the complete commit history that will be merged.
+      create_merge_request:
+        name: Create Merge Request
+        description: Create a new merge request in a project. Requires source branch, target branch, and title. Can optionally set description, assignees, and labels. Returns created MR details including IID and web URL.
+      update_merge_request:
+        name: Update Merge Request
+        description: Update an existing merge request. Can modify title, description, target branch, assignees, labels, milestone, or state (close/reopen). Use merge request IID to specify which MR to update.
+      add_merge_request_note:
+        name: Add Merge Request Comment
+        description: Add a comment or note to a merge request. Comments support Markdown formatting and can mention users with @username. Useful for code review feedback, questions, or general discussion about the changes.
+      search_issues:
+        name: Search Issues
+        description: Search and list issues in a project. Can filter by state (opened, closed, all), scope (created_by_me, assigned_to_me, all), labels, and other criteria. Returns issue titles, IDs, states, authors, and assignees.
+      get_issue:
+        name: Get Issue Details
+        description: Get detailed information about a specific issue. Returns title, description, state, author, assignees, labels, milestone, due date, and time tracking information. Use issue IID (internal ID).
+      create_issue:
+        name: Create Issue
+        description: Create a new issue in a project. Requires title. Can optionally set description, assignees, labels, milestone, and due date. Returns created issue details including IID and web URL.
+      update_issue:
+        name: Update Issue
+        description: Update an existing issue. Can modify title, description, assignees, labels, milestone, state (close/reopen), or due date. Use issue IID to specify which issue to update.
+      search_packages:
+        name: Search Packages
+        description: Search and list packages in a GitLab package registry. Can filter by package name. Returns package names, versions, types (npm, maven, nuget, etc.), and creation dates. Useful for managing artifacts and dependencies.
+      get_package:
+        name: Get Package Details
+        description: Get detailed information about a specific package in the package registry. Returns package metadata, version, type, size, and download links. Use package ID to retrieve full package information.
+      list_pipelines:
+        name: List CI/CD Pipelines
+        description: Get all CI/CD pipelines for a project. Can filter by branch/tag ref and status (running, pending, success, failed, canceled, skipped). Returns pipeline IDs, statuses, refs, and creation timestamps. Essential for monitoring builds and deployments.
+      get_pipeline:
+        name: Get Pipeline Details
+        description: Get detailed information about a specific CI/CD pipeline. Returns pipeline status, stages, duration, commit SHA, user who triggered it, and detailed job information. Use pipeline ID to retrieve full execution details.
+  add_gitlab: Add GitLab Instance
   active: Active
   credentials_not_editable: Credentials cannot be edited for security reasons.
   credential_exists: Current value is stored securely. Leave empty to keep it.
@@ -209,10 +337,16 @@ action:
   edit: Edit
   delete: Delete
   cancel: Cancel
+  close: Close
+  done: Done
   actions: Actions
   copy: Copy
   copied: Copied!
   download: Download
+  manage_tools: Manage Tools
+  back_to_skills: Back to Skills
+  configure: Configure
+  manage_platform_skills: Manage Platform Skills
 
 file:
   title: Files
@@ -242,7 +376,8 @@ user:
   email: Email
   role: Role
   joined_at: Joined at
-  organisation: Organisation
+  organisation: Channel
+  workflow_user_id: My Workflow User ID
 
 profile:
   title: My Profile
@@ -253,7 +388,7 @@ profile:
   delete_account_confirm: Are you sure you want to delete your account?
   delete_account_consequences: 'This action will:'
   delete_consequence_1: Delete all your integrations
-  delete_consequence_2: Remove your access to the organisation
+  delete_consequence_2: Remove your access to the channel
   delete_consequence_3: Permanently delete all your data
   confirm_delete: Yes, delete account
 

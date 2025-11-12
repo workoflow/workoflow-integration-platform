@@ -4,12 +4,15 @@ common:
   optional: optional
 
 nav:
-  dashboard: Dashboard
-  integrations: Integrationen
+  general: Allgemein
+  skills: Skills
   files: Dateien
-  organisation: Organisation
+  organisation: Kanal
   profile: Profil
   logout: Abmelden
+  channel: Kanal
+  members: Mitglieder
+  login: Anmelden
 
 home:
   title: Willkommen bei Workoflow
@@ -58,12 +61,12 @@ auth:
     google: Mit Google anmelden
     privacy: Mit der Anmeldung akzeptieren Sie unsere Datenschutzbestimmungen.
 
-dashboard:
-  title: Dashboard
+general:
+  title: Allgemein
   welcome: Willkommen, %name%!
-  organisation: Ihre Organisation
+  organisation: Ihr Kanal
   integration_api_url: Integration API URL
-  workflow_user_id: Organisations spezifische ID
+  workflow_user_id: Kanal-spezifische ID
   copy_curl_command: curl-Befehl für /tools Endpunkt kopieren
   copied: Kopiert!
   integrations_count: Integrationen
@@ -75,35 +78,64 @@ dashboard:
 
 organisation:
   create:
-    title: Organisation erstellen
-    description: Bitte geben Sie einen Namen für Ihre Organisation ein, um fortzufahren.
+    title: Kanal erstellen
+    description: Bitte geben Sie einen Namen für Ihren Kanal ein, um fortzufahren.
     placeholder: z.B. Meine Firma GmbH
     help: Sie können den Namen später in den Einstellungen ändern.
-    submit: Organisation erstellen
+    submit: Kanal erstellen
   created:
-    success: Organisation erfolgreich erstellt!
-  name: Organisationsname
-  settings: Organisationseinstellungen
+    success: Kanal erfolgreich erstellt!
+  name: Kanalname
+  settings: Kanaleinstellungen
   members: Mitglieder
   updated:
-    success: Organisation erfolgreich aktualisiert!
+    success: Kanal erfolgreich aktualisiert!
   member:
     role_updated: Rolle erfolgreich aktualisiert!
     cannot_change_own_role: Sie können Ihre eigene Rolle nicht ändern.
   invite:
     invalid_email: Ungültige E-Mail-Adresse.
-    user_has_organisation: Dieser Benutzer gehört bereits einer Organisation an.
+    user_has_organisation: Dieser Benutzer gehört bereits einem Kanal an.
     user_added: Benutzer erfolgreich hinzugefügt!
     user_not_found: Benutzer muss sich zuerst bei Workoflow registrieren.
-  uuid: Organisations-UUID
+
+channel:
+  title: Kanal
+  management: Kanalverwaltung
+  management.description: Erstellen und verwalten Sie Ihre Kanäle
+  create:
+    button: Neuen Kanal erstellen
+    title: Kanal erstellen
+    description: Bitte geben Sie einen Namen für Ihren Kanal ein, um fortzufahren.
+  uuid: Kanal-UUID
   uuid_help: Diese UUID wird für die API-Endpunkte verwendet
   integration_api_help: Verwenden Sie diese API-URL, um AI-Agenten (z.B. n8n) mit Ihren Integrationen zu verbinden
   save: Speichern
   invite_member: Mitglied einladen
   invite_help: Der Benutzer muss sich zuerst bei Workoflow registrieren
+  workflow_user_id: Workoflow Benutzer-ID
+  organisation_name: Kanalname
+  channel_settings: Kanaleinstellungen
+  agent_settings: Agenteneinstellungen
+  agent_type: Agententyp
+  workflow_visualization: Workflow-Visualisierung
   send_invite: Einladung senden
   make_admin: Zum Admin machen
   make_member: Zum Mitglied machen
+  organisation_type: Kanaltyp
+  type:
+    common: Allgemein
+    ecommerce: E-Commerce
+    msteams: MS Teams
+
+msteams:
+  configuration: MS Teams Konfiguration
+  configuration.description: Konfigurieren Sie die Microsoft Teams Bot-Integrationseinstellungen
+  app_type: Microsoft App-Typ
+  app_id: Microsoft App-ID
+  app_password: Microsoft App-Passwort
+  app_password.hint: Dieses Passwort wird verschlüsselt gespeichert
+  tenant_id: Microsoft Mandanten-ID
 
 status:
   active: Aktiv
@@ -118,11 +150,20 @@ PLATFORM: PLATTFORM
 
 integration:
   name: Name
-  system_tools: System-Tools
-  system_tools_description: Eingebaute Tools, die allen Benutzern zur Verfügung stehen
-  external_integrations: Externe Integrationen
-  external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint
+  actions: Aktionen
+  title: Skills verwalten
+  skills_page_title: Skills verwalten
+  skills_explanation_p1: Skills ermöglichen es KI-Agenten, in Ihrem Namen Aktionen auszuführen, indem sie sich mit verschiedenen Plattformen und Services verbinden. Jeder Skill bietet spezifische Fähigkeiten, die die KI bei der Arbeit mit Ihren Daten nutzen kann.
+  skills_explanation_p2: Es gibt zwei Arten von Skills - Personalisierte Skills benötigen Ihre Zugangsdaten, um auf externe Dienste wie Jira oder Confluence in Ihrem Namen zuzugreifen, während Plattform-Skills integrierte Funktionen sind, die keine externe Authentifizierung benötigen, wie z.B. PDF-Generierung oder Datenverarbeitung.
+  platform_skills: Plattform-Skills
+  platform_skills_description: Integrierte Plattform-Funktionen, die keine externen Dienst-Zugangsdaten benötigen. Jeder Benutzer kann diese unabhängig konfigurieren.
+  platform_skills_info: Integrierte Tools, die wesentliche Funktionen für Ihre KI-Agenten bereitstellen. Verwalten Sie, welche Tools für Ihre Organisation verfügbar sind.
+  platform_skills_edit: Plattform-Skills verwalten
+  platform_skills_edit_description: Aktivieren oder deaktivieren Sie Plattform-Tools, die allen Benutzern in Ihrer Organisation zur Verfügung stehen
+  external_integrations: Personalisierte Skills
+  external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint mit Ihren Zugangsdaten
   available_tools: Verfügbare Tools
+  tools_hint: Aktivieren oder deaktivieren Sie bestimmte Tools, die diese Integration bereitstellt
   setup: Einrichten
   setup_description: Konfigurieren Sie Ihre %name% Integration
   save_configuration: Konfiguration speichern
@@ -134,18 +175,21 @@ integration:
   type: Typ
   status: Status
   last_accessed: Letzter Zugriff
-  title: Integrationen
-  add_new: Neue Integration hinzufügen
-  no_integrations: Noch keine Integrationen konfiguriert
-  no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihrer ersten Integration, um externe Dienste zu verbinden'
+  add_new: Personalisierten Skill hinzufügen
+  no_integrations: Noch keine Skills konfiguriert
+  no_integrations_desc: 'Beginnen Sie mit dem Hinzufügen Ihres ersten Skills, um externe Dienste zu verbinden'
   workflow_id: Workoflow ID
   functions: Funktionen
   active_of: aktiv von
   test_connection: Verbindung testen
   delete_confirm: Sind Sie sicher, dass Sie diese Integration löschen möchten?
+  testing: Teste...
   test_success: Verbindung erfolgreich!
+  test_success_title: Verbindung erfolgreich
   test_failed: Verbindung fehlgeschlagen
+  test_failed_title: Verbindung fehlgeschlagen
   test_error: Ein Fehler ist aufgetreten
+  test_error_title: Test-Fehler
   basic_info: Grundinformationen
   select_type: Integrationstyp auswählen
   name_placeholder: z.B. Your integration name (you can also use your applications URL)
@@ -156,7 +200,8 @@ integration:
   save: Integration speichern
   system_description: Plattform-Tools für alle Benutzer verfügbar
   manage_tools: Tools verwalten
-  system_tools_always_active: System-Tools sind immer aktiv
+  platform_skills_always_active: Plattform-Skills sind immer verfügbar
+  platform: Plattform
   credentials_update_note: Felder leer lassen, um bestehende Anmeldedaten beizubehalten
   instance_name: Instanz-Name
   instance_name_hint: 'Ein freundlicher Name zur Identifizierung dieser Integration (z.B. "Produktiv Jira", "Test SharePoint")'
@@ -198,6 +243,89 @@ integration:
     reconnect: SharePoint-Konto erneut verbinden
     token_expires: Token läuft ab
   connect_sharepoint: Mit SharePoint verbinden
+  gitlab:
+    name: GitLab
+    description: Verbindung zu GitLab für Projektmanagement, Issue-Tracking, Merge Requests und CI/CD-Pipeline-Integration
+    url: GitLab URL
+    url_placeholder: 'z.B. https://gitlab.nxs360.com'
+    url_help: 'Geben Sie Ihre GitLab-Instanz-URL ein (unterstützt Self-Hosted und GitLab.com). Verwenden Sie nur das https:// Protokoll.'
+    api_token: Personal Access Token
+    api_token_placeholder: 'Geben Sie Ihren GitLab Personal Access Token ein'
+    api_token_help: 'Erstellen Sie ein Personal Access Token in GitLab: Benutzereinstellungen > Access Tokens. Benötigte Scopes: api, read_api, read_repository'
+    tools:
+      get_project:
+        name: Projektdetails abrufen
+        description: Detaillierte Informationen zu einem bestimmten GitLab-Projekt abrufen. Liefert Projekt-Metadaten einschließlich Beschreibung, Statistiken, Standard-Branch, Sichtbarkeitsstufe und Konfiguration. Verwenden Sie Projekt-ID oder Namespace/Projekt-Name Format.
+      list_projects:
+        name: Projekte auflisten
+        description: Alle für den authentifizierten Benutzer zugänglichen GitLab-Projekte abrufen. Liefert eine Liste von Projekten mit Namen, IDs, Beschreibungen, URLs und Sichtbarkeitseinstellungen. Kann nach Mitgliedschaftsstatus gefiltert werden.
+      get_file_content:
+        name: Dateiinhalt abrufen
+        description: Den Inhalt einer bestimmten Datei aus einem GitLab-Repository lesen. Liefert Dateiinhalt, Kodierung, Größe und Metadaten. Geben Sie Dateipfad und optional einen Branch/Tag/Commit-Ref an. Nützlich zum Lesen von Konfigurationsdateien, Code oder Dokumentation.
+      list_repository_tree:
+        name: Repository-Baum auflisten
+        description: Die Verzeichnisstruktur eines GitLab-Repositorys durchsuchen. Liefert Liste von Dateien und Ordnern mit Namen, Pfaden, Typen und Größen. Kann bestimmte Verzeichnispfade, Branches/Tags auflisten und unterstützt rekursives Durchlaufen verschachtelter Ordner.
+      list_tags:
+        name: Tags auflisten
+        description: Alle Git-Tags in einem Projekt-Repository abrufen. Liefert Tag-Namen, Ziel-Commits, Erstellungsdaten und Release-Informationen. Nützlich zur Verfolgung von Releases und Versionshistorie.
+      list_branches:
+        name: Branches auflisten
+        description: Alle Git-Branches in einem Projekt-Repository abrufen. Liefert Branch-Namen, letzte Commit-Information, Schutzstatus und ob es der Standard-Branch ist. Wesentlich zum Verständnis aktiver Entwicklungsstränge.
+      get_commit:
+        name: Commit-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Git-Commit abrufen. Liefert Commit-Nachricht, Autor, Zeitstempel, geänderte Dateien und Diff-Statistiken. Verwenden Sie Commit-SHA um vollständige Commit-Informationen abzurufen.
+      list_commits:
+        name: Commits auflisten
+        description: Commit-Historie für ein Projekt oder einen bestimmten Branch abrufen. Liefert Liste von Commits mit SHAs, Nachrichten, Autoren, Zeitstempeln und übergeordneten Commits. Kann nach Branch/Tag gefiltert und Anzahl der Ergebnisse begrenzt werden.
+      search_merge_requests:
+        name: Merge Requests suchen
+        description: Merge Requests in einem Projekt suchen und auflisten. Kann nach Status (opened, closed, merged, all), Bereich (created_by_me, assigned_to_me, all) und anderen Kriterien gefiltert werden. Liefert MR-Titel, IDs, Status, Autoren und Ziel-Branches.
+      get_merge_request:
+        name: Merge Request Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Merge Request abrufen. Liefert Titel, Beschreibung, Quell-/Ziel-Branches, Status, Autor, Bearbeiter, Labels, Genehmigungen und Merge-Status. Verwenden Sie Merge Request IID (interne ID).
+      get_merge_request_changes:
+        name: Merge Request Änderungen abrufen
+        description: Den Diff und die Dateiänderungen für einen bestimmten Merge Request abrufen. Liefert alle geänderten Dateien mit Vorher/Nachher-Inhalt, hinzugefügten/gelöschten Zeilen und Änderungsstatistiken. Wesentlich für Code-Review und Verständnis der eingeführten Änderungen.
+      get_merge_request_discussions:
+        name: Merge Request Diskussionen abrufen
+        description: Alle Diskussionsstränge und Kommentare zu einem Merge Request abrufen. Liefert Kommentartext, Autoren, Zeitstempel und Thread-Kontext. Beinhaltet Inline-Code-Kommentare und allgemeine Diskussion. Nützlich zum Verständnis von Code-Review-Feedback.
+      get_merge_request_commits:
+        name: Merge Request Commits abrufen
+        description: Alle in einem bestimmten Merge Request enthaltenen Commits abrufen. Liefert Liste von Commits mit SHAs, Nachrichten und Autoren. Zeigt die vollständige Commit-Historie, die gemergt wird.
+      create_merge_request:
+        name: Merge Request erstellen
+        description: Neuen Merge Request in einem Projekt erstellen. Erfordert Quell-Branch, Ziel-Branch und Titel. Kann optional Beschreibung, Bearbeiter und Labels setzen. Liefert erstellte MR-Details einschließlich IID und Web-URL.
+      update_merge_request:
+        name: Merge Request aktualisieren
+        description: Bestehenden Merge Request aktualisieren. Kann Titel, Beschreibung, Ziel-Branch, Bearbeiter, Labels, Meilenstein oder Status (schließen/wiedereröffnen) ändern. Verwenden Sie Merge Request IID um anzugeben, welcher MR aktualisiert werden soll.
+      add_merge_request_note:
+        name: Merge Request Kommentar hinzufügen
+        description: Kommentar oder Notiz zu einem Merge Request hinzufügen. Kommentare unterstützen Markdown-Formatierung und können Benutzer mit @benutzername erwähnen. Nützlich für Code-Review-Feedback, Fragen oder allgemeine Diskussion über die Änderungen.
+      search_issues:
+        name: Issues suchen
+        description: Issues in einem Projekt suchen und auflisten. Kann nach Status (opened, closed, all), Bereich (created_by_me, assigned_to_me, all), Labels und anderen Kriterien gefiltert werden. Liefert Issue-Titel, IDs, Status, Autoren und Bearbeiter.
+      get_issue:
+        name: Issue-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Issue abrufen. Liefert Titel, Beschreibung, Status, Autor, Bearbeiter, Labels, Meilenstein, Fälligkeitsdatum und Zeiterfassungsinformationen. Verwenden Sie Issue IID (interne ID).
+      create_issue:
+        name: Issue erstellen
+        description: Neues Issue in einem Projekt erstellen. Erfordert Titel. Kann optional Beschreibung, Bearbeiter, Labels, Meilenstein und Fälligkeitsdatum setzen. Liefert erstellte Issue-Details einschließlich IID und Web-URL.
+      update_issue:
+        name: Issue aktualisieren
+        description: Bestehendes Issue aktualisieren. Kann Titel, Beschreibung, Bearbeiter, Labels, Meilenstein, Status (schließen/wiedereröffnen) oder Fälligkeitsdatum ändern. Verwenden Sie Issue IID um anzugeben, welches Issue aktualisiert werden soll.
+      search_packages:
+        name: Pakete suchen
+        description: Pakete in einer GitLab-Paketregistrierung suchen und auflisten. Kann nach Paketnamen gefiltert werden. Liefert Paketnamen, Versionen, Typen (npm, maven, nuget, etc.) und Erstellungsdaten. Nützlich für die Verwaltung von Artefakten und Abhängigkeiten.
+      get_package:
+        name: Paket-Details abrufen
+        description: Detaillierte Informationen zu einem bestimmten Paket in der Paketregistrierung abrufen. Liefert Paket-Metadaten, Version, Typ, Größe und Download-Links. Verwenden Sie Paket-ID um vollständige Paketinformationen abzurufen.
+      list_pipelines:
+        name: CI/CD Pipelines auflisten
+        description: Alle CI/CD-Pipelines für ein Projekt abrufen. Kann nach Branch/Tag-Ref und Status (running, pending, success, failed, canceled, skipped) gefiltert werden. Liefert Pipeline-IDs, Status, Refs und Erstellungszeitstempel. Wesentlich für die Überwachung von Builds und Deployments.
+      get_pipeline:
+        name: Pipeline-Details abrufen
+        description: Detaillierte Informationen zu einer bestimmten CI/CD-Pipeline abrufen. Liefert Pipeline-Status, Stages, Dauer, Commit-SHA, Benutzer der sie ausgelöst hat und detaillierte Job-Informationen. Verwenden Sie Pipeline-ID um vollständige Ausführungsdetails abzurufen.
+  add_gitlab: GitLab-Instanz hinzufügen
   active: Aktiv
   credentials_not_editable: Anmeldedaten können aus Sicherheitsgründen nicht bearbeitet werden.
   credential_exists: Aktueller Wert ist sicher gespeichert. Leer lassen um ihn beizubehalten.
@@ -209,10 +337,16 @@ action:
   edit: Bearbeiten
   delete: Löschen
   cancel: Abbrechen
+  close: Schließen
+  done: Fertig
   actions: Aktionen
   copy: Kopieren
   copied: Kopiert!
   download: Herunterladen
+  manage_tools: Tools verwalten
+  back_to_skills: Zurück zu Skills
+  configure: Konfigurieren
+  manage_platform_skills: Platform Skills verwalten
 
 file:
   title: Dateien
@@ -243,7 +377,8 @@ user:
   email: E-Mail
   role: Rolle
   joined_at: Beigetreten am
-  organisation: Organisation
+  organisation: Kanal
+  workflow_user_id: Meine Workflow Benutzer-ID
 
 
 profile:
@@ -255,7 +390,7 @@ profile:
   delete_account_confirm: Sind Sie sicher, dass Sie Ihren Account löschen möchten?
   delete_account_consequences: 'Diese Aktion wird:'
   delete_consequence_1: Alle Ihre Integrationen löschen
-  delete_consequence_2: Ihren Zugang zur Organisation entfernen
+  delete_consequence_2: Ihren Zugang zum Kanal entfernen
   delete_consequence_3: Alle Ihre Daten unwiderruflich löschen
   confirm_delete: Ja, Account löschen
 

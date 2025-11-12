@@ -26,7 +26,7 @@ $params = $method->getParameters();
 echo "Testing Integration Controller's 'new' method...\n\n";
 
 // Create a mock request
-$request = Request::create('/integrations/new', 'GET');
+$request = Request::create('/tools/new', 'GET');
 $request->setSession(new Session());
 
 // Manually get IntegrationRegistry service

@@ -45,6 +45,33 @@ class Organisation
     #[ORM\OneToMany(targetEntity: IntegrationConfig::class, mappedBy: 'organisation')]
     private Collection $integrationConfigs;
 
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $webhookType = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $webhookUrl = null;
+
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $workflowUrl = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $encryptedN8nApiKey = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $organisationType = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $microsoftAppType = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $microsoftAppId = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $encryptedMicrosoftAppPassword = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $microsoftAppTenantId = null;
+
 
     public function __construct()
     {
@@ -211,8 +238,107 @@ class Organisation
         return $this;
     }
 
+    public function getWebhookType(): ?string
+    {
+        return $this->webhookType;
+    }
+
+    public function setWebhookType(?string $webhookType): static
+    {
+        $this->webhookType = $webhookType;
+        return $this;
+    }
+
+    public function getWebhookUrl(): ?string
+    {
+        return $this->webhookUrl;
+    }
+
+    public function setWebhookUrl(?string $webhookUrl): static
+    {
+        $this->webhookUrl = $webhookUrl;
+        return $this;
+    }
+
+    public function getWorkflowUrl(): ?string
+    {
+        return $this->workflowUrl;
+    }
+
+    public function setWorkflowUrl(?string $workflowUrl): static
+    {
+        $this->workflowUrl = $workflowUrl;
+        return $this;
+    }
+
+    public function getEncryptedN8nApiKey(): ?string
+    {
+        return $this->encryptedN8nApiKey;
+    }
+
+    public function setEncryptedN8nApiKey(?string $encryptedN8nApiKey): static
+    {
+        $this->encryptedN8nApiKey = $encryptedN8nApiKey;
+        return $this;
+    }
+
+    public function getOrganisationType(): ?string
+    {
+        return $this->organisationType;
+    }
+
+    public function setOrganisationType(?string $organisationType): static
+    {
+        $this->organisationType = $organisationType;
+        return $this;
+    }
+
+    public function getMicrosoftAppType(): ?string
+    {
+        return $this->microsoftAppType;
+    }
+
+    public function setMicrosoftAppType(?string $microsoftAppType): static
+    {
+        $this->microsoftAppType = $microsoftAppType;
+        return $this;
+    }
+
+    public function getMicrosoftAppId(): ?string
+    {
+        return $this->microsoftAppId;
+    }
+
+    public function setMicrosoftAppId(?string $microsoftAppId): static
+    {
+        $this->microsoftAppId = $microsoftAppId;
+        return $this;
+    }
+
+    public function getEncryptedMicrosoftAppPassword(): ?string
+    {
+        return $this->encryptedMicrosoftAppPassword;
+    }
+
+    public function setEncryptedMicrosoftAppPassword(?string $encryptedMicrosoftAppPassword): static
+    {
+        $this->encryptedMicrosoftAppPassword = $encryptedMicrosoftAppPassword;
+        return $this;
+    }
+
+    public function getMicrosoftAppTenantId(): ?string
+    {
+        return $this->microsoftAppTenantId;
+    }
+
+    public function setMicrosoftAppTenantId(?string $microsoftAppTenantId): static
+    {
+        $this->microsoftAppTenantId = $microsoftAppTenantId;
+        return $this;
+    }
+
     public function getIntegrationApiUrl(): string
     {
-        return sprintf('/api/integration/%s', $this->uuid);
+        return sprintf('/api/integrations/%s', $this->uuid);
     }
 }

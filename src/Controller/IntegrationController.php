@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-#[Route('/integrations')]
+#[Route('/skills')]
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 class IntegrationController extends AbstractController
 {
@@ -32,7 +32,30 @@ class IntegrationController extends AbstractController
     ) {
     }
 
-    #[Route('/', name: 'app_integrations')]
+    /**
+     * Get logo path for integration type
+     */
+    private function getLogoPath(string $type, bool $isSystem): string
+    {
+        // System integrations get the Workoflow logo
+        if ($isSystem) {
+            return '/images/logos/workoflow-logo.png';
+        }
+
+        // Map integration types to logo paths
+        $logoMap = [
+            'jira' => '/images/logos/jira-icon.svg',
+            'confluence' => '/images/logos/confluence-icon.svg',
+            'gitlab' => '/images/logos/gitlab-icon.svg',
+            'trello' => '/images/logos/trello-logo.png',
+            'sharepoint' => '/images/logos/sharepoint-logo.svg',
+        ];
+
+        // Return mapped logo or default to Workoflow logo
+        return $logoMap[$type] ?? '/images/logos/workoflow-logo.png';
+    }
+
+    #[Route('/', name: 'app_skills')]
     public function index(Request $request): Response
     {
         /** @var User $user */
@@ -41,7 +64,7 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         // Get workflow_user_id from the user's organization relationship
@@ -100,7 +123,8 @@ class IntegrationController extends AbstractController
                     'tools' => $tools,
                     'hasCredentials' => false,
                     'active' => $config ? $config->isActive() : true,
-                    'lastAccessedAt' => $config?->getLastAccessedAt()
+                    'lastAccessedAt' => $config?->getLastAccessedAt(),
+                    'logoPath' => $this->getLogoPath($integration->getType(), true)
                 ];
             } else {
                 // For user integrations, show each instance
@@ -116,7 +140,8 @@ class IntegrationController extends AbstractController
                         'tools' => [],
                         'hasCredentials' => false,
                         'active' => false,
-                        'lastAccessedAt' => null
+                        'lastAccessedAt' => null,
+                        'logoPath' => $this->getLogoPath($integration->getType(), false)
                     ];
                 } else {
                     // Show each configured instance
@@ -141,7 +166,8 @@ class IntegrationController extends AbstractController
                             'tools' => $tools,
                             'hasCredentials' => $config->hasCredentials(),
                             'active' => $config->isActive(),
-                            'lastAccessedAt' => $config->getLastAccessedAt()
+                            'lastAccessedAt' => $config->getLastAccessedAt(),
+                            'logoPath' => $this->getLogoPath($integration->getType(), false)
                         ];
                     }
                 }
@@ -172,7 +198,7 @@ class IntegrationController extends AbstractController
         ]);
     }
 
-    #[Route('/setup/{type}', name: 'app_integration_setup', methods: ['GET', 'POST'])]
+    #[Route('/setup/{type}', name: 'app_tool_setup', methods: ['GET', 'POST'])]
     public function setup(string $type, Request $request): Response
     {
         /** @var User $user */
@@ -181,20 +207,20 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         // Find integration in registry
         $integration = $this->integrationRegistry->get($type);
         if (!$integration) {
             $this->addFlash('error', 'Integration type not found');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_skills');
         }
 
         // System tools don't need setup
         if (!$integration->requiresCredentials()) {
             $this->addFlash('info', 'This integration does not require setup');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_skills');
         }
 
         // Get workflow_user_id from the user's organization relationship
@@ -216,7 +242,7 @@ class IntegrationController extends AbstractController
             $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
             if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
                 $this->addFlash('error', 'Instance not found');
-                return $this->redirectToRoute('app_integrations');
+                return $this->redirectToRoute('app_skills');
             }
 
             // Decrypt existing credentials for display (with masking for sensitive fields)
@@ -320,6 +346,7 @@ class IntegrationController extends AbstractController
                     if ($value !== null) {
                         // Normalize URLs
                         if ($field->getName() === 'url' && !empty($value)) {
+                            // Remove trailing slash
                             $value = rtrim($value, '/');
                         }
                         $credentials[$field->getName()] = $value;
@@ -345,7 +372,7 @@ class IntegrationController extends AbstractController
 
                 $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
 
-                return $this->redirectToRoute('app_integration_oauth_microsoft_start', [
+                return $this->redirectToRoute('app_tool_oauth_microsoft_start', [
                     'configId' => $tempConfig->getId()
                 ]);
             }
@@ -417,7 +444,7 @@ class IntegrationController extends AbstractController
             );
 
             $this->addFlash('success', 'Integration "' . $name . '" configured successfully');
-            return $this->redirectToRoute('app_integrations');
+            return $this->redirectToRoute('app_skills');
         }
 
         return $this->render('integration/setup.html.twig', [
@@ -432,7 +459,7 @@ class IntegrationController extends AbstractController
     }
 
 
-    #[Route('/{type}/toggle-tool', name: 'app_integration_toggle_tool', methods: ['POST'])]
+    #[Route('/{type}/toggle-tool', name: 'app_tool_toggle_tool', methods: ['POST'])]
     public function toggleTool(string $type, Request $request): JsonResponse
     {
         /** @var User $user */
@@ -455,8 +482,13 @@ class IntegrationController extends AbstractController
 
         // Get specific instance and verify ownership
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
-        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId() || $config->getUser()->getId() !== $user->getId()) {
+        if (!$config || $config->getOrganisation()->getId() !== $organisation->getId()) {
             return $this->json(['error' => 'Instance not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Verify user ownership (system tools should have user set, user integrations must match)
+        if ($config->getUser() === null || $config->getUser()->getId() !== $user->getId()) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
 
         // Update tool state
@@ -480,7 +512,7 @@ class IntegrationController extends AbstractController
         return $this->json(['success' => true]);
     }
 
-    #[Route('/{type}/toggle', name: 'app_integration_toggle', methods: ['POST'])]
+    #[Route('/{type}/toggle', name: 'app_tool_toggle', methods: ['POST'])]
     public function toggleIntegration(string $type, Request $request): JsonResponse
     {
         /** @var User $user */
@@ -532,7 +564,7 @@ class IntegrationController extends AbstractController
     }
 
 
-    #[Route('/delete/{instanceId}', name: 'app_integration_delete', methods: ['POST'])]
+    #[Route('/delete/{instanceId}', name: 'app_tool_delete', methods: ['POST'])]
     public function delete(int $instanceId, Request $request): Response
     {
         /** @var User $user */
@@ -541,7 +573,7 @@ class IntegrationController extends AbstractController
         $organisation = $user->getCurrentOrganisation($sessionOrgId);
 
         if (!$organisation) {
-            return $this->redirectToRoute('app_organisation_create');
+            return $this->redirectToRoute('app_channel_create');
         }
 
         $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($instanceId);
@@ -563,10 +595,10 @@ class IntegrationController extends AbstractController
             $this->addFlash('error', 'Integration not found');
         }
 
-        return $this->redirectToRoute('app_integrations');
+        return $this->redirectToRoute('app_skills');
     }
 
-    #[Route('/{type}/test', name: 'app_integration_test', methods: ['POST'])]
+    #[Route('/{type}/test', name: 'app_tool_test', methods: ['POST'])]
     public function testConnection(string $type, Request $request): JsonResponse
     {
         /** @var User $user */
@@ -613,7 +645,94 @@ class IntegrationController extends AbstractController
                 true
             );
 
-            // Validate credentials
+            // For Jira, use detailed testing
+            if ($type === 'jira') {
+                $jiraIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($jiraIntegration);
+                $property = $reflection->getProperty('jiraService');
+                $property->setAccessible(true);
+                $jiraService = $property->getValue($jiraIntegration);
+
+                $result = $jiraService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
+            // For Confluence, use detailed testing
+            if ($type === 'confluence') {
+                $confluenceIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($confluenceIntegration);
+                $property = $reflection->getProperty('confluenceService');
+                $property->setAccessible(true);
+                $confluenceService = $property->getValue($confluenceIntegration);
+
+                $result = $confluenceService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
+            // For GitLab, use detailed testing
+            if ($type === 'gitlab') {
+                $gitLabIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($gitLabIntegration);
+                $property = $reflection->getProperty('gitLabService');
+                $property->setAccessible(true);
+                $gitLabService = $property->getValue($gitLabIntegration);
+
+                $result = $gitLabService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
+            // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
                 return $this->json(['success' => true, 'message' => 'Connection successful']);
             } else {
@@ -622,5 +741,62 @@ class IntegrationController extends AbstractController
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'message' => 'Connection test failed: ' . $e->getMessage()]);
         }
+    }
+
+    #[Route('/skills/platform-skills/edit', name: 'app_platform_skills_edit', methods: ['GET'])]
+    public function editPlatformSkills(): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $organisation = $user->getOrganisation();
+
+        if (!$organisation) {
+            $this->addFlash('error', 'You must be part of an organisation to manage platform skills');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Get all system integrations
+        $systemIntegrations = $this->integrationRegistry->getSystemIntegrations();
+
+        // Get existing configs for system integrations (per user)
+        $integrationConfigs = $this->integrationConfigRepository->findBy([
+            'organisation' => $organisation,
+            'user' => $user // System integrations are user-specific
+        ], ['integrationType' => 'ASC']);
+
+        // Build config map by integration type
+        $configMap = [];
+        foreach ($integrationConfigs as $config) {
+            $configMap[$config->getIntegrationType()] = $config;
+        }
+
+        // Build display data for all system integrations
+        $platformSkills = [];
+        foreach ($systemIntegrations as $integration) {
+            $config = $configMap[$integration->getType()] ?? null;
+
+            // Build tools array with enabled/disabled status
+            $tools = [];
+            foreach ($integration->getTools() as $tool) {
+                $tools[] = [
+                    'name' => $tool->getName(),
+                    'description' => $tool->getDescription(),
+                    'enabled' => !($config && $config->isToolDisabled($tool->getName()))
+                ];
+            }
+
+            $platformSkills[] = [
+                'type' => $integration->getType(),
+                'name' => $integration->getName(),
+                'instanceId' => $config?->getId(),
+                'config' => $config,
+                'tools' => $tools
+            ];
+        }
+
+        return $this->render('integration/platform_skills_edit.html.twig', [
+            'platformSkills' => $platformSkills,
+            'organisation' => $organisation
+        ]);
     }
 }

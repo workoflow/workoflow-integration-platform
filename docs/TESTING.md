@@ -303,7 +303,31 @@ $this->assertPageTitleContains('Integrations');  // ❌
 
 - **Unit Tests:** Ausstehend
 - **Integration Tests:** 8/18 Tests aktiv
+- **E2E Tests:** 4 Tests für JIRA Service aktiv
 - **Acceptance Tests:** Ausstehend
+
+### E2E Tests für Externe Services
+
+E2E-Tests validieren die Integration mit echten externen Services:
+
+#### JIRA E2E Tests
+
+**Datei:** `tests/Integration/Service/JiraServiceE2ETest.php`
+
+**Voraussetzungen:**
+- Echte JIRA-Credentials in `.env.test.local`
+- Zugriff auf JIRA Cloud Instanz
+
+**Tests:**
+- Connection Validation
+- Issue Retrieval mit Content-Validierung
+- JQL Search mit Pagination
+- Detailed Error Reporting
+
+**Ausführung:**
+```bash
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php --testdox
+```
 
 ### Übersprungene Tests
 
@@ -340,7 +364,7 @@ jobs:
       - name: Setup Test Database
         run: |
           php bin/console doctrine:database:create --env=test
-          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+          php bin/console doctrine:schema:update --force --env=test
           php bin/console doctrine:fixtures:load --env=test --no-interaction
 
       - name: Run Tests
@@ -385,7 +409,7 @@ XDEBUG_CONFIG="idekey=PHPSTORM" php bin/phpunit
 # Test-Datenbank neu erstellen
 php bin/console doctrine:database:drop --force --env=test
 php bin/console doctrine:database:create --env=test
-php bin/console doctrine:migrations:migrate --env=test --no-interaction
+php bin/console doctrine:schema:update --force --env=test
 
 # Fixtures neu laden
 php bin/console doctrine:fixtures:load --env=test --no-interaction
@@ -398,6 +422,12 @@ php bin/phpunit --stop-on-failure
 
 # Test-Coverage generieren (wenn konfiguriert)
 php bin/phpunit --coverage-html coverage/
+
+# E2E Tests ausführen
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php --testdox
+
+# Einzelnen E2E-Test mit Filter
+php bin/phpunit tests/Integration/Service/JiraServiceE2ETest.php --filter testGetIssueAzubi20WithValidation
 ```
 
 ## Weiterführende Ressourcen

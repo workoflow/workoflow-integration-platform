@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<integrations>
+  <integration type="system.share_file" name="Standard" category="system">
+    <tool name="share_file">
+      <description>Upload and share a file. Returns a signed URL that can be used to access the file.</description>
+      <parameters>
+        <parameter name="binaryData" type="string" required="true">
+          <description>Base64 encoded file content</description>
+        </parameter>
+        <parameter name="fileName" type="string" required="false">
+          <description>Original file name (optional, for reference only)</description>
+        </parameter>
+        <parameter name="contentType" type="string" required="false">
+          <description>MIME type of the file</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.content_learn" name="Content Learning" category="system">
+    <tool name="content_learn">
+      <description>Call this tool when the user asks you to learn based on an uploaded file. This tool will then upload the file, and the file will be sent to a vector database. Then in the future, you can query on the vector database.</description>
+      <parameters>
+        <parameter name="url" type="string" required="true">
+          <description>The download URL of the file to learn from</description>
+        </parameter>
+        <parameter name="filetype" type="string" required="true">
+          <description>The type of the file (csv, pdf, txt)</description>
+        </parameter>
+        <parameter name="userName" type="string" required="false">
+          <description>The name of the user</description>
+        </parameter>
+        <parameter name="filename" type="string" required="false">
+          <description>The name of the file</description>
+        </parameter>
+        <parameter name="tenantId" type="string" required="false">
+          <description>The tenant ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.content_query" name="Content Query" category="system">
+    <tool name="content_query">
+      <description>Use this tool to retrieve content that does not specifically relate to employees or colleagues. The tool returns not only available content but also the source, which needs to be validated against what was requested.</description>
+      <parameters>
+        <parameter name="query" type="string" required="true">
+          <description>The search query to find relevant content</description>
+        </parameter>
+        <parameter name="type" type="string" required="false">
+          <description>The type of content to search for (default: all)</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.read_file_tool" name="Read File Tool" category="system">
+    <tool name="read_file_tool">
+      <description>Call this tool when the user asks you to read a file or is asking a question related to a file.</description>
+      <parameters>
+        <parameter name="url" type="string" required="true">
+          <description>The download URL of the file to read</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.employees_query_v2" name="Employee Query" category="system">
+    <tool name="employees_query_v2">
+      <description>Search for employees based on various criteria including name, skills, languages, roles, and certificates.</description>
+      <parameters>
+        <parameter name="employee_name" type="string" required="false">
+          <description>First and last name of the employee being searched for, or just parts of it</description>
+        </parameter>
+        <parameter name="projects_industries_skills" type="string" required="false">
+          <description>A concise description of what is being searched for. For example, "Experience with Java" or "Banking industry"</description>
+        </parameter>
+        <parameter name="languages" type="string" required="false">
+          <description>Languages spoken by the employee</description>
+        </parameter>
+        <parameter name="roles" type="string" required="false">
+          <description>Job roles or positions</description>
+        </parameter>
+        <parameter name="certificates" type="string" required="false">
+          <description>Professional certificates held by the employee</description>
+        </parameter>
+        <parameter name="limit" type="integer" required="false">
+          <description>Number of results. Cannot be greater than 20. Try to stick to small numbers.</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.employee_profile" name="Employee Profile" category="system">
+    <tool name="employee_profile">
+      <description>Use this tool to load information and contact details for a specific employee using the employee_id.</description>
+      <parameters>
+        <parameter name="employee_id" type="integer" required="true">
+          <description>ID of the employee being sought (integer)</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.generate_pptx" name="PowerPoint Generator" category="system">
+    <tool name="generate_pptx">
+      <description>Use this tool to prepare text content as a PowerPoint presentation. You must provide the data basis, for which the tool will then create a presentation.</description>
+      <parameters>
+        <parameter name="input" type="string" required="true">
+          <description>A collection of content that should be prepared in the slide deck</description>
+        </parameter>
+        <parameter name="query" type="string" required="true">
+          <description>A summary of the request that the user has made. Will be used as context when generating the slides</description>
+        </parameter>
+        <parameter name="user_id" type="string" required="false">
+          <description>The AAD Object ID of the user</description>
+        </parameter>
+        <parameter name="tenant_id" type="string" required="false">
+          <description>The tenant ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.generate_and_upload_pdf" name="PDF Generator" category="system">
+    <tool name="generate_and_upload_pdf">
+      <description>Call this tool when user asking you to generate a PDF file. On success, you will get back a URL to the uploaded file that you can return in webhook response.</description>
+      <parameters>
+        <parameter name="data" type="string" required="true">
+          <description>Here you pass the data you want to generate into a PDF in a text form (pass the data as markdown)</description>
+        </parameter>
+        <parameter name="userID" type="string" required="false">
+          <description>The AAD Object ID of the user</description>
+        </parameter>
+        <parameter name="tenantID" type="string" required="false">
+          <description>The tenant ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.searxng_tool" name="Web Search" category="system">
+    <tool name="SearXNG_tool">
+      <description>Use this tool to search in web, currently you have these search engines enabled: google, duckduckgo</description>
+      <parameters>
+        <parameter name="search_string" type="string" required="true">
+          <description>The search query string to search for on the web</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.read_page_tool" name="Web Page Reader" category="system">
+    <tool name="read_page_tool">
+      <description>Call this tool to extract the text from webpage. Dont call that for nexus-netsoft.atlassian.net domains or private pages (as sharepoint pages).</description>
+      <parameters>
+        <parameter name="url" type="string" required="true">
+          <description>The URL of the web page to read and extract text from</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="system.fetch_valantic_events" name="Company Events" category="system">
+    <tool name="fetch_valantic_events">
+      <description>Use this tool to find out about upcoming events at Valantic.</description>
+    </tool>
+  </integration>
+  <integration type="system.clear_memory_tool" name="Memory Management" category="system">
+    <tool name="clear_memory_tool">
+      <description>Use this tool to clear the conversation memory when requested by the user.</description>
+    </tool>
+  </integration>
+  <integration type="system.report_issue_tool" name="Issue Reporting" category="system">
+    <tool name="report_issue_tool">
+      <description>Use this tool to report issues or problems encountered by the user.</description>
+    </tool>
+  </integration>
+  <integration type="jira" name="Jira" category="user">
+    <tool name="jira_search">
+      <description>Search for Jira issues using JQL (Jira Query Language)</description>
+      <parameters>
+        <parameter name="jql" type="string" required="true">
+          <description>JQL query string</description>
+        </parameter>
+        <parameter name="maxResults" type="integer" required="false">
+          <description>Maximum number of results (default: 50)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="jira_get_issue">
+      <description>Get detailed information about a specific Jira issue</description>
+      <parameters>
+        <parameter name="issueKey" type="string" required="true">
+          <description>Issue key (e.g., PROJ-123)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="jira_get_sprints_from_board">
+      <description>Get all sprints from a Jira board</description>
+      <parameters>
+        <parameter name="boardId" type="integer" required="true">
+          <description>Board ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="jira_get_sprint_issues">
+      <description>Get all issues in a specific sprint</description>
+      <parameters>
+        <parameter name="sprintId" type="integer" required="true">
+          <description>Sprint ID</description>
+        </parameter>
+        <parameter name="maxResults" type="integer" required="false">
+          <description>Maximum number of results (default: 50)</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="confluence" name="Confluence" category="user">
+    <tool name="confluence_search">
+      <description>Search for Confluence pages using CQL (Confluence Query Language)</description>
+      <parameters>
+        <parameter name="cql" type="string" required="true">
+          <description>CQL query string. Examples: id=123456 (by page ID), title~"Meeting notes" (by title), space=AT AND text~"search term" (in space with text), type=page AND lastModified&gt;=2024-01-01 (pages modified after date). Note: url= is not a valid CQL field.</description>
+        </parameter>
+        <parameter name="maxResults" type="integer" required="false">
+          <description>Maximum number of results (default: 50)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="confluence_get_page">
+      <description>Get detailed content of a specific Confluence page</description>
+      <parameters>
+        <parameter name="pageId" type="string" required="true">
+          <description>Page ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="confluence_get_comments">
+      <description>Get comments from a specific Confluence page</description>
+      <parameters>
+        <parameter name="pageId" type="string" required="true">
+          <description>Page ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="confluence_create_page">
+      <description>Create a new page in Confluence. Supports markdown, plain text, or HTML content formats for AI-friendly page creation.</description>
+      <parameters>
+        <parameter name="spaceKey" type="string" required="false">
+          <description>Space key like 'PROJ', 'IT', or 'MARKETING'. Either spaceKey or spaceId is required. Use confluence_search with type=space to find available spaces.</description>
+        </parameter>
+        <parameter name="spaceId" type="string" required="false">
+          <description>Space ID (numeric). Either spaceKey or spaceId is required. If you know the space key, use that instead for easier usage.</description>
+        </parameter>
+        <parameter name="title" type="string" required="true">
+          <description>Page title, e.g., 'Q3 Planning Meeting Notes', 'API Documentation', or 'Team Retrospective - Sprint 42'</description>
+        </parameter>
+        <parameter name="content" type="string" required="true">
+          <description>Page content. Supports markdown (# Headers, **bold**, *italic*, [links](url), etc.), plain text, or HTML. Example: '# Meeting Notes\n\n## Attendees\n* John\n* Jane\n\n## Action Items\n1. Review budget\n2. Update timeline'</description>
+        </parameter>
+        <parameter name="contentFormat" type="string" required="false">
+          <description>Format of the content: 'markdown' (default), 'plain', 'html', or 'storage' (Confluence native format). Most AI agents should use 'markdown' for best results.</description>
+        </parameter>
+        <parameter name="parentId" type="string" required="false">
+          <description>Parent page ID to create this page as a child. Leave empty to create at space root. Use confluence_search to find parent pages.</description>
+        </parameter>
+        <parameter name="status" type="string" required="false">
+          <description>Page status: 'current' (published, default) or 'draft' (not published). Use 'draft' for pages that need review before publishing.</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="confluence_update_page">
+      <description>Update an existing Confluence page. Automatically handles version conflicts and supports multiple content formats for AI-friendly page updates.</description>
+      <parameters>
+        <parameter name="pageId" type="string" required="true">
+          <description>Page ID to update. Use confluence_search or confluence_get_page to find the page ID.</description>
+        </parameter>
+        <parameter name="title" type="string" required="false">
+          <description>New page title. Leave empty to keep the current title. Example: 'Updated Meeting Notes - Q4 Planning'</description>
+        </parameter>
+        <parameter name="content" type="string" required="true">
+          <description>New page content. Supports markdown (# Headers, **bold**, *italic*, [links](url), etc.), plain text, or HTML. Example: '# Updated Content\n\n## Changes\n* Item 1 completed\n* Item 2 in progress'</description>
+        </parameter>
+        <parameter name="contentFormat" type="string" required="false">
+          <description>Format of the content: 'markdown' (default), 'plain', 'html', or 'storage' (Confluence native format). Most AI agents should use 'markdown' for best results.</description>
+        </parameter>
+        <parameter name="versionMessage" type="string" required="false">
+          <description>Optional message describing what changed in this update. Example: 'Added Q4 action items and updated attendee list'</description>
+        </parameter>
+        <parameter name="status" type="string" required="false">
+          <description>Page status: 'current' (published) or 'draft'. Leave empty to keep the current status.</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+  <integration type="sharepoint" name="SharePoint" category="user">
+    <tool name="sharepoint_search_documents">
+      <description>Search for documents in SharePoint with content summaries</description>
+      <parameters>
+        <parameter name="query" type="string" required="true">
+          <description>Search query to find relevant documents</description>
+        </parameter>
+        <parameter name="limit" type="integer" required="false">
+          <description>Maximum number of results to return (default: 10, max: 25)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_search_pages">
+      <description>Search for pages in SharePoint</description>
+      <parameters>
+        <parameter name="query" type="string" required="true">
+          <description>Search query</description>
+        </parameter>
+        <parameter name="limit" type="integer" required="false">
+          <description>Maximum number of results (default: 25)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_read_document">
+      <description>Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files)</description>
+      <parameters>
+        <parameter name="siteId" type="string" required="true">
+          <description>Site ID where the document is stored (from search result's siteId field, or site name if ID not available)</description>
+        </parameter>
+        <parameter name="itemId" type="string" required="true">
+          <description>Document item ID from search results (use the id field from search results)</description>
+        </parameter>
+        <parameter name="maxLength" type="integer" required="false">
+          <description>Maximum characters to extract (default: 5000, max: 50000)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_read_page">
+      <description>Read content from a SharePoint page</description>
+      <parameters>
+        <parameter name="siteId" type="string" required="true">
+          <description>Site ID or site name</description>
+        </parameter>
+        <parameter name="pageId" type="string" required="true">
+          <description>Page ID or page title</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_list_files">
+      <description>List files in a SharePoint directory</description>
+      <parameters>
+        <parameter name="siteId" type="string" required="true">
+          <description>Site ID</description>
+        </parameter>
+        <parameter name="path" type="string" required="false">
+          <description>Directory path (optional)</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_download_file">
+      <description>Download a file from SharePoint</description>
+      <parameters>
+        <parameter name="siteId" type="string" required="true">
+          <description>Site ID</description>
+        </parameter>
+        <parameter name="itemId" type="string" required="true">
+          <description>Item ID</description>
+        </parameter>
+      </parameters>
+    </tool>
+    <tool name="sharepoint_get_list_items">
+      <description>Get items from a SharePoint list</description>
+      <parameters>
+        <parameter name="siteId" type="string" required="true">
+          <description>Site ID</description>
+        </parameter>
+        <parameter name="listId" type="string" required="true">
+          <description>List ID</description>
+        </parameter>
+        <parameter name="filters" type="array" required="false">
+          <description>Optional filters</description>
+        </parameter>
+      </parameters>
+    </tool>
+  </integration>
+</integrations>
