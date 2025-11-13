@@ -22,7 +22,8 @@ class ToolProviderService
 {
     public function __construct(
         private readonly IntegrationRegistry $integrationRegistry,
-        private readonly IntegrationConfigRepository $configRepository
+        private readonly IntegrationConfigRepository $configRepository,
+        private readonly EncryptionService $encryptionService
     ) {
     }
 
@@ -217,12 +218,16 @@ class ToolProviderService
             $toolName = $tool->getName();
             $description = $tool->getDescription();
 
-            // For user integrations with config, add instance ID and name
+            // For user integrations with config, add instance ID and URL
             if ($config !== null) {
                 $toolName .= '_' . $config->getId();
 
-                if ($config->getName()) {
-                    $description .= ' (' . $config->getName() . ')';
+                // Extract URL from credentials to help AI agents identify correct instance
+                $credentials = $this->getDecryptedCredentials($config);
+                $url = $this->extractInstanceUrl($integration->getType(), $credentials);
+
+                if ($url) {
+                    $description .= ' (' . $url . ')';
                 }
             }
 
@@ -260,5 +265,45 @@ class ToolProviderService
                 return ($param['required'] ?? false) ? $param['name'] : null;
             }, $parameters)))
         ];
+    }
+
+    /**
+     * Get decrypted credentials from config
+     *
+     * @return array<string, mixed>|null
+     */
+    private function getDecryptedCredentials(IntegrationConfig $config): ?array
+    {
+        if (!$config->hasCredentials()) {
+            return null;
+        }
+
+        try {
+            $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+            $credentials = json_decode($decrypted, true);
+
+            return is_array($credentials) ? $credentials : null;
+        } catch (\Exception $e) {
+            // If decryption fails, return null gracefully
+            return null;
+        }
+    }
+
+    /**
+     * Extract instance URL from credentials based on integration type
+     *
+     * @param array<string, mixed>|null $credentials
+     */
+    private function extractInstanceUrl(string $integrationType, ?array $credentials): ?string
+    {
+        if (!$credentials) {
+            return null;
+        }
+
+        return match ($integrationType) {
+            'jira', 'confluence' => $credentials['url'] ?? null,
+            'gitlab' => $credentials['gitlab_url'] ?? null,
+            default => null  // SharePoint, Trello, or future integrations without URL
+        };
     }
 }

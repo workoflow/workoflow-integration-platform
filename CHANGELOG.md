@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - Simplified and optimized API integration code for better maintainability and performance
 - API tool filtering is now more efficient when handling requests for multiple integration types
+- Improved AI agent tool selection by adding domain information to integration descriptions - AI agents can now automatically identify the correct integration when you mention a URL (e.g., when asked about https://company.atlassian.net/browse/TICKET-123, the agent knows to use the matching Jira instance)
 
 ## 2025-10-30
 
