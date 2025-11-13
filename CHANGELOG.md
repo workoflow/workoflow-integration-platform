@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-13
+
+### Added
+- Multiple integration type filtering in REST API - you can now request tools from several integrations at once using comma-separated values (e.g., `tool_type=jira,confluence,sharepoint`)
+- This enables more flexible tool queries for AI agents and automation platforms that need access to multiple service types simultaneously
+
+### Improved
+- Simplified and optimized API integration code for better maintainability and performance
+- API tool filtering is now more efficient when handling requests for multiple integration types
+
 ## 2025-10-30
 
 ### Changed

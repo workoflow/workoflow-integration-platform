@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\DTO\ToolFilterCriteria;
 use App\Entity\IntegrationConfig;
 use App\Entity\Organisation;
 use App\Integration\IntegrationRegistry;
@@ -9,6 +10,7 @@ use App\Repository\IntegrationConfigRepository;
 use App\Repository\OrganisationRepository;
 use App\Service\EncryptionService;
 use App\Service\IntegrationAuditService;
+use App\Service\ToolProviderService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -25,6 +27,7 @@ class IntegrationApiController extends AbstractController
         private IntegrationConfigRepository $integrationConfigRepository,
         private EncryptionService $encryptionService,
         private IntegrationRegistry $integrationRegistry,
+        private ToolProviderService $toolProviderService,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $apiAuthUser,
@@ -46,122 +49,16 @@ class IntegrationApiController extends AbstractController
             return $this->json(['error' => 'Organisation not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // Get parameters
-        $workflowUserId = $request->query->get('workflow_user_id');
-        $toolType = $request->query->get('tool_type');
+        // Parse filter criteria (supports CSV: ?tool_type=system,jira,confluence)
+        $criteria = ToolFilterCriteria::fromCsv(
+            $request->query->get('workflow_user_id'),
+            $request->query->get('tool_type')
+        );
 
-        // Get integration configs
-        $configs = $this->integrationConfigRepository->findByOrganisationAndWorkflowUser($organisation, $workflowUserId);
+        // Delegate to service
+        $tools = $this->toolProviderService->getToolsForOrganisation($organisation, $criteria);
 
-        // Build config map for quick lookup (type => array of configs)
-        $configMap = [];
-        foreach ($configs as $config) {
-            $type = $config->getIntegrationType();
-            if (!isset($configMap[$type])) {
-                $configMap[$type] = [];
-            }
-            $configMap[$type][] = $config;
-        }
-
-        $tools = [];
-
-        // Get all integrations from registry (code-defined)
-        $allIntegrations = $this->integrationRegistry->getAllIntegrations();
-
-        foreach ($allIntegrations as $integration) {
-            $type = $integration->getType();
-            $integrationConfigs = $configMap[$type] ?? [];
-
-            // Handle system integrations (no credentials required)
-            if (!$integration->requiresCredentials()) {
-                // Skip system tools unless explicitly requested via tool_type
-                // If tool_type is specified, it must either:
-                // - Equal "system" (show all system integrations)
-                // - Start with "system." (show specific system integration)
-                // - Match the exact type (e.g., "system.share_file")
-                if ($toolType) {
-                    if ($toolType === 'system') {
-                        // Show all system integrations
-                        // Continue processing this integration
-                    } elseif ($toolType === $type) {
-                        // Show this specific system integration
-                        // Continue processing this integration
-                    } else {
-                        // Skip this integration
-                        continue;
-                    }
-                } else {
-                    // No tool_type specified, skip system integrations by default
-                    continue;
-                }
-                // Use first config if exists (for disabled tools tracking)
-                $config = $integrationConfigs[0] ?? null;
-
-                // Skip if explicitly disabled
-                if ($config && !$config->isActive()) {
-                    continue;
-                }
-
-                // Add tools that aren't disabled
-                $disabledTools = $config ? $config->getDisabledTools() : [];
-                foreach ($integration->getTools() as $tool) {
-                    if (!in_array($tool->getName(), $disabledTools)) {
-                        $tools[] = [
-                            'type' => 'function',
-                            'function' => [
-                                'name' => $tool->getName(),
-                                'description' => $tool->getDescription(),
-                                'parameters' => $this->formatParameters($tool->getParameters())
-                            ]
-                        ];
-                    }
-                }
-            } else {
-                // Handle user integrations (require credentials) - may have multiple instances
-                // Skip user integrations if tool_type starts with 'system'
-                if ($toolType && str_starts_with($toolType, 'system')) {
-                    continue;
-                }
-                // Filter by tool_type if specified for specific user integrations
-                if ($toolType && $toolType !== $type) {
-                    continue;
-                }
-                foreach ($integrationConfigs as $config) {
-                    // Skip if inactive or no credentials
-                    if (!$config->isActive() || !$config->hasCredentials()) {
-                        continue;
-                    }
-
-                    // Add tools for this instance that aren't disabled
-                    $disabledTools = $config->getDisabledTools();
-                    foreach ($integration->getTools() as $tool) {
-                        if (!in_array($tool->getName(), $disabledTools)) {
-                            // Generate unique ID with instance ID suffix
-                            $toolId = $tool->getName() . '_' . $config->getId();
-
-                            // Include instance name in description for clarity
-                            $description = $tool->getDescription();
-                            if ($config->getName()) {
-                                $description .= ' (' . $config->getName() . ')';
-                            }
-
-                            $tools[] = [
-                                'type' => 'function',
-                                'function' => [
-                                    'name' => $toolId,
-                                    'description' => $description,
-                                    'parameters' => $this->formatParameters($tool->getParameters())
-                                ]
-                            ];
-                        }
-                    }
-                }
-            }
-        }
-
-        return $this->json([
-            'tools' => $tools
-        ]);
+        return $this->json(['tools' => $tools]);
     }
 
     #[Route('/{organisationUuid}/execute', name: 'api_integration_execute', methods: ['POST'])]
@@ -309,22 +206,5 @@ class IntegrationApiController extends AbstractController
         [$username, $password] = explode(':', $decoded, 2);
 
         return $username === $this->apiAuthUser && $password === $this->apiAuthPassword;
-    }
-
-    private function formatParameters(array $parameters): array
-    {
-        return [
-            'type' => 'object',
-            'properties' => array_reduce($parameters, function ($props, $param) {
-                $props[$param['name']] = [
-                    'type' => $param['type'] ?? 'string',
-                    'description' => $param['description'] ?? ''
-                ];
-                return $props;
-            }, []),
-            'required' => array_values(array_filter(array_map(function ($param) {
-                return $param['required'] ?? false ? $param['name'] : null;
-            }, $parameters)))
-        ];
     }
 }

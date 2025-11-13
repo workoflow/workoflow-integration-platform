@@ -60,6 +60,53 @@ curl -X GET \
   -H 'Accept: application/json'
 ```
 
+### Filter Multiple Integration Types (CSV)
+
+**Get tools from multiple integrations at once:**
+
+**Example 1: Get Jira and Confluence tools:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=jira,confluence' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Example 2: Get all user integrations (Jira, Confluence, SharePoint):**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=jira,confluence,sharepoint' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Example 3: Get system tools plus specific user integration:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=system,jira' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Example 4: Get specific system tool plus user integrations:**
+```bash
+curl -X GET \
+  'http://localhost:3979/api/integrations/550e8400-e29b-41d4-a716-446655440000/?workflow_user_id=user123&tool_type=system.share_file,jira,confluence' \
+  -H 'Authorization: Basic d29ya29mbG93OndvcmtvZmxvdw==' \
+  -H 'Accept: application/json'
+```
+
+**Available Integration Types:**
+- **User Integrations:** `jira`, `confluence`, `sharepoint`, `gitlab`, `trello`
+- **System Tools:** `system` (all system tools) or `system.share_file`, `system.read_file_tool`, `system.report_issue_tool`, `system.clear_memory_tool`, `system.content_query`, `system.content_learn`, `system.searxng_tool`, `system.fetch_valantic_events`, `system.employee_profile`, `system.employees_query_v2`, `system.read_page_tool`, `system.generate_and_upload_pdf`, `system.generate_pptx`
+
+**CSV Filtering Rules:**
+- Separate multiple types with commas (no spaces)
+- Values are case-sensitive and must match exactly
+- Empty values are ignored (e.g., `jira,,confluence` works the same as `jira,confluence`)
+- Duplicate values are automatically removed
+- Whitespace around values is automatically trimmed
+
 **Note:** When filtering by `tool_type`, the API returns only tools from that specific integration. If you get an empty array:
 - The integration might be disabled
 - Individual tools within the integration might be disabled
