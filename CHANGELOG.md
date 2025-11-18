@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - n8n workflow JSON files for Main Agent (orchestrator) and JIRA Agent with detailed import and configuration guides
 - System prompt templates for all specialized agents with tool definitions, workflow guidelines, and best practices
 
+### Improved
+- Deployment reliability enhanced with automatic asset verification - production deployments now automatically rebuild frontend assets if they're missing, preventing 500 errors after Docker cleanup operations
+- Production deployments now use clean builds to ensure all components are properly compiled and up-to-date
+
 ### Fixed
 - Fixed header overlap issue on homepage for visitors - navigation now displays cleanly without visual overlap
 

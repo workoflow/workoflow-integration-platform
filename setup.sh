@@ -128,7 +128,12 @@ fi
 # Build and start containers
 echo ""
 echo "Building and starting Docker containers..."
-docker-compose -f $COMPOSE_FILE build
+if [ "$ENVIRONMENT" != "dev" ]; then
+    # Force clean build in production/stage to ensure all assets are properly built
+    docker-compose -f $COMPOSE_FILE build --no-cache
+else
+    docker-compose -f $COMPOSE_FILE build
+fi
 docker-compose -f $COMPOSE_FILE up -d
 
 # Wait for services to be ready
@@ -148,15 +153,27 @@ if [ "$ENVIRONMENT" != "prod" ]; then
     docker-compose -f $COMPOSE_FILE exec -T frankenphp composer install --optimize-autoloader
 fi
 
-# Install npm dependencies and build assets (dev only - prod builds during Docker image creation)
-if [ "$ENVIRONMENT" != "prod" ]; then
+# Install npm dependencies and build assets
+if [ "$ENVIRONMENT" == "dev" ]; then
+    # Dev: Install dependencies and build for development
     echo ""
     echo "Installing npm dependencies..."
     docker-compose -f $COMPOSE_FILE exec -T frankenphp npm install
-    
+
     echo ""
     echo "Building frontend assets..."
     docker-compose -f $COMPOSE_FILE exec -T frankenphp npm run dev
+else
+    # Production/Stage: Verify assets were built during Docker image creation
+    echo ""
+    echo "Verifying frontend assets..."
+    if ! docker-compose -f $COMPOSE_FILE exec -T frankenphp test -f /app/public/build/entrypoints.json; then
+        echo "Assets not found, building them now..."
+        docker-compose -f $COMPOSE_FILE exec -T frankenphp npm install
+        docker-compose -f $COMPOSE_FILE exec -T frankenphp npm run build
+    else
+        echo "Frontend assets verified successfully"
+    fi
 fi
 
 # Update database schema from entities
