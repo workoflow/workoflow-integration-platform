@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-18
+
+### Added
+- Comprehensive multi-agent AI system documentation including n8n workflow configurations and system prompts for JIRA, Confluence, SharePoint, GitLab, and Trello integrations
+- n8n workflow JSON files for Main Agent (orchestrator) and JIRA Agent with detailed import and configuration guides
+- System prompt templates for all specialized agents with tool definitions, workflow guidelines, and best practices
+
+### Fixed
+- Fixed header overlap issue on homepage for visitors - navigation now displays cleanly without visual overlap
+
 ## 2025-11-13
 
 ### Added

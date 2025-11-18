@@ -3,7 +3,8 @@
 {% block title %}Workoflow - AI Integration Platform{% endblock %}
 
 {% block body %}
-<!-- Navigation Bar -->
+<!-- Navigation Bar - Only shown for non-logged-in users -->
+{% if not app.user %}
 <nav class="home-nav">
     <div class="nav-container">
         <a href="#hero" class="nav-link">Home</a>
@@ -15,6 +16,7 @@
         <a href="#waitlist" class="nav-link">Join Waitlist</a>
     </div>
 </nav>
+{% endif %}
 
 <!-- Hero Section -->
 <section id="hero" class="hero-section">
