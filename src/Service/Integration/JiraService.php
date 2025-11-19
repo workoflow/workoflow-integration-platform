@@ -826,14 +826,11 @@ class JiraService
         $url = $this->validateAndNormalizeUrl($credentials['url']);
 
         try {
-            // Use JQL to get all issues on the board
-            // The Jira Agile API uses "board = {boardId}" JQL to filter board issues
-            $jql = "board = {$boardId} ORDER BY Rank ASC";
-
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
+            // Use the Jira Agile API to get all issues on the board
+            // This endpoint works for both Kanban and Scrum boards
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/issue', [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
                 'query' => [
-                    'jql' => $jql,
                     'maxResults' => $maxResults,
                     'fields' => '*all',
                 ],

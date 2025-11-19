@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - Better error messages when SharePoint search fails - now includes troubleshooting tips about permissions, token validity, and Search API configuration
 
 ### Fixed
+- Fixed Kanban board returning no issues - AI agents can now successfully retrieve all issues from Kanban boards (the tool was using an invalid query that always returned empty results)
 - Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
 - Fixed Jira integration failing with HTTP 410 errors - updated to use Jira's current API after Atlassian removed the deprecated endpoint, restoring full functionality for searching issues and retrieving Kanban board data
 - Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
