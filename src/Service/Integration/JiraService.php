@@ -307,7 +307,37 @@ class JiraService
             $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
 
             $suggestion = '';
-            if ($statusCode === 404 || $statusCode === 400) {
+
+            // Check if error indicates Kanban board (sprints not supported)
+            if (
+                stripos($errorText, 'sprint') !== false &&
+                (stripos($errorText, 'nicht unterstützt') !== false ||
+                 stripos($errorText, 'not support') !== false ||
+                 stripos($errorText, 'does not support') !== false)
+            ) {
+                // Try to get board details to confirm it's a Kanban board
+                try {
+                    $board = $this->getBoard($credentials, $boardId);
+                    $boardType = $board['type'] ?? 'unknown';
+                    $boardName = $board['name'] ?? "Board {$boardId}";
+
+                    if ($boardType === 'kanban') {
+                        throw new \RuntimeException(
+                            "This is a Kanban board ('{$boardName}') which does not support sprints. " .
+                            "Use jira_get_kanban_issues or jira_get_board_issues instead to get issues from this board.",
+                            400
+                        );
+                    }
+                } catch (\RuntimeException $boardError) {
+                    // If we can't get board details, re-throw the board error if it's our Kanban message
+                    if (stripos($boardError->getMessage(), 'Kanban board') !== false) {
+                        throw $boardError;
+                    }
+                    // Otherwise continue with original error handling below
+                }
+
+                $suggestion = ' - This board may be a Kanban board. Kanban boards do not have sprints. Use jira_get_kanban_issues or jira_get_board_issues instead.';
+            } elseif ($statusCode === 404 || $statusCode === 400) {
                 $suggestion = " - Board ID {$boardId} may not exist or you don't have permission to access it";
             } elseif (stripos($errorText, 'permission') !== false) {
                 $suggestion = ' - Check that your API token has Jira Software/Agile permissions';
@@ -678,5 +708,160 @@ class JiraService
             'path' => $path,
             'attempts' => $attempt
         ];
+    }
+
+    /**
+     * Get board details including type (scrum/kanban)
+     *
+     * @param array $credentials Jira credentials
+     * @param int $boardId Board ID
+     * @return array Board details with id, name, type (scrum/kanban), and location info
+     */
+    public function getBoard(array $credentials, int $boardId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Board ID {$boardId} does not exist or you don't have permission to access it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has Jira Software/Agile permissions';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get issues from any board type (Scrum or Kanban)
+     * Automatically detects board type and uses appropriate method
+     *
+     * @param array $credentials Jira credentials
+     * @param int $boardId Board ID
+     * @param int $maxResults Maximum number of results
+     * @return array Issues from the board
+     */
+    public function getBoardIssues(array $credentials, int $boardId, int $maxResults = 50): array
+    {
+        // First, get board details to determine type
+        $board = $this->getBoard($credentials, $boardId);
+        $boardType = $board['type'] ?? 'unknown';
+
+        if ($boardType === 'scrum') {
+            // For Scrum boards, get issues from active sprint
+            $sprints = $this->getSprintsFromBoard($credentials, $boardId);
+
+            // Find active sprint
+            $activeSprint = null;
+            foreach ($sprints['values'] ?? [] as $sprint) {
+                if (($sprint['state'] ?? '') === 'active') {
+                    $activeSprint = $sprint;
+                    break;
+                }
+            }
+
+            if ($activeSprint === null) {
+                // No active sprint, return empty result
+                return [
+                    'expand' => '',
+                    'startAt' => 0,
+                    'maxResults' => $maxResults,
+                    'total' => 0,
+                    'issues' => [],
+                    'boardType' => 'scrum',
+                    'message' => 'No active sprint found on this Scrum board'
+                ];
+            }
+
+            // Get issues from active sprint
+            $result = $this->getSprintIssues($credentials, $activeSprint['id']);
+            $result['boardType'] = 'scrum';
+            $result['sprintId'] = $activeSprint['id'];
+            $result['sprintName'] = $activeSprint['name'];
+
+            return $result;
+        } elseif ($boardType === 'kanban') {
+            // For Kanban boards, get all board issues
+            $result = $this->getKanbanIssues($credentials, $boardId, $maxResults);
+            $result['boardType'] = 'kanban';
+
+            return $result;
+        } else {
+            throw new \RuntimeException(
+                "Unknown board type '{$boardType}' for board ID {$boardId}. Expected 'scrum' or 'kanban'."
+            );
+        }
+    }
+
+    /**
+     * Get issues from a Kanban board
+     *
+     * @param array $credentials Jira credentials
+     * @param int $boardId Kanban board ID
+     * @param int $maxResults Maximum number of results
+     * @return array Issues from the Kanban board
+     */
+    public function getKanbanIssues(array $credentials, int $boardId, int $maxResults = 50): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            // Use JQL to get all issues on the board
+            // The Jira Agile API uses "board = {boardId}" JQL to filter board issues
+            $jql = "board = {$boardId} ORDER BY Rank ASC";
+
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'jql' => $jql,
+                    'maxResults' => $maxResults,
+                    'fields' => '*all',
+                ],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404 || $statusCode === 400) {
+                $suggestion = " - Board ID {$boardId} may not exist, may not be a Kanban board, or you don't have permission to access it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has Jira Software/Agile permissions';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 }

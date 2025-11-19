@@ -58,14 +58,26 @@ class JiraIntegration implements IntegrationInterface
                 ]
             ),
             new ToolDefinition(
-                'jira_get_sprints_from_board',
-                'Get all sprints from a Jira board. Returns: Object with maxResults, startAt, total, isLast, and values array. Each sprint contains: id, self, state (future/active/closed), name, startDate, endDate, completeDate (for closed sprints), originBoardId',
+                'jira_get_board',
+                'Get board details including type (scrum/kanban), name, and project information. Use this to detect board type before using sprint-specific tools. Returns: Object with id, self, name, type (scrum/kanban), and location (containing projectId, projectKey, projectName, displayName, projectTypeKey)',
                 [
                     [
                         'name' => 'boardId',
                         'type' => 'integer',
                         'required' => true,
                         'description' => 'Board ID'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_sprints_from_board',
+                'Get all sprints from a Scrum board (Scrum boards only - does NOT work with Kanban boards). Use jira_get_board first to verify board type. For Kanban boards, use jira_get_kanban_issues instead. Returns: Object with maxResults, startAt, total, isLast, and values array. Each sprint contains: id, self, state (future/active/closed), name, startDate, endDate, completeDate (for closed sprints), originBoardId',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Board ID (must be a Scrum board)'
                     ]
                 ]
             ),
@@ -164,6 +176,42 @@ class JiraIntegration implements IntegrationInterface
                         'description' => 'Optional comment to add during the transition'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_get_board_issues',
+                'Universal tool to get issues from any board type (works with both Scrum and Kanban). Automatically detects board type and retrieves issues accordingly: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all issues on the board. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Board ID (works with both Scrum and Kanban boards)'
+                    ],
+                    [
+                        'name' => 'maxResults',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Maximum number of results (default: 50)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_kanban_issues',
+                'Get all issues from a Kanban board. This is specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description, created, updated',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Kanban Board ID'
+                    ],
+                    [
+                        'name' => 'maxResults',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Maximum number of results (default: 50)'
+                    ]
+                ]
             )
         ];
     }
@@ -183,6 +231,10 @@ class JiraIntegration implements IntegrationInterface
             'jira_get_issue' => $this->jiraService->getIssue(
                 $credentials,
                 $parameters['issueKey']
+            ),
+            'jira_get_board' => $this->jiraService->getBoard(
+                $credentials,
+                $parameters['boardId']
             ),
             'jira_get_sprints_from_board' => $this->jiraService->getSprintsFromBoard(
                 $credentials,
@@ -212,6 +264,16 @@ class JiraIntegration implements IntegrationInterface
                 $parameters['issueKey'],
                 $parameters['targetStatusName'],
                 $parameters['comment'] ?? null
+            ),
+            'jira_get_board_issues' => $this->jiraService->getBoardIssues(
+                $credentials,
+                $parameters['boardId'],
+                $parameters['maxResults'] ?? 50
+            ),
+            'jira_get_kanban_issues' => $this->jiraService->getKanbanIssues(
+                $credentials,
+                $parameters['boardId'],
+                $parameters['maxResults'] ?? 50
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };

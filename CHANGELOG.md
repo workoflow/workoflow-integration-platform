@@ -4,17 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-19
 
+### Added
+- Kanban board support for Jira - AI agents can now work with Kanban boards in addition to Scrum boards (previously only Scrum was supported)
+- New Jira board detection tool - AI agents can now check if a board is Scrum or Kanban before choosing the right approach
+- Universal Jira board tool - automatically detects board type and retrieves issues (active sprint for Scrum, all issues for Kanban)
+
 ### Improved
 - Enhanced GitLab integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from all 24 GitLab tools (project details, MR states, issue info, commit data, pipeline status, package versions, file content, branch info) making it easier to search code, review merge requests, track issues, monitor CI/CD pipelines, and manage repositories
 - Enhanced Jira integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each Jira tool (issue keys, statuses, assignees, sprint details, transition options, comment metadata) making it easier to search issues, manage workflows, track sprints, and update tickets
 - Enhanced Trello integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each Trello tool (board names, card details, list positions, comments, checklists) making it easier to search boards, manage cards, and track tasks
 - Enhanced SharePoint integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each SharePoint tool (file names, sizes, URLs, timestamps, author info) making document search, file listings, and page reading more reliable
 - Enhanced Confluence integration tool descriptions with detailed return value documentation - AI agents now know exactly what data fields they'll receive (page IDs, titles, URLs, content, version info) making it easier to work with Confluence pages, comments, and search results
+- Better error messages for Kanban boards - when trying to get sprints from a Kanban board, the system now explains that Kanban boards don't have sprints and suggests using the correct tool instead
 
 ### Fixed
 - Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
 - Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
 - Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
+- Fixed "Sprints not supported" error when working with Kanban boards - system now detects board type and uses the appropriate method to get issues
 
 ## 2025-01-19
 
