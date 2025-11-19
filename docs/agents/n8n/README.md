@@ -4,26 +4,33 @@
 
 This directory contains n8n workflow JSON files for the multi-agent AI orchestration system. These workflows implement the agent architecture defined in `../system_prompts/`.
 
-**Version:** 1.0.0
-**Last Updated:** 2025-01-18
+**Version:** 2.0.0
+**Last Updated:** 2025-01-19
 
 ## Workflows
 
 | Workflow | File | Type | Description |
 |----------|------|------|-------------|
 | Main Agent | `main_agent.json` | Orchestrator | Routes user requests to specialized sub-agents |
-| Jira Agent | `jira_agent.json` | Sub-Agent | Handles Jira operations (issues, sprints, comments) |
+| Jira Agent | `jira_agent.json` | User Integration | Handles Jira operations (issues, sprints, comments) |
+| Confluence Agent | `confluence_agent.json` | User Integration | Manages Confluence pages, spaces, and documentation |
+| GitLab Agent | `gitlab_agent.json` | User Integration | Handles GitLab repositories, MRs, and CI/CD operations |
+| SharePoint Agent | `sharepoint_agent.json` | User Integration | Manages SharePoint document libraries and searches |
+| Trello Agent | `trello_agent.json` | User Integration | Handles Trello boards, cards, and project management |
+| System Tools Agent | `system_tools_agent.json` | Platform Tools | Platform-internal tools (PDF generation, web search, etc.) |
 
 ## Architecture
 
 ```
 User Request (Webhook)
     ↓
-Main Agent (Orchestrator)
-    ├─→ Jira Agent (Sub-Workflow)
-    ├─→ Confluence Agent (Sub-Workflow) [planned]
-    ├─→ SharePoint Agent (Sub-Workflow) [planned]
-    └─→ System Tools Agent (Sub-Workflow) [planned]
+Main Agent (Orchestrator) ← Has conversation memory
+    ├─→ Jira Agent (Stateless Sub-Workflow)
+    ├─→ Confluence Agent (Stateless Sub-Workflow)
+    ├─→ GitLab Agent (Stateless Sub-Workflow)
+    ├─→ SharePoint Agent (Stateless Sub-Workflow)
+    ├─→ Trello Agent (Stateless Sub-Workflow)
+    └─→ System Tools Agent (Stateless Sub-Workflow)
 ```
 
 ### Key Principles
@@ -271,24 +278,141 @@ All sub-agents return responses in this format:
 - **Check**: `tool_type=jira` query parameter
 - **Fix**: Verify URL in CURRENT_USER_TOOLS node includes correct tool_type
 
+## Helper Script: create_agent.sh
+
+To simplify the creation of new user integration agents, use the provided `create_agent.sh` helper script. This script automates the generation of n8n workflow JSON files from XML system prompts.
+
+### Purpose
+
+The script generates complete n8n workflow JSON files with:
+- Proper node structure (Execute Workflow Trigger → AI Agent → Respond to Webhook)
+- Embedded system prompt from XML file
+- HTTP Request Tool nodes for dynamic tool discovery and execution
+- Unique UUIDs for all nodes
+- Correct connections between nodes
+- Predefined credentials (Azure OpenAI, HTTP Basic Auth)
+- Pin data for testing
+
+### Usage
+
+```bash
+bash create_agent.sh <agent_type> <xml_file> <output_file>
+```
+
+**Parameters**:
+- `agent_type`: Type of integration (e.g., `jira`, `confluence`, `gitlab`, `sharepoint`, `trello`)
+- `xml_file`: Path to system prompt XML file (e.g., `../system_prompts/confluence_agent.xml`)
+- `output_file`: Output path for generated JSON (e.g., `confluence_agent.json`)
+
+### Examples
+
+```bash
+# Generate Confluence Agent
+bash create_agent.sh confluence ../system_prompts/confluence_agent.xml confluence_agent.json
+
+# Generate GitLab Agent
+bash create_agent.sh gitlab ../system_prompts/gitlab_agent.xml gitlab_agent.json
+
+# Generate SharePoint Agent
+bash create_agent.sh sharepoint ../system_prompts/sharepoint_agent.xml sharepoint_agent.json
+
+# Generate Trello Agent
+bash create_agent.sh trello ../system_prompts/trello_agent.xml trello_agent.json
+```
+
+### What the Script Generates
+
+The script creates a complete user integration agent with:
+
+1. **Execute Workflow Trigger** node with parameters:
+   - `userID` (string)
+   - `tenantID` (string)
+   - `locale` (string)
+   - `userPrompt` (string)
+   - `taskDescription` (string)
+
+2. **AI Agent** node with:
+   - Embedded system prompt from XML file
+   - `maxIterations: 15`
+   - Task text from `taskDescription` parameter
+
+3. **Azure OpenAI LLM** node:
+   - Model: `gpt-4.1`
+   - Credential: `azure-open-ai-proxy` (ID: cLd5WshSqySpWGKz)
+   - Max retries: 2
+
+4. **CURRENT_USER_TOOLS** (HTTP Request Tool):
+   - GET `/api/integrations/{tenantID}/?workflow_user_id={userID}&tool_type={agent_type}`
+   - Description: Dynamic tool discovery for current user
+   - Credential: `Workoflow Integration Platform` (ID: 6DYEkcLl6x47zCLE)
+
+5. **CURRENT_USER_EXECUTE_TOOL** (HTTP Request Tool):
+   - POST `/api/integrations/{tenantID}/execute?workflow_user_id={userID}`
+   - Description: Executes tools with parameters
+   - Credential: `Workoflow Integration Platform` (ID: 6DYEkcLl6x47zCLE)
+
+6. **Respond to Webhook** node for returning results
+
+7. **Pin Data** for testing with sample parameters
+
+### Important Notes
+
+- **User Integration Agents Only**: This script is designed for user integration agents (Jira, Confluence, GitLab, SharePoint, Trello)
+- **Not for System Tools Agent**: System Tools Agent has a different structure and requires manual tool connections
+- **Credentials**: Generated workflows use predefined credential IDs from existing jira_agent.json
+- **UUIDs**: Each run generates unique UUIDs for all nodes
+- **XML Escaping**: System prompt XML is properly escaped for JSON embedding
+
+### Limitations
+
+The helper script does NOT handle:
+- System Tools Agent creation (different architecture)
+- Custom credential IDs (uses predefined IDs)
+- Direct n8n tool nodes (content_query, generate_pdf, etc.)
+- Main Agent modifications (must be done manually)
+
 ## Adding New Sub-Agents
 
-To add a new sub-agent (e.g., Confluence Agent):
+To add a new user integration agent:
+
+### Option A: Using Helper Script (Recommended)
+
+1. **Create System Prompt**:
+   - Create `../system_prompts/<agent_type>_agent.xml`
+   - Define agent behavior and tool usage patterns
+
+2. **Generate Workflow**:
+   ```bash
+   bash create_agent.sh <agent_type> ../system_prompts/<agent_type>_agent.xml <agent_type>_agent.json
+   ```
+
+3. **Update Main Agent**:
+   - Add new "toolWorkflow" node with appropriate description
+   - Connect to AI Agent
+   - Configure parameter mapping (tenantID, userID, locale, userPrompt, taskDescription)
+
+4. **Import and Configure**:
+   - Import workflow to n8n
+   - Note the workflow ID
+   - Update Main Agent's toolWorkflow node with actual workflow ID
+
+### Option B: Manual Creation
 
 1. **Create Workflow**:
    - Copy `jira_agent.json` as template
-   - Update system prompt with Confluence-specific instructions
-   - Update HTTP Request Tool URLs to use `tool_type=confluence`
+   - Update system prompt with agent-specific instructions
+   - Update HTTP Request Tool URLs to use `tool_type=<agent_type>`
+   - Generate new UUIDs for all nodes
 
 2. **Update Main Agent**:
    - Add new "toolWorkflow" node
    - Connect to AI Agent
-   - Set tool description with Confluence keywords
+   - Set tool description with relevant keywords
    - Configure parameter mapping
 
 3. **Update System Prompts**:
-   - Create `../system_prompts/confluence_agent.xml`
-   - Update `../system_prompts/main_agent.xml` with Confluence routing
+   - Create `../system_prompts/<agent_type>_agent.xml`
+   - Update `../system_prompts/main_agent.xml` with routing logic
 
 4. **Document**:
    - Add workflow to this README
@@ -296,6 +420,7 @@ To add a new sub-agent (e.g., Confluence Agent):
 
 ## Version History
 
+- **2.0.0** (2025-01-19): Added Confluence, GitLab, SharePoint, Trello, and System Tools agents. Introduced create_agent.sh helper script for automated agent generation
 - **1.0.0** (2025-01-18): Initial release with Main Agent and Jira Agent
 
 ## Support
@@ -318,5 +443,5 @@ After importing and configuring workflows:
 
 ---
 
-**Last Updated:** 2025-01-18
+**Last Updated:** 2025-01-19
 **Maintainer:** Development Team

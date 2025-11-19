@@ -311,7 +311,134 @@
             "userID": "={{ $('SET USER').item.json.userId }}",
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
-            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific system tool operation should this agent perform? Be precise and include all necessary context and data. For document generation, include the content to be generated. For multi-agent workflows, embed any data from previous agents.', 'string') }}"
+            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific system tool operation should this agent perform? Be precise and include all necessary context and data. For document generation, include the content to be generated. For multi-agent workflows, embed any data from previous agents.', 'string') }}",
+            "downloadUrl": "={{ $('SET USER').item.json.downloadUrl }}",
+            "filetype": "={{ $('SET USER').item.json.filetype }}",
+            "filename": "={{ $('SET USER').item.json.filename }}",
+            "userName": "={{ $('SET USER').item.json.userName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "userID",
+              "displayName": "userID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "tenantID",
+              "displayName": "tenantID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "locale",
+              "displayName": "locale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userPrompt",
+              "displayName": "userPrompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "taskDescription",
+              "displayName": "taskDescription",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "downloadUrl",
+              "displayName": "downloadUrl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "filetype",
+              "displayName": "filetype",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "filename",
+              "displayName": "filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userName",
+              "displayName": "userName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [528, 592],
+      "id": "7bf828e3-ed79-4438-8c7b-f1f1758b9b60",
+      "name": "System Tools Agent"
+    },
+    {
+      "parameters": {
+        "name": "Confluence Agent",
+        "description": "Use this tool when the user wants to interact with Confluence. This includes:\n- Searching wiki pages or documentation\n- Creating or updating Confluence pages\n- Managing page comments\n- Accessing team knowledge bases\n- Organizing documentation in spaces\n- Working with CQL queries\n\nKeywords: confluence, wiki, documentation, page, space, knowledge base, docs, cql, team docs, documentation",
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_CONFLUENCE",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WORKFLOW_ID_CONFLUENCE",
+          "cachedResultName": "Confluence Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenantID": "={{ $('SET USER').item.json.tenantId }}",
+            "userID": "={{ $('SET USER').item.json.userId }}",
+            "locale": "={{ $('SET USER').item.json.locale }}",
+            "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
+            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific Confluence-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the Confluence portion.', 'string') }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -372,9 +499,258 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [528, 592],
-      "id": "7bf828e3-ed79-4438-8c7b-f1f1758b9b60",
-      "name": "System Tools Agent"
+      "position": [704, 592],
+      "id": "a1b2c3d4-e5f6-4a5b-a1b2-c3d4e5f6a1b2",
+      "name": "Call 'Confluence Agent'"
+    },
+    {
+      "parameters": {
+        "name": "GitLab Agent",
+        "description": "Use this tool when the user wants to interact with GitLab. This includes:\n- Managing repositories and code\n- Handling merge requests and code reviews\n- Tracking issues and tasks\n- Monitoring CI/CD pipelines\n- Troubleshooting pipeline failures\n- Managing packages and container registry\n- Analyzing commits and code changes\n\nKeywords: gitlab, git, repository, merge request, MR, pipeline, CI/CD, commit, branch, issue, package, devops, ci, cd, build, deploy",
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_GITLAB",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WORKFLOW_ID_GITLAB",
+          "cachedResultName": "GitLab Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenantID": "={{ $('SET USER').item.json.tenantId }}",
+            "userID": "={{ $('SET USER').item.json.userId }}",
+            "locale": "={{ $('SET USER').item.json.locale }}",
+            "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
+            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific GitLab-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the GitLab portion.', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "userID",
+              "displayName": "userID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "tenantID",
+              "displayName": "tenantID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "locale",
+              "displayName": "locale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userPrompt",
+              "displayName": "userPrompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "taskDescription",
+              "displayName": "taskDescription",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [880, 592],
+      "id": "b2c3d4e5-f6a7-5b6c-b2c3-d4e5f6a7b2c3",
+      "name": "Call 'GitLab Agent'"
+    },
+    {
+      "parameters": {
+        "name": "SharePoint Agent",
+        "description": "Use this tool when the user wants to interact with SharePoint. This includes:\n- Intelligent multi-keyword document search\n- Reading Word, Excel, PowerPoint, PDF documents\n- Listing files and folders\n- Managing SharePoint lists\n- Accessing OneDrive documents\n- Finding documents with advanced search strategies\n\nIMPORTANT: This agent uses intelligent search with multiple keyword variations (German + English, synonyms, acronyms) and ALWAYS asks user permission before reading documents.\n\nKeywords: sharepoint, document, file, list, onedrive, upload, download, excel, word, pdf, powerpoint, dokument, datei",
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_SHAREPOINT",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WORKFLOW_ID_SHAREPOINT",
+          "cachedResultName": "SharePoint Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenantID": "={{ $('SET USER').item.json.tenantId }}",
+            "userID": "={{ $('SET USER').item.json.userId }}",
+            "locale": "={{ $('SET USER').item.json.locale }}",
+            "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
+            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific SharePoint-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the SharePoint portion.', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "userID",
+              "displayName": "userID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "tenantID",
+              "displayName": "tenantID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "locale",
+              "displayName": "locale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userPrompt",
+              "displayName": "userPrompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "taskDescription",
+              "displayName": "taskDescription",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1056, 592],
+      "id": "c3d4e5f6-a7b8-6c7d-c3d4-e5f6a7b8c3d4",
+      "name": "Call 'SharePoint Agent'"
+    },
+    {
+      "parameters": {
+        "name": "Trello Agent",
+        "description": "Use this tool when the user wants to interact with Trello. This includes:\n- Managing boards, lists, and cards\n- Creating and updating tasks\n- Handling checklists\n- Managing comments\n- Tracking project progress\n- Moving cards between lists\n- Analyzing board status\n\nKeywords: trello, board, card, list, checklist, task, project management, kanban, todo, done, in progress",
+        "workflowId": {
+          "__rl": true,
+          "value": "WORKFLOW_ID_TRELLO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WORKFLOW_ID_TRELLO",
+          "cachedResultName": "Trello Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenantID": "={{ $('SET USER').item.json.tenantId }}",
+            "userID": "={{ $('SET USER').item.json.userId }}",
+            "locale": "={{ $('SET USER').item.json.locale }}",
+            "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
+            "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific Trello-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the Trello portion.', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "userID",
+              "displayName": "userID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "tenantID",
+              "displayName": "tenantID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "locale",
+              "displayName": "locale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "userPrompt",
+              "displayName": "userPrompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "taskDescription",
+              "displayName": "taskDescription",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [1232, 592],
+      "id": "d4e5f6a7-b8c9-7d8e-d4e5-f6a7b8c9d4e5",
+      "name": "Call 'Trello Agent'"
     }
   ],
   "connections": {
@@ -474,6 +850,50 @@
       ]
     },
     "System Tools Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Confluence Agent'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'GitLab Agent'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'SharePoint Agent'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Trello Agent'": {
       "ai_tool": [
         [
           {
