@@ -16,22 +16,16 @@ All notable changes to this project will be documented in this file.
 - Enhanced SharePoint integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each SharePoint tool (file names, sizes, URLs, timestamps, author info) making document search, file listings, and page reading more reliable
 - Enhanced Confluence integration tool descriptions with detailed return value documentation - AI agents now know exactly what data fields they'll receive (page IDs, titles, URLs, content, version info) making it easier to work with Confluence pages, comments, and search results
 - Better error messages for Kanban boards - when trying to get sprints from a Kanban board, the system now explains that Kanban boards don't have sprints and suggests using the correct tool instead
-
-### Fixed
-- Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
-- Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
-- Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
-- Fixed "Sprints not supported" error when working with Kanban boards - system now detects board type and uses the appropriate method to get issues
-
-## 2025-01-19
-
-### Improved
 - SharePoint search now finds significantly more results using intelligent multi-keyword search - the system automatically searches with all relevant variations (synonyms, German+English translations, acronyms) in a single query
 - SharePoint search results are now grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint's native search interface - making it easier to find what you're looking for
 - Simplified SharePoint search workflow - agents now make one comprehensive search instead of multiple attempts, providing faster results
 - Better error messages when SharePoint search fails - now includes troubleshooting tips about permissions, token validity, and Search API configuration
 
 ### Fixed
+- Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
+- Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
+- Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
+- Fixed "Sprints not supported" error when working with Kanban boards - system now detects board type and uses the appropriate method to get issues
 - Fixed SharePoint search returning no results for multilingual queries - system now automatically includes both German and English keywords for better coverage in bilingual workspaces
 - Fixed missing clickable links in search results across all agents - SharePoint, Confluence, Jira, and Trello search results now include direct URLs to access documents, pages, issues, and cards with a single click
 
