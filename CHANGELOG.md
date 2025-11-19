@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
+- Fixed Jira integration failing with HTTP 410 errors - updated to use Jira's current API after Atlassian removed the deprecated endpoint, restoring full functionality for searching issues and retrieving Kanban board data
 - Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
 - Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
 - Fixed "Sprints not supported" error when working with Kanban boards - system now detects board type and uses the appropriate method to get issues

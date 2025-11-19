@@ -255,7 +255,7 @@
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
             "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific Jira-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the Jira portion.', 'string') }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -316,7 +316,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],
@@ -355,7 +355,7 @@
             "filetype": "={{ $('SET USER').item.json.filetype }}",
             "filename": "={{ $('SET USER').item.json.filename }}",
             "userName": "={{ $('SET USER').item.json.userName }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -456,7 +456,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],
@@ -491,7 +491,7 @@
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
             "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific Confluence-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the Confluence portion.', 'string') }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -552,7 +552,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],
@@ -587,7 +587,7 @@
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
             "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific GitLab-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the GitLab portion.', 'string') }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -648,7 +648,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],
@@ -683,7 +683,7 @@
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
             "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific SharePoint-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the SharePoint portion.', 'string') }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -744,7 +744,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],
@@ -779,7 +779,7 @@
             "locale": "={{ $('SET USER').item.json.locale }}",
             "userPrompt": "={{ $('SET USER').item.json.chatInput }}",
             "taskDescription": "={{ $fromAI('taskDescription', 'Based on the user request and conversation history, what specific Trello-related task should this agent perform? Be precise and include all necessary context. If this is a multi-agent workflow, only describe the Trello portion.', 'string') }}",
-            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"string\") }}"
+            "previousAgentData": "={{ $fromAI(\"previousAgentData\", \"If this is a multi-agent workflow and a previous agent (JIRA, Confluence, SharePoint, GitLab, Trello, System Tools) returned data in its response, construct a previousAgentData object: {agentType: \\\"jira|confluence|sharepoint|gitlab|trello|system\\\", data: {the data object from previous agent response}, context: \\\"brief description of the data\\\"}. IMPORTANT: Extract data from the previous tool response.data field if available. Return null if no previous agent was called or response.data does not exist.\", \"object\") }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -840,7 +840,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "object",
               "removed": false
             }
           ],

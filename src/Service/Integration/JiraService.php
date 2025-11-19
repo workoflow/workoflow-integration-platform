@@ -199,8 +199,8 @@ class JiraService
         }
 
         try {
-            // Use standard /search endpoint (more reliable than /search/jql)
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search', [
+            // Use /search/jql endpoint (the /search endpoint was deprecated and removed)
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
                 'query' => [
                     'jql' => $jql,
@@ -830,7 +830,7 @@ class JiraService
             // The Jira Agile API uses "board = {boardId}" JQL to filter board issues
             $jql = "board = {$boardId} ORDER BY Rank ASC";
 
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search', [
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
                 'query' => [
                     'jql' => $jql,
