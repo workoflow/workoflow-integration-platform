@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-01-19
+
+### Improved
+- SharePoint search now finds significantly more results using intelligent multi-keyword search - the system automatically searches with all relevant variations (synonyms, German+English translations, acronyms) in a single query
+- SharePoint search results are now grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint's native search interface - making it easier to find what you're looking for
+- Simplified SharePoint search workflow - agents now make one comprehensive search instead of multiple attempts, providing faster results
+- Better error messages when SharePoint search fails - now includes troubleshooting tips about permissions, token validity, and Search API configuration
+
+### Fixed
+- Fixed SharePoint search returning no results for multilingual queries - system now automatically includes both German and English keywords for better coverage in bilingual workspaces
+
 ## 2025-11-18
 
 ### Added

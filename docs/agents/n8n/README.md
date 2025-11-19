@@ -371,6 +371,95 @@ The helper script does NOT handle:
 - Direct n8n tool nodes (content_query, generate_pdf, etc.)
 - Main Agent modifications (must be done manually)
 
+## Updating Agent System Prompts in n8n Workflows
+
+**IMPORTANT:** When system prompt XML files in `../system_prompts/` are updated, the corresponding n8n workflow JSON files must also be updated manually.
+
+### Why Manual Update is Required
+
+The n8n workflow JSON files contain embedded copies of the system prompt XML within the "AI Agent" node's `systemMessage` field. These embedded prompts are **not** automatically synchronized when the XML files change.
+
+### How to Update an Agent's System Prompt
+
+When you modify a system prompt XML file (e.g., `sharepoint_agent.xml`), follow these steps:
+
+1. **Open the n8n Workflow in the UI**:
+   - Navigate to your n8n instance
+   - Open the corresponding workflow (e.g., "SharePoint Agent")
+
+2. **Locate the AI Agent Node**:
+   - Find the node named "AI Agent" or "AI Agent1"
+   - Click to edit the node
+
+3. **Update the System Message**:
+   - In the node configuration, find the "Options" section
+   - Locate the "System Message" field
+   - **Copy the entire contents** of the updated XML file from `../system_prompts/<agent>_agent.xml`
+   - **Paste** it into the "System Message" field, replacing the old content
+
+4. **Save and Test**:
+   - Click "Save" to save the node changes
+   - Click "Save" again to save the workflow
+   - Test the workflow with pinned data to verify the updated behavior
+
+### Alternative: Programmatic Update (Advanced)
+
+For large XML files or multiple agents, you can use this Python script:
+
+```bash
+cd /home/patrickjaja/development/workoflow-promopage-v2/docs/agents/n8n
+
+python3 << 'PYTHON_EOF'
+import json
+
+# Read the XML file
+with open('../system_prompts/sharepoint_agent.xml', 'r') as f:
+    xml_content = f.read()
+
+# Read the JSON workflow
+with open('sharepoint_agent.json', 'r') as f:
+    workflow = json.load(f)
+
+# Find and update the AI Agent node's systemMessage
+for node in workflow.get('nodes', []):
+    if node.get('type') == '@n8n/n8n-nodes-langchain.agent':
+        if 'parameters' in node and 'options' in node['parameters']:
+            node['parameters']['options']['systemMessage'] = xml_content
+            break
+
+# Write back
+with open('sharepoint_agent.json', 'w') as f:
+    json.dump(workflow, f, indent=2, ensure_ascii=False)
+
+print("✓ Updated sharepoint_agent.json")
+PYTHON_EOF
+```
+
+### Affected Workflows
+
+The following workflows contain embedded system prompts that must be manually updated:
+
+| Workflow | XML Source | JSON File | AI Agent Node Name |
+|----------|------------|-----------|-------------------|
+| Main Agent | `main_agent.xml` | `main_agent.json` | "AI Agent" |
+| Jira Agent | `jira_agent.xml` | `jira_agent.json` | "AI Agent1" |
+| Confluence Agent | `confluence_agent.xml` | `confluence_agent.json` | "AI Agent1" |
+| GitLab Agent | `gitlab_agent.xml` | `gitlab_agent.json` | "AI Agent1" |
+| **SharePoint Agent** | `sharepoint_agent.xml` | `sharepoint_agent.json` | "AI Agent1" |
+| Trello Agent | `trello_agent.xml` | `trello_agent.json` | "AI Agent1" |
+| System Tools Agent | `system_tools_agent.xml` | `system_tools_agent.json` | "AI Agent1" |
+
+### Recent Updates Requiring Manual Sync
+
+**2025-01-19 - SharePoint Agent KQL Enhancement:**
+- **File**: `sharepoint_agent.xml`
+- **Changes**:
+  - Added automatic KQL (Keyword Query Language) parsing
+  - Implemented result grouping by type (Files, Sites, Pages, Lists, Drives)
+  - Simplified intelligent search workflow (single search call with multi-keywords)
+  - Enhanced error handling with detailed troubleshooting messages
+- **Action Required**: Update `sharepoint_agent.json` in n8n with the new XML content from `sharepoint_agent.xml`
+
 ## Adding New Sub-Agents
 
 To add a new user integration agent:

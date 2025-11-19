@@ -190,13 +190,14 @@ class SharePointService
             error_log('SharePoint searchPages called with query: ' . $query . ', limit: ' . $limit);
             $results = [];
 
-            // Use the Microsoft Graph Search API
+            // Use the Microsoft Graph Search API with comprehensive entity types
+            // Supporting Files, Sites, Pages, Lists, and Drives to match SharePoint native search
             $searchRequest = [
                 'requests' => [
                     [
-                        'entityTypes' => ['listItem', 'site', 'driveItem'],
+                        'entityTypes' => ['driveItem', 'site', 'listItem', 'list', 'drive'],
                         'query' => [
-                            'queryString' => $query
+                            'queryString' => $query  // Now receives properly formatted KQL query
                         ],
                         'size' => $limit,
                         'fields' => [
@@ -207,13 +208,15 @@ class SharePointService
                             'createdDateTime',
                             'lastModifiedDateTime',
                             'siteId',
-                            'id'
+                            'id',
+                            'fileSystemInfo',
+                            'size'
                         ]
                     ]
                 ]
             ];
 
-            error_log('Attempting Microsoft Graph Search API with query: ' . json_encode($searchRequest));
+            error_log('Attempting Microsoft Graph Search API with KQL query: ' . json_encode($searchRequest));
 
             $searchResponse = $this->httpClient->request('POST', self::GRAPH_API_BASE . '/search/query', [
                 'auth_bearer' => $credentials['access_token'],
@@ -237,17 +240,25 @@ class SharePointService
                                 // Log all available fields for debugging
                                 error_log('Resource fields: ' . json_encode(array_keys($resource)));
 
-                                // More flexible filtering - include any SharePoint content
-                                // Determine the type based on @odata.type
+                                // Determine the type based on @odata.type for proper grouping
                                 $odataType = $resource['@odata.type'] ?? 'unknown';
                                 $resultType = 'page'; // default
 
                                 if (str_contains($odataType, 'driveItem')) {
-                                    $resultType = 'document';
+                                    // Files in document libraries
+                                    $resultType = 'file';
                                 } elseif (str_contains($odataType, 'site')) {
+                                    // SharePoint sites
                                     $resultType = 'site';
                                 } elseif (str_contains($odataType, 'listItem')) {
+                                    // List items (includes pages)
                                     $resultType = 'page';
+                                } elseif (str_contains($odataType, 'list')) {
+                                    // SharePoint lists
+                                    $resultType = 'list';
+                                } elseif (str_contains($odataType, 'drive')) {
+                                    // Document libraries
+                                    $resultType = 'drive';
                                 }
 
                                 // Extract siteId properly based on the resource type
@@ -296,15 +307,36 @@ class SharePointService
 
             error_log('Search API found ' . count($results) . ' results');
 
+            // Group results by type for better user experience (matching SharePoint native search UI)
+            $groupedResults = $this->groupResultsByType($results);
+
             return [
-                'value' => $results,
+                'value' => $results,  // Keep flat list for backward compatibility
+                'grouped_results' => $groupedResults,  // New grouped format
                 'count' => count($results),
+                'grouped_summary' => $this->createGroupedSummary($groupedResults),
                 'searchQuery' => $query
             ];
         } catch (\Exception $e) {
             error_log('SharePoint Pages Search Error: ' . $e->getMessage());
             error_log('Error trace: ' . $e->getTraceAsString());
-            throw $e;
+
+            // Return detailed error message for better debugging
+            return [
+                'value' => [],
+                'error' => true,
+                'error_message' => $e->getMessage(),
+                'error_details' => [
+                    'query' => $query,
+                    'limit' => $limit,
+                    'timestamp' => date('Y-m-d H:i:s')
+                ],
+                'troubleshooting' => [
+                    'check_permissions' => 'Ensure Application permissions Sites.Read.All and Files.Read.All are granted',
+                    'check_token' => 'Verify access token is valid and not expired',
+                    'check_search_api' => 'Confirm Microsoft Graph Search API is enabled in tenant'
+                ]
+            ];
         }
     }
 
@@ -1255,5 +1287,80 @@ class SharePointService
         }
 
         return trim($text);
+    }
+
+    /**
+     * Group search results by type (Files, Sites, Pages, Lists, Drives)
+     *
+     * @param array $results Flat array of search results
+     * @return array Grouped results by type
+     */
+    private function groupResultsByType(array $results): array
+    {
+        $grouped = [
+            'files' => [],
+            'sites' => [],
+            'pages' => [],
+            'lists' => [],
+            'drives' => []
+        ];
+
+        foreach ($results as $result) {
+            $type = $result['type'] ?? 'unknown';
+
+            switch ($type) {
+                case 'file':
+                case 'document':  // Backward compatibility
+                    $grouped['files'][] = $result;
+                    break;
+                case 'site':
+                    $grouped['sites'][] = $result;
+                    break;
+                case 'page':
+                    $grouped['pages'][] = $result;
+                    break;
+                case 'list':
+                    $grouped['lists'][] = $result;
+                    break;
+                case 'drive':
+                    $grouped['drives'][] = $result;
+                    break;
+                default:
+                    // Unknown types go to pages as fallback
+                    $grouped['pages'][] = $result;
+            }
+        }
+
+        // Remove empty groups
+        return array_filter($grouped, fn($group) => !empty($group));
+    }
+
+    /**
+     * Create a human-readable summary of grouped results
+     *
+     * @param array $groupedResults Results grouped by type
+     * @return string Summary like "Files: 8, Sites: 2, Pages: 5"
+     */
+    private function createGroupedSummary(array $groupedResults): string
+    {
+        $summaryParts = [];
+
+        $typeLabels = [
+            'files' => 'Files',
+            'sites' => 'Sites',
+            'pages' => 'Pages',
+            'lists' => 'Lists',
+            'drives' => 'Drives'
+        ];
+
+        foreach ($groupedResults as $type => $items) {
+            if (!empty($items)) {
+                $label = $typeLabels[$type] ?? ucfirst($type);
+                $count = count($items);
+                $summaryParts[] = "$label: $count";
+            }
+        }
+
+        return implode(', ', $summaryParts);
     }
 }

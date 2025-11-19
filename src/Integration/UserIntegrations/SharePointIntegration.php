@@ -33,37 +33,37 @@ class SharePointIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'sharepoint_search_documents',
-                'Search for documents in SharePoint with content summaries',
+                'Search for documents in SharePoint with content summaries. Supports multi-keyword queries (comma-separated or space-separated). Returns results grouped by type (Files, Sites, Pages, Lists) similar to SharePoint\'s native search.',
                 [
                     [
                         'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query to find relevant documents'
+                        'description' => 'Search query to find relevant documents. Can be a single keyword, multiple keywords separated by commas or spaces, or exact phrases in quotes. Examples: "Urlaub", "Urlaubsregelung, Ferien", "API documentation"'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results to return (default: 10, max: 25)'
+                        'description' => 'Maximum number of results to return per result type (default: 10, max: 25)'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'sharepoint_search_pages',
-                'Search for pages in SharePoint',
+                'Search for pages and content across SharePoint using Microsoft Graph Search API. Supports multi-keyword queries with automatic KQL (Keyword Query Language) formatting. Returns comprehensive results grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint\'s native search experience.',
                 [
                     [
                         'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query'
+                        'description' => 'Search query supporting multiple formats: single keywords, comma-separated keywords (e.g., "Urlaub, Ferien, Abwesenheit"), exact phrases in quotes (e.g., "vacation policy"), or natural language. The query will be automatically converted to proper KQL syntax for optimal search results.'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results (default: 25)'
+                        'description' => 'Maximum number of results per result type (default: 25, max: 50). Results are grouped by type, so total results may exceed this limit.'
                     ]
                 ]
             ),
@@ -186,13 +186,13 @@ class SharePointIntegration implements IntegrationInterface
         return match ($toolName) {
             'sharepoint_search_documents' => $this->sharePointService->searchDocuments(
                 $credentials,
-                $parameters['query'],
+                $this->parseQueryToKQL($parameters['query']),
                 min($parameters['limit'] ?? 10, 25)
             ),
             'sharepoint_search_pages' => $this->sharePointService->searchPages(
                 $credentials,
-                $parameters['query'],
-                $parameters['limit'] ?? 25
+                $this->parseQueryToKQL($parameters['query']),
+                min($parameters['limit'] ?? 25, 50)
             ),
             'sharepoint_read_document' => $this->sharePointService->readDocument(
                 $credentials,
@@ -269,5 +269,56 @@ class SharePointIntegration implements IntegrationInterface
             'refresh_token' => $newTokens['refresh_token'],
             'expires_at' => $newTokens['expires_at']
         ]);
+    }
+
+    /**
+     * Parse search query into KQL (Keyword Query Language) format
+     *
+     * Transforms various query formats into proper KQL syntax for Microsoft Graph Search:
+     * - Comma-separated keywords: "Urlaub, Ferien" → "Urlaub OR Ferien"
+     * - Multiple spaces: "Urlaub  Ferien" → "Urlaub OR Ferien"
+     * - Exact phrases: '"vacation policy"' → '"vacation policy"'
+     * - Mixed: "Urlaub, Ferien, \"vacation policy\"" → "Urlaub OR Ferien OR \"vacation policy\""
+     *
+     * @param string $query Raw search query from user/agent
+     * @return string Properly formatted KQL query
+     */
+    private function parseQueryToKQL(string $query): string
+    {
+        // Trim whitespace
+        $query = trim($query);
+
+        // If query is already in KQL format (contains OR, AND, NOT operators), return as-is
+        if (preg_match('/\b(OR|AND|NOT)\b/i', $query)) {
+            return $query;
+        }
+
+        // Extract exact phrases (anything in quotes)
+        $phrases = [];
+        $query = preg_replace_callback('/"([^"]+)"/', function ($matches) use (&$phrases) {
+            $phrases[] = '"' . $matches[1] . '"';
+            return '___PHRASE_' . (count($phrases) - 1) . '___';
+        }, $query);
+
+        // Split by comma or multiple spaces
+        $keywords = preg_split('/[,\s]+/', $query, -1, PREG_SPLIT_NO_EMPTY);
+
+        // Replace phrase placeholders back
+        $keywords = array_map(function ($keyword) use ($phrases) {
+            return preg_replace_callback('/___PHRASE_(\d+)___/', function ($matches) use ($phrases) {
+                return $phrases[(int)$matches[1]];
+            }, $keyword);
+        }, $keywords);
+
+        // Remove duplicates and empty values
+        $keywords = array_unique(array_filter($keywords));
+
+        // If only one keyword, return as-is
+        if (count($keywords) === 1) {
+            return $keywords[0];
+        }
+
+        // Join with OR operator for KQL
+        return implode(' OR ', $keywords);
     }
 }
