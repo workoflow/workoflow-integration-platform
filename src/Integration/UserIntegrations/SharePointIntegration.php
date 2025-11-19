@@ -33,7 +33,7 @@ class SharePointIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'sharepoint_search_documents',
-                'Search for documents in SharePoint with content summaries. Supports multi-keyword queries (comma-separated or space-separated). Returns results grouped by type (Files, Sites, Pages, Lists) similar to SharePoint\'s native search.',
+                'Search for documents in SharePoint with content summaries. Supports multi-keyword queries (comma-separated or space-separated). Returns: Array of search results grouped by type (Files, Sites, Pages, Lists) with each result containing hitId, rank, summary, and resource object. Resource includes: id, name, size, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, parentReference (with siteId, driveId, sharepointIds).',
                 [
                     [
                         'name' => 'query',
@@ -51,7 +51,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_search_pages',
-                'Search for pages and content across SharePoint using Microsoft Graph Search API. Supports multi-keyword queries with automatic KQL (Keyword Query Language) formatting. Returns comprehensive results grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint\'s native search experience.',
+                'Search for pages and content across SharePoint using Microsoft Graph Search API. Supports multi-keyword queries with automatic KQL (Keyword Query Language) formatting. Returns: Array of search results grouped by type (Files, Sites, Pages, Lists, Drives) with each result containing hitId, rank, summary, and resource object. Resource includes: id, name, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, size, fileSystemInfo, parentReference.',
                 [
                     [
                         'name' => 'query',
@@ -69,7 +69,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_read_document',
-                'Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files)',
+                'Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files). Returns: Object containing extracted text content, metadata including fileName, fileSize, mimeType, and documentInfo with title, author, pageCount, wordCount (when available).',
                 [
                     [
                         'name' => 'siteId',
@@ -93,7 +93,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_read_page',
-                'Read content from a SharePoint page',
+                'Read content from a SharePoint page. Returns: Object containing page data with properties: id, name, title, webUrl, createdDateTime, lastModifiedDateTime, lastModifiedBy, webParts array (containing page sections and content blocks).',
                 [
                     [
                         'name' => 'siteId',
@@ -111,7 +111,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_list_files',
-                'List files in a SharePoint directory',
+                'List files in a SharePoint directory. Returns: Array of driveItem objects with properties: id, name, size, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, file (with mimeType and hashes), folder (if item is a folder), parentReference.',
                 [
                     [
                         'name' => 'siteId',
@@ -129,7 +129,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_download_file',
-                'Download a file from SharePoint',
+                'Download a file from SharePoint. Returns: Binary file content stream or redirect URL to pre-authenticated download location. Response includes Content-Type header with file MIME type and Content-Disposition header with filename.',
                 [
                     [
                         'name' => 'siteId',
@@ -147,7 +147,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_get_list_items',
-                'Get items from a SharePoint list',
+                'Get items from a SharePoint list. Returns: Array of listItem objects with properties: id, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, fields (containing custom column values like Title, Employee, ID, etc.), contentType, eTag, webUrl.',
                 [
                     [
                         'name' => 'siteId',

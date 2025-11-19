@@ -29,7 +29,7 @@ class JiraIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'jira_search',
-                'Search for Jira issues using JQL (Jira Query Language)',
+                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue contains: id, self, key, fields (including summary, status.name, assignee.displayName, priority.name, project.key, description, created, updated)',
                 [
                     [
                         'name' => 'jql',
@@ -47,7 +47,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_issue',
-                'Get detailed information about a specific Jira issue',
+                'Get detailed information about a specific Jira issue. Returns: Issue object with id, key, self, and fields containing summary, description, status.name, assignee (accountId, displayName, emailAddress), priority.name, project (key, name), reporter, created, updated, comment array, attachment array, issuelinks, subtasks, and watchers',
                 [
                     [
                         'name' => 'issueKey',
@@ -59,7 +59,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_sprints_from_board',
-                'Get all sprints from a Jira board',
+                'Get all sprints from a Jira board. Returns: Object with maxResults, startAt, total, isLast, and values array. Each sprint contains: id, self, state (future/active/closed), name, startDate, endDate, completeDate (for closed sprints), originBoardId',
                 [
                     [
                         'name' => 'boardId',
@@ -71,7 +71,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get all issues in a specific sprint',
+                'Get all issues in a specific sprint. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, sprint (current sprint), closedSprints array, flagged, epic, description, project, timetracking',
                 [
                     [
                         'name' => 'sprintId',
@@ -89,7 +89,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_add_comment',
-                'Add a comment to a Jira issue',
+                'Add a comment to a Jira issue. Returns: Comment object with self, id, author (accountId, displayName, emailAddress, active), body (document format), created, updated, updateAuthor, and visibility settings',
                 [
                     [
                         'name' => 'issueKey',
@@ -107,7 +107,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_available_transitions',
-                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow.',
+                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow. Returns: Object with expand and transitions array. Each transition contains: id, name, description, hasScreen, isAvailable, isConditional, isGlobal, isInitial, to (status object with id, name, description, iconUrl, statusCategory), and fields (required/optional fields for the transition)',
                 [
                     [
                         'name' => 'issueKey',
@@ -119,7 +119,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_transition_issue',
-                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs.',
+                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs. Returns: HTTP 204 No Content on success (no response body), or error details if the transition fails',
                 [
                     [
                         'name' => 'issueKey',
@@ -143,7 +143,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_transition_issue_to_status',
-                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path.',
+                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path. Returns: Success message with the new status name and transition details, or error message if the target status cannot be reached',
                 [
                     [
                         'name' => 'issueKey',

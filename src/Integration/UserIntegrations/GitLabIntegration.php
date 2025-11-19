@@ -30,7 +30,7 @@ class GitLabIntegration implements IntegrationInterface
             // Repository & Metadata
             new ToolDefinition(
                 'gitlab_get_project',
-                'Get detailed information about a GitLab project',
+                'Get detailed information about a GitLab project. Returns: Object with id, name, path, path_with_namespace, description, web_url, default_branch, visibility, created_at, namespace, owner, and other project metadata',
                 [
                     [
                         'name' => 'project',
@@ -42,7 +42,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_list_projects',
-                'List GitLab projects accessible to the authenticated user',
+                'List GitLab projects accessible to the authenticated user. Returns: Array of projects with id, name, path, path_with_namespace, description, web_url, default_branch, visibility, created_at, last_activity_at, namespace',
                 [
                     [
                         'name' => 'membership',
@@ -60,7 +60,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_file_content',
-                'Get the content of a file from the repository',
+                'Get the content of a file from the repository. Returns: Object with file_name, file_path, size, encoding, content (base64 or plain text), content_sha256, ref, blob_id, commit_id, last_commit_id',
                 [
                     [
                         'name' => 'project',
@@ -84,7 +84,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_list_repository_tree',
-                'List files and directories in the repository',
+                'List files and directories in the repository. Returns: Array of tree items with id, name, type (blob/tree), path, mode',
                 [
                     [
                         'name' => 'project',
@@ -116,7 +116,7 @@ class GitLabIntegration implements IntegrationInterface
             // Tags, Branches & Commits
             new ToolDefinition(
                 'gitlab_list_tags',
-                'List all tags in the repository',
+                'List all tags in the repository. Returns: Array of tags with name, message, target (commit SHA), commit (id, short_id, title, author_name, created_at), release, protected',
                 [
                     [
                         'name' => 'project',
@@ -128,7 +128,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_list_branches',
-                'List all branches in the repository',
+                'List all branches in the repository. Returns: Array of branches with name, commit (id, short_id, title, author_name, created_at), merged, protected, default, can_push, web_url',
                 [
                     [
                         'name' => 'project',
@@ -140,7 +140,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_commit',
-                'Get detailed information about a specific commit',
+                'Get detailed information about a specific commit. Returns: Object with id, short_id, title, message, author_name, author_email, authored_date, committer_name, committer_email, committed_date, created_at, parent_ids, web_url, stats (additions, deletions, total)',
                 [
                     [
                         'name' => 'project',
@@ -158,7 +158,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_list_commits',
-                'List commits in the repository',
+                'List commits in the repository. Returns: Array of commits with id, short_id, title, message, author_name, author_email, authored_date, committer_name, created_at, parent_ids, web_url',
                 [
                     [
                         'name' => 'project',
@@ -184,7 +184,7 @@ class GitLabIntegration implements IntegrationInterface
             // Merge Requests (Read)
             new ToolDefinition(
                 'gitlab_search_merge_requests',
-                'Search merge requests in a project',
+                'Search merge requests in a project. Returns: Array of MRs with id, iid, project_id, title, description, state, web_url, author, assignee, source_branch, target_branch, created_at, updated_at, merge_status',
                 [
                     [
                         'name' => 'project',
@@ -208,7 +208,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_merge_request',
-                'Get detailed information about a merge request',
+                'Get detailed information about a merge request. Returns: Object with id, iid, project_id, title, description, state, web_url, author, assignee, assignees, reviewers, source_branch, target_branch, sha, merge_commit_sha, merge_status, created_at, updated_at, merged_at, closed_at, milestone, labels, pipeline, user_notes_count',
                 [
                     [
                         'name' => 'project',
@@ -226,7 +226,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_merge_request_changes',
-                'Get changes (diff) for a merge request',
+                'Get changes (diff) for a merge request. Returns: MR object with changes array containing old_path, new_path, a_mode, b_mode, diff, new_file, renamed_file, deleted_file for each changed file',
                 [
                     [
                         'name' => 'project',
@@ -244,7 +244,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_merge_request_discussions',
-                'Get all discussions (comments) for a merge request',
+                'Get all discussions (comments) for a merge request. Returns: Array of discussions with id, individual_note (boolean), notes array (each note has id, body, author, created_at, updated_at, resolved, resolvable)',
                 [
                     [
                         'name' => 'project',
@@ -262,7 +262,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_merge_request_commits',
-                'Get all commits in a merge request',
+                'Get all commits in a merge request. Returns: Array of commits with id, short_id, title, message, author_name, author_email, authored_date, committer_name, committer_email, committed_date, created_at, web_url',
                 [
                     [
                         'name' => 'project',
@@ -282,7 +282,7 @@ class GitLabIntegration implements IntegrationInterface
             // Merge Requests (Write)
             new ToolDefinition(
                 'gitlab_create_merge_request',
-                'Create a new merge request',
+                'Create a new merge request. Returns: MR object with id, iid, project_id, title, description, state, web_url, author, source_branch, target_branch, created_at, updated_at',
                 [
                     [
                         'name' => 'project',
@@ -318,7 +318,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_update_merge_request',
-                'Update an existing merge request',
+                'Update an existing merge request. Returns: Updated MR object with id, iid, title, description, state, web_url, updated_at',
                 [
                     [
                         'name' => 'project',
@@ -354,7 +354,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_add_merge_request_note',
-                'Add a comment to a merge request',
+                'Add a comment to a merge request. Returns: Note object with id, body, author (id, name, username, state, avatar_url, web_url), created_at, updated_at, system, noteable_id, noteable_type',
                 [
                     [
                         'name' => 'project',
@@ -380,7 +380,7 @@ class GitLabIntegration implements IntegrationInterface
             // Issues
             new ToolDefinition(
                 'gitlab_search_issues',
-                'Search issues in a project',
+                'Search issues in a project. Returns: Array of issues with id, iid, project_id, title, description, state, web_url, author, assignee, assignees, labels, created_at, updated_at, closed_at, milestone, user_notes_count',
                 [
                     [
                         'name' => 'project',
@@ -404,7 +404,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_issue',
-                'Get detailed information about an issue',
+                'Get detailed information about an issue. Returns: Object with id, iid, project_id, title, description, state, web_url, author, assignee, assignees, labels, created_at, updated_at, closed_at, closed_by, milestone, user_notes_count, due_date, confidential, issue_type',
                 [
                     [
                         'name' => 'project',
@@ -422,7 +422,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_create_issue',
-                'Create a new issue',
+                'Create a new issue. Returns: Issue object with id, iid, project_id, title, description, state, web_url, author, created_at, updated_at',
                 [
                     [
                         'name' => 'project',
@@ -446,7 +446,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_update_issue',
-                'Update an existing issue',
+                'Update an existing issue. Returns: Updated issue object with id, iid, title, description, state, web_url, updated_at',
                 [
                     [
                         'name' => 'project',
@@ -484,7 +484,7 @@ class GitLabIntegration implements IntegrationInterface
             // Packages
             new ToolDefinition(
                 'gitlab_search_packages',
-                'Search packages in a project',
+                'Search packages in a project. Returns: Array of packages with id, name, version, package_type, created_at, pipelines (array with id, status, ref, sha, web_url, created_at, user)',
                 [
                     [
                         'name' => 'project',
@@ -502,7 +502,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_package',
-                'Get detailed information about a package',
+                'Get detailed information about a package. Returns: Object with id, name, version, package_type, created_at, project_id, pipelines, _links (web_path, delete_api_path)',
                 [
                     [
                         'name' => 'project',
@@ -522,7 +522,7 @@ class GitLabIntegration implements IntegrationInterface
             // CI/CD
             new ToolDefinition(
                 'gitlab_list_pipelines',
-                'List CI/CD pipelines in a project',
+                'List CI/CD pipelines in a project. Returns: Array of pipelines with id, project_id, ref, sha, status, source, web_url, created_at, updated_at, started_at, finished_at, duration, user',
                 [
                     [
                         'name' => 'project',
@@ -546,7 +546,7 @@ class GitLabIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'gitlab_get_pipeline',
-                'Get detailed information about a pipeline',
+                'Get detailed information about a pipeline. Returns: Object with id, project_id, ref, sha, status, source, web_url, created_at, updated_at, started_at, finished_at, duration, coverage, user, detailed_status (icon, text, label, group)',
                 [
                     [
                         'name' => 'project',

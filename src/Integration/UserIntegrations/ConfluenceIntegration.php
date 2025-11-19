@@ -29,7 +29,7 @@ class ConfluenceIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'confluence_search',
-                'Search for Confluence pages using CQL (Confluence Query Language)',
+                'Search for Confluence pages using CQL (Confluence Query Language). Returns: Array of pages with results[].id, results[].title, results[].status, results[].spaceId, results[].parentId, results[].version.number, results[].body.storage, results[]._links.webui, results[]._links.editui, _links.next for pagination',
                 [
                     [
                         'name' => 'cql',
@@ -47,7 +47,7 @@ class ConfluenceIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'confluence_get_page',
-                'Get detailed content of a specific Confluence page',
+                'Get detailed content of a specific Confluence page. Returns: Page object with id, status, title, spaceId, parentId, parentType, authorId, createdAt, version.number, version.message, body.storage.value, body.atlas_doc_format, _links.webui, _links.editui',
                 [
                     [
                         'name' => 'pageId',
@@ -59,7 +59,7 @@ class ConfluenceIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'confluence_get_comments',
-                'Get comments from a specific Confluence page',
+                'Get comments from a specific Confluence page. Returns: Array of comments with results[].id, results[].status, results[].title, results[].version.number, results[].version.authorId, results[].version.createdAt, results[].body.storage, results[].body.atlas_doc_format, results[]._links.webui, _links.next for pagination',
                 [
                     [
                         'name' => 'pageId',
@@ -71,7 +71,7 @@ class ConfluenceIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'confluence_create_page',
-                'Create a new page in Confluence. Supports markdown, plain text, or HTML content formats for AI-friendly page creation.',
+                'Create a new page in Confluence. Supports markdown, plain text, or HTML content formats for AI-friendly page creation. Returns: Created page object with id, status, title, spaceId, parentId, authorId, createdAt, version.number, body.storage.value, _links.webui, _links.editui',
                 [
                     [
                         'name' => 'spaceKey',
@@ -119,7 +119,7 @@ class ConfluenceIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'confluence_update_page',
-                'Update an existing Confluence page. Automatically handles version conflicts and supports multiple content formats for AI-friendly page updates.',
+                'Update an existing Confluence page. Automatically handles version conflicts and supports multiple content formats for AI-friendly page updates. Returns: Updated page object with id, status, title, spaceId, parentId, version.number (incremented), version.message, version.authorId, body.storage.value, _links.webui, _links.editui',
                 [
                     [
                         'name' => 'pageId',
