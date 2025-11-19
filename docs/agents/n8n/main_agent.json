@@ -7,8 +7,11 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
-      "position": [176, 512],
-      "id": "8657f2a4-f6d9-4d6b-b452-1452565a0d6d",
+      "position": [
+        480,
+        544
+      ],
+      "id": "e7fa4182-fe6e-48bf-b473-1fe6d2809fb3",
       "name": "Postgres Chat Memory",
       "credentials": {
         "postgres": {
@@ -24,25 +27,25 @@
             {
               "id": "b81e53b1-c305-4f1c-993f-08fdf4f22a04",
               "name": "userId",
-              "value": "={{ $('Webhook').item.json.body.from.id }}",
+              "value": "={{ $('Webhook1').item.json.body.from.aadObjectId }}",
               "type": "string"
             },
             {
               "id": "d1fdcc6f-b960-4981-97e7-c0204847b204",
               "name": "userName",
-              "value": "={{ $('Webhook').item.json.body.from.name }}",
+              "value": "={{ $('Webhook1').item.json.body.from.name }}",
               "type": "string"
             },
             {
               "id": "d2b667bd-4d3e-4820-9668-0de422060b65",
               "name": "chatInput",
-              "value": "={{ $('Webhook').item.json.body.text }}",
+              "value": "={{ $('Webhook1').item.json.body.text }}",
               "type": "string"
             },
             {
               "id": "1b06fe31-01d5-47c6-aecd-fdc75f8e4458",
               "name": "sessionId",
-              "value": "={{ $('Webhook').item.json.body.conversation.id }}",
+              "value": "={{ $('Webhook1').item.json.body.conversation.id }}",
               "type": "string"
             },
             {
@@ -87,8 +90,11 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-112, 304],
-      "id": "034e1da7-42f3-418b-b2c3-15b61a764909",
+      "position": [
+        192,
+        336
+      ],
+      "id": "1086c270-9865-422a-9569-328460169ae4",
       "name": "SET USER"
     },
     {
@@ -102,8 +108,11 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
-      "position": [112, 304],
-      "id": "37748b3c-4029-406d-ad94-8d9399cc9ca1",
+      "position": [
+        416,
+        336
+      ],
+      "id": "6d28812a-ba0f-43ff-b51d-597f818f758e",
       "name": "AI Agent"
     },
     {
@@ -134,8 +143,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [480, 304],
-      "id": "bfc3a8ec-d44e-433c-a266-95a8dd49839f",
+      "position": [
+        784,
+        336
+      ],
+      "id": "3f2a4c92-99fd-469c-bcfb-eee15330acb8",
       "name": "Successful?"
     },
     {
@@ -144,8 +156,11 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [688, 240],
-      "id": "b260a67a-2da4-4fa5-a982-6daaec57b403",
+      "position": [
+        992,
+        272
+      ],
+      "id": "3818b71b-726d-4abb-8efe-4c044d1c3bf2",
       "name": "Respond to Webhook"
     },
     {
@@ -156,8 +171,11 @@
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.2,
-      "position": [688, 384],
-      "id": "ad03577a-3106-4a6a-8d1e-2fc9b95e6f87",
+      "position": [
+        992,
+        416
+      ],
+      "id": "d88669c5-dd83-49f8-ac48-627ed4666134",
       "name": "Error Response"
     },
     {
@@ -166,8 +184,11 @@
       },
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
-      "position": [912, 384],
-      "id": "4dff30ed-e923-4958-97d6-b06617296185",
+      "position": [
+        1216,
+        416
+      ],
+      "id": "09cc3416-9c7c-4ba6-8614-24a7b9e29ba7",
       "name": "Stop and Error"
     },
     {
@@ -179,8 +200,11 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatAzureOpenAi",
       "typeVersion": 1,
-      "position": [32, 512],
-      "id": "6c5e7148-d2f4-4859-9030-ae000af3f9fa",
+      "position": [
+        336,
+        544
+      ],
+      "id": "f1ba959f-dcc0-4556-a83d-8eafc07e400b",
       "name": "workoflow-proxy",
       "credentials": {
         "azureOpenAiApi": {
@@ -192,16 +216,19 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "3fc1f315-9805-49fd-af01-bcc92ee7551d",
+        "path": "016d8b95-d5a5-4ac6-acb5-359a547f642f",
         "authentication": "basicAuth",
         "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-336, 304],
-      "id": "8ad009a7-6d3c-4dbc-b127-76fbd6783aae",
-      "name": "Webhook",
+      "position": [
+        -32,
+        336
+      ],
+      "id": "697e9404-5ef5-41f1-8d5c-ff56ddbb011b",
+      "name": "Webhook1",
       "webhookId": "3fc1f315-9805-49fd-af01-bcc92ee7551d",
       "credentials": {
         "httpBasicAuth": {
@@ -212,7 +239,6 @@
     },
     {
       "parameters": {
-        "name": "Jira Agent",
         "description": "Use this tool when the user wants to interact with Jira. This includes:\n- Searching for issues, tickets, or tasks\n- Viewing issue details or status\n- Creating or updating issues\n- Adding comments to tickets\n- Managing sprints and boards\n- Transitioning issue status\n- Analyzing sprint data or team progress\n\nKeywords: jira, ticket, issue, sprint, epic, story, bug, task, backlog, board, kanban, scrum, assignee, status, transition, comment",
         "workflowId": {
           "__rl": true,
@@ -289,13 +315,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [352, 592],
-      "id": "7f1050a0-242c-49c4-964a-8a5ce5c662c9",
-      "name": "Call 'Jira Agent'"
+      "position": [
+        720,
+        672
+      ],
+      "id": "8d634455-b175-4078-8e4d-9a52b2e26626",
+      "name": "Jira Agent"
     },
     {
       "parameters": {
-        "name": "System Tools Agent",
         "description": "Use this tool for platform-internal operations. This includes:\n- Web search using SearXNG\n- Reading web pages\n- Generating PDF documents\n- Creating PowerPoint presentations\n- File sharing and upload\n- Searching for employees/colleagues\n- Querying company events\n- Content query and learning\n- Memory management\n\nKeywords: search, web, pdf, powerpoint, presentation, file, share, upload, employee, mitarbeiter, colleague, event, generate, create, document",
         "workflowId": {
           "__rl": true,
@@ -416,13 +444,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [528, 592],
-      "id": "7bf828e3-ed79-4438-8c7b-f1f1758b9b60",
+      "position": [
+        896,
+        672
+      ],
+      "id": "e0acd5b8-84c8-459b-a01e-df3e8e9091a3",
       "name": "System Tools Agent"
     },
     {
       "parameters": {
-        "name": "Confluence Agent",
         "description": "Use this tool when the user wants to interact with Confluence. This includes:\n- Searching wiki pages or documentation\n- Creating or updating Confluence pages\n- Managing page comments\n- Accessing team knowledge bases\n- Organizing documentation in spaces\n- Working with CQL queries\n\nKeywords: confluence, wiki, documentation, page, space, knowledge base, docs, cql, team docs, documentation",
         "workflowId": {
           "__rl": true,
@@ -499,13 +529,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [704, 592],
-      "id": "a1b2c3d4-e5f6-4a5b-a1b2-c3d4e5f6a1b2",
-      "name": "Call 'Confluence Agent'"
+      "position": [
+        1072,
+        672
+      ],
+      "id": "0c8e1c67-e282-48f3-9434-db5ad4aecfaa",
+      "name": "Confluence Agent"
     },
     {
       "parameters": {
-        "name": "GitLab Agent",
         "description": "Use this tool when the user wants to interact with GitLab. This includes:\n- Managing repositories and code\n- Handling merge requests and code reviews\n- Tracking issues and tasks\n- Monitoring CI/CD pipelines\n- Troubleshooting pipeline failures\n- Managing packages and container registry\n- Analyzing commits and code changes\n\nKeywords: gitlab, git, repository, merge request, MR, pipeline, CI/CD, commit, branch, issue, package, devops, ci, cd, build, deploy",
         "workflowId": {
           "__rl": true,
@@ -582,20 +614,22 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [880, 592],
-      "id": "b2c3d4e5-f6a7-5b6c-b2c3-d4e5f6a7b2c3",
-      "name": "Call 'GitLab Agent'"
+      "position": [
+        720,
+        832
+      ],
+      "id": "bdc65558-d853-4ffb-9924-2494e2fd83db",
+      "name": "GitLab Agent"
     },
     {
       "parameters": {
-        "name": "SharePoint Agent",
         "description": "Use this tool when the user wants to interact with SharePoint. This includes:\n- Intelligent multi-keyword document search\n- Reading Word, Excel, PowerPoint, PDF documents\n- Listing files and folders\n- Managing SharePoint lists\n- Accessing OneDrive documents\n- Finding documents with advanced search strategies\n\nIMPORTANT: This agent uses intelligent search with multiple keyword variations (German + English, synonyms, acronyms) and ALWAYS asks user permission before reading documents.\n\nKeywords: sharepoint, document, file, list, onedrive, upload, download, excel, word, pdf, powerpoint, dokument, datei",
         "workflowId": {
           "__rl": true,
-          "value": "WORKFLOW_ID_SHAREPOINT",
+          "value": "FCNBK7tAwMG9RmMa",
           "mode": "list",
-          "cachedResultUrl": "/workflow/WORKFLOW_ID_SHAREPOINT",
-          "cachedResultName": "SharePoint Agent"
+          "cachedResultUrl": "/workflow/FCNBK7tAwMG9RmMa",
+          "cachedResultName": "Sharepoint Agent"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -665,13 +699,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [1056, 592],
-      "id": "c3d4e5f6-a7b8-6c7d-c3d4-e5f6a7b8c3d4",
-      "name": "Call 'SharePoint Agent'"
+      "position": [
+        896,
+        832
+      ],
+      "id": "43a1bb08-046a-4095-b158-0a70622860b7",
+      "name": "SharePoint Agent"
     },
     {
       "parameters": {
-        "name": "Trello Agent",
         "description": "Use this tool when the user wants to interact with Trello. This includes:\n- Managing boards, lists, and cards\n- Creating and updating tasks\n- Handling checklists\n- Managing comments\n- Tracking project progress\n- Moving cards between lists\n- Analyzing board status\n\nKeywords: trello, board, card, list, checklist, task, project management, kanban, todo, done, in progress",
         "workflowId": {
           "__rl": true,
@@ -748,9 +784,12 @@
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
-      "position": [1232, 592],
-      "id": "d4e5f6a7-b8c9-7d8e-d4e5-f6a7b8c9d4e5",
-      "name": "Call 'Trello Agent'"
+      "position": [
+        1072,
+        832
+      ],
+      "id": "982013a6-3422-4413-ab79-8e36c8846eca",
+      "name": "Trello Agent"
     }
   ],
   "connections": {
@@ -827,7 +866,7 @@
         ]
       ]
     },
-    "Webhook": {
+    "Webhook1": {
       "main": [
         [
           {
@@ -838,7 +877,7 @@
         ]
       ]
     },
-    "Call 'Jira Agent'": {
+    "Jira Agent": {
       "ai_tool": [
         [
           {
@@ -860,7 +899,7 @@
         ]
       ]
     },
-    "Call 'Confluence Agent'": {
+    "Confluence Agent": {
       "ai_tool": [
         [
           {
@@ -871,7 +910,7 @@
         ]
       ]
     },
-    "Call 'GitLab Agent'": {
+    "GitLab Agent": {
       "ai_tool": [
         [
           {
@@ -882,7 +921,7 @@
         ]
       ]
     },
-    "Call 'SharePoint Agent'": {
+    "SharePoint Agent": {
       "ai_tool": [
         [
           {
@@ -893,7 +932,7 @@
         ]
       ]
     },
-    "Call 'Trello Agent'": {
+    "Trello Agent": {
       "ai_tool": [
         [
           {
