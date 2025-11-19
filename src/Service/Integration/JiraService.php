@@ -192,45 +192,170 @@ class JiraService
     public function search(array $credentials, string $jql, int $maxResults = 50): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'query' => [
-                'jql' => $jql,
-                'maxResults' => $maxResults,
-            ],
-        ]);
 
-        return $response->toArray();
+        // Default to ordering by created date if JQL is empty
+        if (empty(trim($jql))) {
+            $jql = 'ORDER BY created DESC';
+        }
+
+        try {
+            // Use standard /search endpoint (more reliable than /search/jql)
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'jql' => $jql,
+                    'maxResults' => $maxResults,
+                    'fields' => '*all',  // Include all fields (summary, status, assignee, etc.)
+                ],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);  // Don't throw on error status codes
+
+            // Extract Jira's error messages
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+
+            // Build comprehensive error message
+            $errorText = '';
+            if (!empty($errorMessages)) {
+                $errorText = implode(', ', $errorMessages);
+            } elseif (!empty($errors)) {
+                $errorText = json_encode($errors);
+            } else {
+                $errorText = $message;
+            }
+
+            // Add context-specific suggestions
+            $suggestion = '';
+            if (stripos($errorText, 'unbounded') !== false || stripos($errorText, 'restriction') !== false) {
+                $suggestion = ' - Add filtering conditions like project, status, or assignee to your JQL query';
+            } elseif (stripos($errorText, 'syntax') !== false || stripos($errorText, 'invalid') !== false) {
+                $suggestion = ' - Check JQL syntax at https://support.atlassian.com/jira-service-management-cloud/docs/use-advanced-search-with-jira-query-language-jql/';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     public function getIssue(array $credentials, string $issueKey): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-        ]);
 
-        return $response->toArray();
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Verify issue key '{$issueKey}' exists and you have permission to view it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to access this issue';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     public function getSprintsFromBoard(array $credentials, int $boardId): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/sprint', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-        ]);
 
-        return $response->toArray();
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/sprint', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'startAt' => 0,
+                    'maxResults' => 50,
+                ],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404 || $statusCode === 400) {
+                $suggestion = " - Board ID {$boardId} may not exist or you don't have permission to access it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has Jira Software/Agile permissions';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     public function getSprintIssues(array $credentials, int $sprintId): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/sprint/' . $sprintId . '/issue', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-        ]);
 
-        return $response->toArray();
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/sprint/' . $sprintId . '/issue', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'maxResults' => 100,
+                    'fields' => '*all',
+                ],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404 || $statusCode === 400) {
+                $suggestion = " - Sprint ID {$sprintId} may not exist or you don't have permission to access it";
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     public function addComment(array $credentials, string $issueKey, string $comment): array
@@ -255,16 +380,40 @@ class JiraService
             ]
         ];
 
-        $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/comment', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json'
-            ],
-            'json' => $payload
-        ]);
+        try {
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/comment', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $payload
+            ]);
 
-        return $response->toArray();
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Issue '{$issueKey}' may not exist";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to add comments';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     /**
@@ -278,11 +427,33 @@ class JiraService
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
 
-        $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-        ]);
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
 
-        return $response->toArray();
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Issue '{$issueKey}' may not exist or you don't have permission to view it";
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
     }
 
     /**
@@ -331,22 +502,47 @@ class JiraService
             ];
         }
 
-        $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json'
-            ],
-            'json' => $payload
-        ]);
+        try {
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $payload
+            ]);
 
-        // Transitions return 204 No Content on success
-        $statusCode = $response->getStatusCode();
-        if ($statusCode === 204) {
-            return ['success' => true, 'message' => 'Issue transitioned successfully'];
+            // Transitions return 204 No Content on success
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 204) {
+                return ['success' => true, 'message' => 'Issue transitioned successfully'];
+            }
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 400) {
+                $suggestion = " - Transition ID '{$transitionId}' may not be valid for this issue's current status";
+            } elseif (stripos($errorText, 'required') !== false || !empty($errors)) {
+                $suggestion = ' - Some required fields may be missing for this transition';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
         }
-
-        return $response->toArray();
     }
 
     /**

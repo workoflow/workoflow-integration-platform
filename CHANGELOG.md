@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
+- Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
+- Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
 
 ## 2025-01-19
 
