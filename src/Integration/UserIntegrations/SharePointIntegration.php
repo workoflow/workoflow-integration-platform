@@ -2,19 +2,22 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\SharePointService;
 use App\Service\EncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
+use Twig\Environment;
 
-class SharePointIntegration implements IntegrationInterface
+class SharePointIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private SharePointService $sharePointService,
         private EncryptionService $encryptionService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private Environment $twig
     ) {
     }
 
@@ -249,6 +252,15 @@ class SharePointIntegration implements IntegrationInterface
                 'Authenticate with your Microsoft account to access SharePoint'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/sharepoint.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
     }
 
     private function refreshTokenIfNeeded(array $credentials): array

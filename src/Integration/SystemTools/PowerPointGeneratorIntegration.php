@@ -2,11 +2,11 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 
-class PowerPointGeneratorIntegration implements IntegrationInterface
+class PowerPointGeneratorIntegration implements PlatformSkillInterface
 {
     public function getType(): string
     {

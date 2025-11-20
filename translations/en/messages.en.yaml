@@ -170,6 +170,9 @@ integration:
   external_integrations_description: Connect to external services like Jira, Confluence, and SharePoint with your credentials
   available_tools: Available Tools
   tools_hint: Enable or disable specific tools that this integration provides
+  system_prompt: AI Agent System Prompt
+  system_prompt_hint: The system prompt defines how the AI agent interacts with this skill. It includes available tools, usage guidelines, and best practices for the AI.
+  view_system_prompt: Click to view/hide system prompt XML
   setup: Setup
   setup_description: Configure your %name% integration
   save_configuration: Save Configuration
@@ -332,6 +335,27 @@ integration:
   keep_existing: Leave empty to keep existing value
   connection_failed: Connection failed. Please check your credentials and URL.
   connection_failed_message: Could not establish connection
+  request_skill: Request New Skill
+  request_skill_tooltip: Request a new integration
+  request_skill_title: Request a New Integration
+  request_skill_description: Tell us which service you would like to integrate with Workoflow.
+  skill_name: Service Name
+  skill_name_placeholder: e.g., GitHub, Slack, Notion
+  skill_description: Description / Use Case
+  skill_description_placeholder: How would you like to use this integration?
+  api_documentation_url: API Documentation URL
+  api_documentation_url_placeholder: https://...
+  api_documentation_url_hint: Optional - Link to the service's API documentation
+  priority: Priority
+  priority_low: Low - Nice to have
+  priority_medium: Medium - Would be helpful
+  priority_high: High - Critical for my workflow
+  submit_request: Submit Request
+  skill_request_submitted: Your skill request has been submitted successfully!
+  error:
+    no_organisation: No organisation found
+    skill_name_required: Service name is required
+    request_failed: Failed to submit request. Please try again.
 
 action:
   edit: Edit

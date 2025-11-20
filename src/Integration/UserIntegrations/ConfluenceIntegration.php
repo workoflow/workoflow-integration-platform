@@ -2,15 +2,18 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\ConfluenceService;
+use Twig\Environment;
 
-class ConfluenceIntegration implements IntegrationInterface
+class ConfluenceIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private ConfluenceService $confluenceService
+        private ConfluenceService $confluenceService,
+        private Environment $twig
     ) {
     }
 
@@ -242,5 +245,14 @@ class ConfluenceIntegration implements IntegrationInterface
                 'Your Confluence API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/confluence.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
     }
 }

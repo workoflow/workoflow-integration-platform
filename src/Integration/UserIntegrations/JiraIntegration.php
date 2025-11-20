@@ -2,15 +2,18 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\JiraService;
+use Twig\Environment;
 
-class JiraIntegration implements IntegrationInterface
+class JiraIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private JiraService $jiraService
+        private JiraService $jiraService,
+        private Environment $twig
     ) {
     }
 
@@ -327,5 +330,14 @@ class JiraIntegration implements IntegrationInterface
                 'Your Jira API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/jira.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
     }
 }

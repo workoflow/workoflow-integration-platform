@@ -2,10 +2,19 @@ import { Controller } from '@hotwired/stimulus';
 
 /**
  * Skills Table Controller
- * Handles test connection and delete operations for integrations
+ * Handles test connection, delete operations, and skill requests for integrations
  */
 export default class extends Controller {
-    static targets = ['row'];
+    static targets = [
+        'row',
+        'requestForm',
+        'skillNameInput',
+        'descriptionInput',
+        'apiUrlInput',
+        'priorityInput',
+        'submitButton',
+        'skillNameError'
+    ];
 
     /**
      * Test connection to integration
@@ -200,5 +209,91 @@ export default class extends Controller {
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
+    }
+
+    /**
+     * Open skill request modal
+     */
+    openRequestModal(event) {
+        event.preventDefault();
+        const modal = document.getElementById('skillRequestModal');
+        if (modal) {
+            modal.classList.add('show');
+            // Focus on skill name input
+            if (this.hasSkillNameInputTarget) {
+                setTimeout(() => this.skillNameInputTarget.focus(), 100);
+            }
+        }
+    }
+
+    /**
+     * Submit skill request
+     */
+    async submitRequest(event) {
+        event.preventDefault();
+
+        // Validate skill name
+        const skillName = this.skillNameInputTarget.value.trim();
+        if (!skillName) {
+            this.skillNameInputTarget.classList.add('is-invalid');
+            if (this.hasSkillNameErrorTarget) {
+                this.skillNameErrorTarget.textContent = 'Service name is required';
+                this.skillNameErrorTarget.style.display = 'block';
+            }
+            return;
+        }
+
+        // Clear validation error
+        this.skillNameInputTarget.classList.remove('is-invalid');
+        if (this.hasSkillNameErrorTarget) {
+            this.skillNameErrorTarget.style.display = 'none';
+        }
+
+        // Get form data
+        const formData = new FormData();
+        formData.append('skillName', skillName);
+        formData.append('description', this.descriptionInputTarget.value.trim());
+        formData.append('apiDocumentationUrl', this.apiUrlInputTarget.value.trim());
+        formData.append('priority', this.priorityInputTarget.value);
+
+        // Disable submit button and show loading state
+        const submitButton = this.submitButtonTarget;
+        const originalContent = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+        try {
+            const response = await fetch('/skills/request', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Close modal
+                const modal = document.getElementById('skillRequestModal');
+                modal.classList.remove('show');
+
+                // Reset form
+                this.requestFormTarget.reset();
+
+                // Show success toast
+                this.showToast('success', data.message || 'Your skill request has been submitted successfully!');
+            } else {
+                // Show error toast
+                this.showToast('error', data.message || 'Failed to submit skill request. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error submitting skill request:', error);
+            this.showToast('error', 'An unexpected error occurred. Please try again later.');
+        } finally {
+            // Restore button state
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalContent;
+        }
     }
 }

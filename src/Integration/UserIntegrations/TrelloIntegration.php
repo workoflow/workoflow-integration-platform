@@ -2,15 +2,18 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\TrelloService;
+use Twig\Environment;
 
-class TrelloIntegration implements IntegrationInterface
+class TrelloIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private TrelloService $trelloService
+        private TrelloService $trelloService,
+        private Environment $twig
     ) {
     }
 
@@ -368,5 +371,14 @@ class TrelloIntegration implements IntegrationInterface
                 'Your Trello API Token. After getting your API Key, click the "Token" link on the same page to generate a token.'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/trello.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
     }
 }

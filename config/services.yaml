@@ -41,7 +41,12 @@ services:
         arguments:
             $apiAuthUser: '%app.api_auth_user%'
             $apiAuthPassword: '%app.api_auth_password%'
-    
+
+    App\Controller\SkillsApiController:
+        arguments:
+            $apiAuthUser: '%app.api_auth_user%'
+            $apiAuthPassword: '%app.api_auth_password%'
+
     App\Security\TestAuthenticator:
         arguments:
             $environment: '%kernel.environment%'

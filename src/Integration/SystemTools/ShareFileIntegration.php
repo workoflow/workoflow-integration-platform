@@ -2,12 +2,12 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\ShareFileService;
 
-class ShareFileIntegration implements IntegrationInterface
+class ShareFileIntegration implements PlatformSkillInterface
 {
     public function __construct(
         private ShareFileService $shareFileService

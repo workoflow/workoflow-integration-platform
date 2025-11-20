@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-20
+
+### Added
+- New Skills API endpoint (`/api/skills/`) for retrieving AI agent system prompts dynamically - AI workflows can now fetch integration-specific instructions and tool documentation on demand
+- System prompts now visible on skill configuration pages - users can review AI agent instructions for each connected integration (Jira, Confluence, SharePoint, Trello, GitLab) directly in the web interface
+- Skill request feature - users can now request new integrations directly from the Skills page by clicking "Request New Skill" button and filling out a form with service name, description, API documentation URL, and priority level
+
+### Changed
+- System prompts now managed within skill definitions instead of separate XML files - prompts are now part of the codebase for easier version control and maintenance
+- Improved integration architecture with Platform Skills and Personalized Skills distinction - clearer separation between system-level tools (file sharing, PDF generation) and user-specific integrations (Jira, Confluence)
+
+### Fixed
+- Skills API endpoint now accessible without authentication errors - resolved HTTP 500 error preventing platform from loading
+- System prompt section on skill edit pages now displays correctly with proper translations and dark theme styling - replaced placeholder text and white backgrounds with formatted XML display
+
 ## 2025-11-19
 
 ### Added

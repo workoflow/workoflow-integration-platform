@@ -143,6 +143,20 @@
                     </div>
                 {% endif %}
 
+                {% if isEdit and config and integration.getSystemPrompt is defined %}
+                    <h3>{{ 'integration.system_prompt'|trans|default('System Prompt') }}</h3>
+                    <p class="field-hint">{{ 'integration.system_prompt_hint'|trans|default('AI agent system prompt for this integration. This defines how the AI will interact with this skill.') }}</p>
+
+                    <details class="system-prompt-details">
+                        <summary class="system-prompt-summary">
+                            <span>{{ 'integration.view_system_prompt'|trans|default('Click to view/hide system prompt XML') }}</span>
+                        </summary>
+                        <div class="system-prompt-content">
+                            <pre><code class="language-xml">{{ integration.getSystemPrompt(config)|e }}</code></pre>
+                        </div>
+                    </details>
+                {% endif %}
+
                 <div class="form-actions">
                     {% if hasOAuthField and not config %}
                         {# For new OAuth integrations, change the button to "Connect with Microsoft" #}
@@ -610,6 +624,106 @@ ul.form-errors li {
 
 .form-control.url-error {
     border-color: var(--danger-color, #ef4444);
+}
+
+/* System Prompt Section */
+.system-prompt-details {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background, #1a1a1a);
+    overflow: hidden;
+}
+
+.system-prompt-summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    font-weight: 500;
+    list-style: none;
+    user-select: none;
+    color: var(--text-primary);
+    background: var(--card-background, #1a1a1a);
+    transition: background-color 0.2s;
+}
+
+.system-prompt-summary:hover {
+    background: var(--secondary-background, #2a2a2a);
+}
+
+.system-prompt-summary::-webkit-details-marker {
+    display: none;
+}
+
+.system-prompt-summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 0.75rem;
+    transition: transform 0.2s;
+    color: var(--primary-color);
+}
+
+details[open] .system-prompt-summary::before {
+    transform: rotate(90deg);
+}
+
+.system-prompt-content {
+    padding: 0 1.25rem 1.25rem 1.25rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.system-prompt-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.system-prompt-content::-webkit-scrollbar-track {
+    background: var(--background, #0a0a0a);
+    border-radius: 4px;
+}
+
+.system-prompt-content::-webkit-scrollbar-thumb {
+    background: var(--border-color, #2a2a2a);
+    border-radius: 4px;
+}
+
+.system-prompt-content::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover, #3a3a3a);
+}
+
+.system-prompt-content pre {
+    margin: 0;
+    padding: 1.25rem;
+    background: var(--background, #0a0a0a);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.system-prompt-content pre::-webkit-scrollbar {
+    height: 8px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-track {
+    background: var(--background, #0a0a0a);
+    border-radius: 4px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-thumb {
+    background: var(--border-color, #2a2a2a);
+    border-radius: 4px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover, #3a3a3a);
+}
+
+.system-prompt-content code {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--text-primary, #e5e7eb);
+    white-space: pre;
+    word-wrap: normal;
 }
 </style>
 

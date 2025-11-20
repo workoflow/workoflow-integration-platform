@@ -164,6 +164,9 @@ integration:
   external_integrations_description: Verbindung zu externen Diensten wie Jira, Confluence und SharePoint mit Ihren Zugangsdaten
   available_tools: Verfügbare Tools
   tools_hint: Aktivieren oder deaktivieren Sie bestimmte Tools, die diese Integration bereitstellt
+  system_prompt: KI-Agenten System-Prompt
+  system_prompt_hint: Der System-Prompt definiert, wie der KI-Agent mit diesem Skill interagiert. Er umfasst verfügbare Tools, Nutzungsrichtlinien und Best Practices für die KI.
+  view_system_prompt: Klicken Sie hier um den System-Prompt XML anzuzeigen/auszublenden
   setup: Einrichten
   setup_description: Konfigurieren Sie Ihre %name% Integration
   save_configuration: Konfiguration speichern
@@ -332,6 +335,27 @@ integration:
   keep_existing: Leer lassen um bestehenden Wert beizubehalten
   connection_failed: Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten und die URL.
   connection_failed_message: Verbindung konnte nicht hergestellt werden
+  request_skill: Neue Fähigkeit anfordern
+  request_skill_tooltip: Neue Integration anfordern
+  request_skill_title: Neue Integration anfordern
+  request_skill_description: Teilen Sie uns mit, welchen Dienst Sie in Workoflow integrieren möchten.
+  skill_name: Dienstname
+  skill_name_placeholder: z.B. GitHub, Slack, Notion
+  skill_description: Beschreibung / Anwendungsfall
+  skill_description_placeholder: Wie möchten Sie diese Integration nutzen?
+  api_documentation_url: API-Dokumentations-URL
+  api_documentation_url_placeholder: https://...
+  api_documentation_url_hint: Optional - Link zur API-Dokumentation des Dienstes
+  priority: Priorität
+  priority_low: Niedrig - Wäre schön zu haben
+  priority_medium: Mittel - Wäre hilfreich
+  priority_high: Hoch - Entscheidend für meinen Workflow
+  submit_request: Anfrage absenden
+  skill_request_submitted: Ihre Anfrage wurde erfolgreich übermittelt!
+  error:
+    no_organisation: Keine Organisation gefunden
+    skill_name_required: Dienstname ist erforderlich
+    request_failed: Anfrage konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.
 
 action:
   edit: Bearbeiten

@@ -2,11 +2,11 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 
-class ContentQueryIntegration implements IntegrationInterface
+class ContentQueryIntegration implements PlatformSkillInterface
 {
     public function getType(): string
     {

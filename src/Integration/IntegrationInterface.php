@@ -2,6 +2,8 @@
 
 namespace App\Integration;
 
+use App\Entity\IntegrationConfig;
+
 interface IntegrationInterface
 {
     /**

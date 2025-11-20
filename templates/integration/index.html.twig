@@ -79,6 +79,31 @@ document.getElementById('testConnectionModal')?.addEventListener('click', functi
         hideTestModal();
     }
 });
+
+// Skill Request Modal functions
+function hideSkillRequestModal() {
+    const modal = document.getElementById('skillRequestModal');
+    modal.classList.remove('show');
+    // Reset form
+    document.getElementById('skillRequestForm')?.reset();
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const skillModal = document.getElementById('skillRequestModal');
+        if (skillModal?.classList.contains('show')) {
+            hideSkillRequestModal();
+        }
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('skillRequestModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideSkillRequestModal();
+    }
+});
 </script>
 
 {% endblock %}

@@ -799,4 +799,76 @@ class IntegrationController extends AbstractController
             'organisation' => $organisation
         ]);
     }
+
+    #[Route('/request', name: 'app_skill_request', methods: ['POST'])]
+    public function requestSkill(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.no_organisation')
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Get form data
+        $skillName = trim($request->request->get('skillName', ''));
+        $description = trim($request->request->get('description', ''));
+        $apiDocumentationUrl = trim($request->request->get('apiDocumentationUrl', ''));
+        $priority = $request->request->get('priority', 'medium');
+
+        // Validate skill name
+        if (empty($skillName)) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.skill_name_required')
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate priority
+        if (!in_array($priority, ['low', 'medium', 'high'], true)) {
+            $priority = 'medium';
+        }
+
+        try {
+            // Create skill request entity
+            $skillRequest = new \App\Entity\SkillRequest();
+            $skillRequest->setUser($user);
+            $skillRequest->setOrganisation($organisation);
+            $skillRequest->setSkillName($skillName);
+            $skillRequest->setDescription($description ?: null);
+            $skillRequest->setApiDocumentationUrl($apiDocumentationUrl ?: null);
+            $skillRequest->setPriority($priority);
+
+            // Persist to database
+            $this->entityManager->persist($skillRequest);
+            $this->entityManager->flush();
+
+            // Log the request
+            $this->auditLogService->log(
+                'skill_request_created',
+                $user,
+                [
+                    'skill_name' => $skillName,
+                    'priority' => $priority,
+                    'request_id' => $skillRequest->getId(),
+                    'organisation_id' => $organisation->getId()
+                ]
+            );
+
+            return $this->json([
+                'success' => true,
+                'message' => $this->translator->trans('integration.skill_request_submitted')
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.request_failed')
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

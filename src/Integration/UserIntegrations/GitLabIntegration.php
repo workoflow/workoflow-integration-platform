@@ -2,15 +2,18 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\GitLabService;
+use Twig\Environment;
 
-class GitLabIntegration implements IntegrationInterface
+class GitLabIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private GitLabService $gitLabService
+        private GitLabService $gitLabService,
+        private Environment $twig
     ) {
     }
 
@@ -765,5 +768,14 @@ class GitLabIntegration implements IntegrationInterface
                 'Your GitLab Personal Access Token with api, read_api, read_repository, and write_repository scopes. <a href="https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html" target="_blank" rel="noopener">Create API token</a>'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/gitlab.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
     }
 }
