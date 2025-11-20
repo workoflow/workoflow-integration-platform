@@ -249,7 +249,7 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
 
     public function getSystemPrompt(?IntegrationConfig $config = null): string
     {
-        return $this->twig->render('skills/prompts/confluence.xml.twig', [
+        return $this->twig->render('skills/prompts/confluence_full.xml.twig', [
             'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
             'tool_count' => count($this->getTools()),
             'integration_id' => $config?->getId() ?? 'XXX',

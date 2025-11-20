@@ -82,8 +82,8 @@ class SkillsApiController extends AbstractController
             // Get all configs for this integration type
             $configs = $this->integrationConfigRepository->findBy([
                 'organisation' => $organisation,
-                'type' => $integrationType,
-                'isActive' => true,
+                'integrationType' => $integrationType,
+                'active' => true,
             ]);
 
             // Filter by user if specified (check organisation's users)

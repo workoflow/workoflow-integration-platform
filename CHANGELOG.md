@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Skills API endpoint now accessible without authentication errors - resolved HTTP 500 error preventing platform from loading
 - System prompt section on skill edit pages now displays correctly with proper translations and dark theme styling - replaced placeholder text and white backgrounds with formatted XML display
+- Fixed critical system prompt incompleteness for all PersonalizedSkill integrations - AI agents now receive complete instructions matching production specifications for SharePoint (6%→100%), GitLab (5.5%→100%), Trello (7%→100%), Confluence (24%→100%), and Jira (72%→100%), including all workflow guidelines, tool definitions, example interactions, best practices, and safety rules that were previously missing
 
 ## 2025-11-19
 
