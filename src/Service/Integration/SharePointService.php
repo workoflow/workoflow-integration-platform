@@ -58,7 +58,8 @@ class SharePointService
                             'siteId',
                             'id',
                             'fileSystemInfo',
-                            'size'
+                            'size',
+                            'parentReference'
                         ]
                     ]
                 ]
