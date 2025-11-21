@@ -76,6 +76,12 @@ Tips: Use OR to include synonyms and translations (German+English) for bilingual
                         'description' => 'Document item ID from search results (use the id field from search results)'
                     ],
                     [
+                        'name' => 'driveId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Drive ID from search results (driveId field). When provided, enables direct access to the file. Improves reliability for files in document libraries.'
+                    ],
+                    [
                         'name' => 'maxLength',
                         'type' => 'integer',
                         'required' => false,
@@ -185,7 +191,8 @@ Tips: Use OR to include synonyms and translations (German+English) for bilingual
                 $credentials,
                 $parameters['siteId'],
                 $parameters['itemId'],
-                min($parameters['maxLength'] ?? 5000, 50000)
+                min($parameters['maxLength'] ?? 5000, 50000),
+                $parameters['driveId'] ?? null
             ),
             'sharepoint_read_page' => $this->sharePointService->readPage(
                 $credentials,

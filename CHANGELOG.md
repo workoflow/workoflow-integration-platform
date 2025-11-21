@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - SharePoint agent now explains when results were filtered (e.g., "found 4 relevant documents out of 25 total results")
 
 ### Fixed
+- SharePoint document reading now works reliably - fixed error where AI agents couldn't open documents found through search, now successfully accesses files in SharePoint document libraries
 - SharePoint search now returns comprehensive results - fixed issue where "filename:" prefix in queries caused post-filtering that excluded valid results
 - SharePoint agent now correctly uses the primary search tool (search_pages) for comprehensive document discovery matching native SharePoint search behavior
 

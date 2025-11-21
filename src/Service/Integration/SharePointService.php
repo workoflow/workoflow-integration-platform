@@ -128,9 +128,13 @@ class SharePointService
                                     }
                                 }
 
+                                // Extract driveId from parentReference for proper file access
+                                $driveId = $resource['parentReference']['driveId'] ?? '';
+
                                 $results[] = [
                                     'type' => $resultType,
                                     'id' => $resource['id'] ?? '',
+                                    'driveId' => $driveId,
                                     'title' => $resource['title'] ?? $resource['name'] ?? $hit['summary'] ?? '',
                                     'name' => $resource['name'] ?? '',
                                     'webUrl' => $resource['webUrl'] ?? '',
@@ -561,67 +565,77 @@ class SharePointService
      * @param int $maxLength Maximum content length to return (default 5000)
      * @return array Document content and metadata
      */
-    public function readDocument(array $credentials, string $siteId, string $itemId, int $maxLength = 5000): array
+    public function readDocument(array $credentials, string $siteId, string $itemId, int $maxLength = 5000, ?string $driveId = null): array
     {
         try {
-            error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
+            error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId . ($driveId ? ', DriveID: ' . $driveId : ''));
 
-            // Check if this is a personal OneDrive file (siteId is "me" or empty)
-            $isPersonalDrive = empty($siteId) || $siteId === 'me' || $siteId === 'personal';
-
-            if ($isPersonalDrive) {
-                error_log('Accessing personal OneDrive file');
-                $driveEndpoint = '/me/drive';
+            // Prioritize driveId-based access if provided (more reliable from search results)
+            if (!empty($driveId)) {
+                error_log('Using driveId-based access for better reliability');
+                $driveEndpoint = "/drives/{$driveId}";
+                $apiEndpoint = self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}";
             } else {
-                // Check if siteId needs to be resolved (if it's a site name rather than ID)
-                // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
-                if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
-                    error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
+                // Fallback to site-based access
+                // Check if this is a personal OneDrive file (siteId is "me" or empty)
+                $isPersonalDrive = empty($siteId) || $siteId === 'me' || $siteId === 'personal';
 
-                    // Try to resolve the site name to a proper site ID
-                    try {
-                        $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                            'auth_bearer' => $credentials['access_token'],
-                            'query' => [
-                                'search' => $siteId,
-                                '$top' => 5
-                            ]
-                        ]);
+                if ($isPersonalDrive) {
+                    error_log('Accessing personal OneDrive file');
+                    $driveEndpoint = '/me/drive';
+                } else {
+                    // Check if siteId needs to be resolved (if it's a site name rather than ID)
+                    // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
+                    if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
+                        error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
 
-                        $sites = $sitesResponse->toArray();
+                        // Try to resolve the site name to a proper site ID
+                        try {
+                            $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
+                                'auth_bearer' => $credentials['access_token'],
+                                'query' => [
+                                    'search' => $siteId,
+                                    '$top' => 5
+                                ]
+                            ]);
 
-                        if (isset($sites['value']) && count($sites['value']) > 0) {
-                            // Try to find exact match first
-                            foreach ($sites['value'] as $site) {
-                                if (
-                                    (isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
-                                    (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)
-                                ) {
-                                    $siteId = $site['id'];
-                                    error_log('Resolved site name to ID: ' . $siteId);
-                                    break;
+                            $sites = $sitesResponse->toArray();
+
+                            if (isset($sites['value']) && count($sites['value']) > 0) {
+                                // Try to find exact match first
+                                foreach ($sites['value'] as $site) {
+                                    if (
+                                        (isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
+                                        (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)
+                                    ) {
+                                        $siteId = $site['id'];
+                                        error_log('Resolved site name to ID: ' . $siteId);
+                                        break;
+                                    }
                                 }
-                            }
 
-                            // If no exact match, use the first result as fallback
-                            if (!str_contains($siteId, ',')) {
-                                $siteId = $sites['value'][0]['id'];
-                                error_log('Using first matching site ID: ' . $siteId);
+                                // If no exact match, use the first result as fallback
+                                if (!str_contains($siteId, ',')) {
+                                    $siteId = $sites['value'][0]['id'];
+                                    error_log('Using first matching site ID: ' . $siteId);
+                                }
+                            } else {
+                                error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
                             }
-                        } else {
-                            error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
+                        } catch (\Exception $e) {
+                            error_log('Failed to resolve site name: ' . $e->getMessage());
+                            // Continue with the original siteId
                         }
-                    } catch (\Exception $e) {
-                        error_log('Failed to resolve site name: ' . $e->getMessage());
-                        // Continue with the original siteId
                     }
+
+                    $driveEndpoint = "/sites/{$siteId}/drive";
                 }
 
-                $driveEndpoint = "/sites/{$siteId}/drive";
+                $apiEndpoint = self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}";
             }
 
             // First get file metadata to understand what we're dealing with
-            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}", [
+            $metadataResponse = $this->httpClient->request('GET', $apiEndpoint, [
                 'auth_bearer' => $credentials['access_token'],
             ]);
 
