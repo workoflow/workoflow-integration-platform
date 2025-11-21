@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - SharePoint search results now always include clickable links to documents and pages for faster access
+- Main AI agent now preserves clickable links from SharePoint and other integrations - links are no longer stripped during response formatting, ensuring you can directly access documents, pages, and resources
 - SharePoint agent now intelligently filters search results by relevance - only shows documents actually about your topic instead of overwhelming you with documents that just mention keywords
 - Search results are now ranked by relevance - documents with matching titles appear first, followed by documents with relevant content
 - SharePoint agent now explains when results were filtered (e.g., "found 4 relevant documents out of 25 total results")

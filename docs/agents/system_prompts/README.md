@@ -170,7 +170,46 @@ Execution:
 POST /api/integrations/{tenantID}/execute?workflow_user_id={userID}
 ```
 
-### 4. SharePoint KQL Search
+### 4. Output Format Preservation
+
+**CRITICAL RULE:** Main Agent MUST preserve formatting from specialized agents.
+
+**Why**: Specialized agents (like SharePoint Agent) format their output for end-users with:
+- Markdown links: `[filename](https://...)`
+- Bold/italic emphasis
+- Structured lists
+- Clickable URLs
+
+**Main Agent Responsibility**:
+- Preserve all markdown syntax during aggregation
+- Never strip link formatting `[text](url)` → `text`
+- Maintain user-facing formatting from sub-agents
+
+**Example**:
+```json
+// SharePoint Agent returns:
+{
+  "output": "[Document.pdf](https://sharepoint.com/doc.pdf) – Summary"
+}
+
+// Main Agent MUST return:
+{
+  "output": "[Document.pdf](https://sharepoint.com/doc.pdf) – Summary"
+}
+
+// NOT:
+{
+  "output": "Document.pdf – Summary" ❌
+}
+```
+
+**Common Mistake**:
+When the Main Agent aggregates results, it often reformats the output for clarity.
+During this reformatting, markdown link syntax `[text](url)` can be accidentally
+stripped to just `text`, breaking the user experience. The Main Agent must be
+vigilant to preserve all markdown links exactly as provided by sub-agents.
+
+### 5. SharePoint KQL Search
 
 **Special Feature:** SharePoint Agent uses direct KQL (Keyword Query Language) search:
 
@@ -191,7 +230,7 @@ POST /api/integrations/{tenantID}/execute?workflow_user_id={userID}
    - NEVER auto-read documents
    - Complete reading BEFORE responding
 
-### 5. Parameter Collection
+### 6. Parameter Collection
 
 **Inherited by all agents:**
 - Ask ONE question at a time
