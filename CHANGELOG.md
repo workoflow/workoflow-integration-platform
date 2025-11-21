@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-21
+
+### Fixed
+- SharePoint search now returns comprehensive results - fixed issue where "filename:" prefix in queries caused post-filtering that excluded valid results
+- SharePoint agent now correctly uses the primary search tool (search_pages) for comprehensive document discovery matching native SharePoint search behavior
+
 ## 2025-11-20
 
 ### Added

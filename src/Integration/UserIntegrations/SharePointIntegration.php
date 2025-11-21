@@ -36,37 +36,37 @@ class SharePointIntegration implements PersonalizedSkillInterface
         return [
             new ToolDefinition(
                 'sharepoint_search_documents',
-                'Search for documents in SharePoint with content summaries. Supports multi-keyword queries (comma-separated or space-separated) and filename filtering. Returns: Array of search results grouped by type (Files, Sites, Pages, Lists) with each result containing hitId, rank, summary, and resource object. Resource includes: id, name, size, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, parentReference (with siteId, driveId, sharepointIds).',
+                'Basic search within user accessible SharePoint sites and personal OneDrive. Searches site-by-site with limited scope. For comprehensive search across ALL SharePoint content, use sharepoint_search_pages instead.',
                 [
                     [
                         'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query to find relevant documents. Supports: (1) Keywords: "Urlaub, Ferien" searches content and filenames. (2) Filename filtering: "filename:Urlaub, filename:Urlaubsregelung" returns only files with these terms in the filename. (3) Mixed: "filename:Urlaub, vacation policy" searches for vacation policy but filters to files with "Urlaub" in filename. (4) Exact phrases: "\"vacation policy\"" for exact match.'
+                        'description' => 'Search keywords (comma-separated for multiple). Example: "Urlaub, Ferien, vacation". DO NOT use filename: prefix.'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results to return per result type (default: 10, max: 25)'
+                        'description' => 'Maximum number of results (default: 10, max: 25)'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'sharepoint_search_pages',
-                'Search for pages and content across SharePoint using Microsoft Graph Search API. Supports multi-keyword queries with automatic KQL formatting and filename filtering. Returns: Array of search results grouped by type (Files, Sites, Pages, Lists, Drives) with each result containing hitId, rank, summary, and resource object. Resource includes: id, name, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, size, fileSystemInfo, parentReference.',
+                'PRIMARY SEARCH TOOL - Comprehensive search across ALL SharePoint content using Microsoft Graph Search API. Returns results grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint native search. Supports KQL (Keyword Query Language) with automatic OR logic for comma-separated keywords.',
                 [
                     [
                         'name' => 'query',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query supporting: (1) Keywords: "Urlaub, Ferien, Abwesenheit" searches all content. (2) Filename filtering: "filename:Urlaub, filename:Vacation" returns only items with these terms in the name. (3) Exact phrases: "\"vacation policy\"" for exact match. (4) Mixed queries combine content search with filename filtering. The query is automatically optimized for Microsoft Graph Search.'
+                        'description' => 'Search keywords (comma-separated for multiple variations). Example: "Urlaub, Ferien, vacation, leave policy". Automatically converted to KQL format. DO NOT use filename: prefix - just use plain keywords.'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results per result type (default: 25, max: 50). Results are grouped by type, so total results may exceed this limit.'
+                        'description' => 'Maximum results per type (default: 25, max: 50). Results grouped by Files, Sites, Pages, Lists, Drives.'
                     ]
                 ]
             ),
@@ -286,18 +286,17 @@ class SharePointIntegration implements PersonalizedSkillInterface
     }
 
     /**
-     * Execute search with filename pattern filtering
+     * Execute search without filename filtering
      *
-     * Handles queries that include filename: prefixes by:
-     * 1. Extracting filename patterns
-     * 2. Converting them to searchable keywords
-     * 3. Post-filtering results by filename
+     * Previously this method would filter results by filename: patterns,
+     * but this caused issues where valid results were excluded.
+     * Now it simply cleans the query and passes through to the service.
      *
      * @param string $method Service method to call ('searchDocuments' or 'searchPages')
      * @param array $credentials Authentication credentials
-     * @param string $query Raw query possibly containing filename: prefixes
+     * @param string $query Raw query (filename: prefixes are now stripped as plain keywords)
      * @param int $limit Maximum results
-     * @return array Search results, filtered by filename if patterns were specified
+     * @return array Search results
      */
     private function executeSearchWithFilenameFilter(
         string $method,
@@ -305,54 +304,27 @@ class SharePointIntegration implements PersonalizedSkillInterface
         string $query,
         int $limit
     ): array {
-        // Extract filename patterns and clean keywords
-        $parsed = $this->parseQueryWithFilenameSupport($query);
-        $cleanQuery = $parsed['query'];
-        $filenamePatterns = $parsed['filenamePatterns'];
+        // Clean query: strip filename: prefixes and use them as plain keywords
+        $cleanQuery = $this->stripFilenamePrefix($query);
 
-        // Execute the search with cleaned query
-        $results = $this->sharePointService->$method(
+        // Execute the search with cleaned query - convert to KQL for searchPages
+        $kqlQuery = $this->parseQueryToKQL($cleanQuery);
+
+        return $this->sharePointService->$method(
             $credentials,
-            $this->parseQueryToKQL($cleanQuery),
-            $limit * 3 // Fetch more to account for filtering
+            $kqlQuery,
+            $limit
         );
-
-        // If no filename patterns, return results as-is
-        if (empty($filenamePatterns)) {
-            return $results;
-        }
-
-        // Post-filter results by filename
-        $filteredResults = $this->filterResultsByFilename($results, $filenamePatterns);
-
-        // Limit results
-        if (isset($filteredResults['value']) && count($filteredResults['value']) > $limit) {
-            $filteredResults['value'] = array_slice($filteredResults['value'], 0, $limit);
-            $filteredResults['count'] = count($filteredResults['value']);
-        }
-
-        // Update grouped results if present
-        if (isset($filteredResults['grouped_results'])) {
-            $filteredResults['grouped_results'] = $this->regroupResults($filteredResults['value']);
-            $filteredResults['grouped_summary'] = $this->createGroupedSummaryFromResults($filteredResults['grouped_results']);
-        }
-
-        // Add filter info to response
-        $filteredResults['filename_filter_applied'] = true;
-        $filteredResults['filename_patterns'] = $filenamePatterns;
-
-        return $filteredResults;
     }
 
     /**
-     * Parse query to extract filename: patterns and return clean searchable query
+     * Strip filename: prefixes from query and convert to plain keywords
      *
      * @param string $query Raw query that may contain filename:value patterns
-     * @return array ['query' => string, 'filenamePatterns' => array]
+     * @return string Clean query with filename: prefixes removed
      */
-    private function parseQueryWithFilenameSupport(string $query): array
+    private function stripFilenamePrefix(string $query): string
     {
-        $filenamePatterns = [];
         $cleanParts = [];
 
         // Split by comma first
@@ -364,132 +336,17 @@ class SharePointIntegration implements PersonalizedSkillInterface
                 continue;
             }
 
-            // Check for filename: prefix (case-insensitive)
+            // Remove filename: prefix if present (case-insensitive)
             if (preg_match('/^filename:\s*(.+)$/i', $part, $matches)) {
-                $pattern = trim($matches[1], '"\'');
-                $filenamePatterns[] = $pattern;
-                // Also add as search keyword (Microsoft Graph indexes filenames)
-                $cleanParts[] = $pattern;
+                // Add the value without the prefix as a plain keyword
+                $cleanParts[] = trim($matches[1], '"\'');
             } else {
                 $cleanParts[] = $part;
             }
         }
 
-        return [
-            'query' => implode(', ', $cleanParts),
-            'filenamePatterns' => array_unique($filenamePatterns)
-        ];
-    }
-
-    /**
-     * Filter search results by filename patterns
-     *
-     * @param array $results Search results from SharePoint service
-     * @param array $filenamePatterns Patterns to match against filename
-     * @return array Filtered results
-     */
-    private function filterResultsByFilename(array $results, array $filenamePatterns): array
-    {
-        if (!isset($results['value']) || empty($results['value'])) {
-            return $results;
-        }
-
-        $filtered = array_filter($results['value'], function ($item) use ($filenamePatterns) {
-            // Get the filename from various possible fields
-            $filename = $item['name'] ?? $item['title'] ?? $item['Name'] ?? '';
-
-            if (empty($filename)) {
-                return false;
-            }
-
-            // Check if filename contains any of the patterns (case-insensitive)
-            foreach ($filenamePatterns as $pattern) {
-                if (stripos($filename, $pattern) !== false) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
-
-        $originalCount = $results['count'] ?? count($results['value']);
-        $results['value'] = array_values($filtered);
-        $results['count'] = count($results['value']);
-        $results['original_count'] = $originalCount;
-
-        return $results;
-    }
-
-    /**
-     * Regroup filtered results by type
-     *
-     * @param array $results Flat array of results
-     * @return array Grouped by type
-     */
-    private function regroupResults(array $results): array
-    {
-        $grouped = [
-            'files' => [],
-            'sites' => [],
-            'pages' => [],
-            'lists' => [],
-            'drives' => []
-        ];
-
-        foreach ($results as $result) {
-            $type = $result['type'] ?? 'unknown';
-
-            switch ($type) {
-                case 'file':
-                case 'document':
-                case 'driveItem':
-                    $grouped['files'][] = $result;
-                    break;
-                case 'site':
-                    $grouped['sites'][] = $result;
-                    break;
-                case 'page':
-                    $grouped['pages'][] = $result;
-                    break;
-                case 'list':
-                    $grouped['lists'][] = $result;
-                    break;
-                case 'drive':
-                    $grouped['drives'][] = $result;
-                    break;
-                default:
-                    $grouped['files'][] = $result;
-            }
-        }
-
-        return array_filter($grouped, fn($group) => !empty($group));
-    }
-
-    /**
-     * Create grouped summary from grouped results
-     *
-     * @param array $groupedResults Grouped results
-     * @return string Summary string
-     */
-    private function createGroupedSummaryFromResults(array $groupedResults): string
-    {
-        $summaryParts = [];
-        $typeLabels = [
-            'files' => 'Files',
-            'sites' => 'Sites',
-            'pages' => 'Pages',
-            'lists' => 'Lists',
-            'drives' => 'Drives'
-        ];
-
-        foreach ($groupedResults as $type => $items) {
-            if (!empty($items)) {
-                $label = $typeLabels[$type] ?? ucfirst($type);
-                $summaryParts[] = "$label: " . count($items);
-            }
-        }
-
-        return implode(', ', $summaryParts);
+        // Remove duplicates
+        return implode(', ', array_unique($cleanParts));
     }
 
     /**
