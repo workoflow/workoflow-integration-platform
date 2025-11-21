@@ -110,21 +110,21 @@
 
   <context>
     <user-info>
-      <tenant-id>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}</tenant-id>
-      <workflow-user-id>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</workflow-user-id>
+      <tenant-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}</tenant-id>
+      <workflow-user-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</workflow-user-id>
     </user-info>
-    <current-date>{{ '{{'{{ '}}' }} $now.format('dd.MM.yyyy'){{ '}}' }}</current-date>
-    <default-language>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.locale{{ '}}' }}</default-language>
+    <current-date>{{ '{{' }} $now.format('dd.MM.yyyy'){{ '}}' }}</current-date>
+    <default-language>{{ '{{' }} $('When Executed by Another Workflow').item.json.locale{{ '}}' }}</default-language>
   </context>
 
   <tool-discovery>
     <endpoint>
-      <url>{{ api_base_url{{ '}}' }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=jira</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=jira</url>
       <method>GET</method>
       <purpose>Fetch available Jira tools for this user</purpose>
     </endpoint>
     <execution>
-      <url>{{ api_base_url{{ '}}' }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
       <method>POST</method>
       <purpose>Execute a specific Jira tool</purpose>
     </execution>
@@ -140,7 +140,7 @@
   <available-tools>
     <tool-category name="Information Retrieval Tools">
       <tool>
-        <name>jira_search_{{ integration_id{{ '}}' }}</name>
+        <name>jira_search_{{ integration_id }}</name>
         <purpose>Search for issues using JQL (Jira Query Language)</purpose>
         <parameters>
           <parameter name="jql" type="string" required="true">JQL query string</parameter>
@@ -149,7 +149,7 @@
         <api-endpoint>/rest/api/3/search/jql</api-endpoint>
       </tool>
       <tool>
-        <name>jira_get_issue_{{ integration_id{{ '}}' }}</name>
+        <name>jira_get_issue_{{ integration_id }}</name>
         <purpose>Get detailed information about a specific issue</purpose>
         <parameters>
           <parameter name="issueKey" type="string" required="true">Issue key (e.g., PROJ-123)</parameter>
@@ -157,7 +157,7 @@
         <api-endpoint>/rest/api/3/issue/{issueKey}</api-endpoint>
       </tool>
       <tool>
-        <name>jira_get_sprints_from_board_{{ integration_id{{ '}}' }}</name>
+        <name>jira_get_sprints_from_board_{{ integration_id }}</name>
         <purpose>Get all sprints from a board</purpose>
         <parameters>
           <parameter name="boardId" type="integer" required="true">Board ID</parameter>
@@ -165,7 +165,7 @@
         <api-endpoint>/rest/agile/1.0/board/{boardId}/sprint</api-endpoint>
       </tool>
       <tool>
-        <name>jira_get_sprint_issues_{{ integration_id{{ '}}' }}</name>
+        <name>jira_get_sprint_issues_{{ integration_id }}</name>
         <purpose>Get all issues in a specific sprint</purpose>
         <parameters>
           <parameter name="sprintId" type="integer" required="true">Sprint ID</parameter>
@@ -174,7 +174,7 @@
         <api-endpoint>/rest/agile/1.0/sprint/{sprintId}/issue</api-endpoint>
       </tool>
       <tool>
-        <name>jira_get_available_transitions_{{ integration_id{{ '}}' }}</name>
+        <name>jira_get_available_transitions_{{ integration_id }}</name>
         <purpose>Get valid status transitions for an issue</purpose>
         <parameters>
           <parameter name="issueKey" type="string" required="true">Issue key (e.g., PROJ-123)</parameter>
@@ -185,7 +185,7 @@
 
     <tool-category name="Modification Tools">
       <tool>
-        <name>jira_add_comment_{{ integration_id{{ '}}' }}</name>
+        <name>jira_add_comment_{{ integration_id }}</name>
         <purpose>Add a comment to an issue</purpose>
         <parameters>
           <parameter name="issueKey" type="string" required="true">Issue key (e.g., PROJ-123)</parameter>
@@ -194,7 +194,7 @@
         <api-endpoint>/rest/api/3/issue/{issueKey}/comment</api-endpoint>
       </tool>
       <tool>
-        <name>jira_transition_issue_{{ integration_id{{ '}}' }}</name>
+        <name>jira_transition_issue_{{ integration_id }}</name>
         <purpose>Change issue status using a specific transition ID</purpose>
         <parameters>
           <parameter name="issueKey" type="string" required="true">Issue key (e.g., PROJ-123)</parameter>
@@ -204,7 +204,7 @@
         <api-endpoint>/rest/api/3/issue/{issueKey}/transitions</api-endpoint>
       </tool>
       <tool>
-        <name>jira_transition_issue_to_status_{{ integration_id{{ '}}' }}</name>
+        <name>jira_transition_issue_to_status_{{ integration_id }}</name>
         <purpose>Intelligently transition to a target status (auto-navigates workflows)</purpose>
         <parameters>
           <parameter name="issueKey" type="string" required="true">Issue key (e.g., PROJ-123)</parameter>
@@ -321,7 +321,7 @@
       <response>
 I don't have access to any Jira tools yet. It looks like you haven't configured
 a Jira integration. Please visit your integration platform at
-{{ api_base_url{{ '}}' }} and set up a Jira Skill to enable Jira
+{{ api_base_url }} and set up a Jira Skill to enable Jira
 functionality. You'll need:
 - Your Jira instance URL (e.g., https://your-domain.atlassian.net)
 - Your Jira email address

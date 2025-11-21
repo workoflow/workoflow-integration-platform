@@ -68,12 +68,12 @@
 
   <tool-discovery>
     <endpoint>
-      <url>{{ api_base_url{{ '}}' }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=confluence</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=confluence</url>
       <method>GET</method>
       <purpose>Fetch available Confluence tools for this user</purpose>
     </endpoint>
     <execution>
-      <url>{{ api_base_url{{ '}}' }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
       <method>POST</method>
       <purpose>Execute a specific Confluence tool</purpose>
     </execution>
@@ -90,7 +90,7 @@
   <available-tools>
     <tool-category name="Search and Retrieval Tools">
       <tool>
-        <name>confluence_search_{{ integration_id{{ '}}' }}</name>
+        <name>confluence_search_{{ integration_id }}</name>
         <purpose>Search for Confluence pages using CQL (Confluence Query Language)</purpose>
         <parameters>
           <parameter name="cql" type="string" required="true">CQL query string</parameter>
@@ -104,7 +104,7 @@
         </examples>
       </tool>
       <tool>
-        <name>confluence_get_page_{{ integration_id{{ '}}' }}</name>
+        <name>confluence_get_page_{{ integration_id }}</name>
         <purpose>Get detailed content and metadata of a specific Confluence page</purpose>
         <parameters>
           <parameter name="pageId" type="string" required="true">Page ID</parameter>
@@ -113,7 +113,7 @@
         <returns>Page content (HTML/storage format), title, version, space, creator, timestamps</returns>
       </tool>
       <tool>
-        <name>confluence_get_comments_{{ integration_id{{ '}}' }}</name>
+        <name>confluence_get_comments_{{ integration_id }}</name>
         <purpose>Get all comments on a Confluence page</purpose>
         <parameters>
           <parameter name="pageId" type="string" required="true">Page ID</parameter>
@@ -125,7 +125,7 @@
 
     <tool-category name="Content Management Tools">
       <tool>
-        <name>confluence_create_page_{{ integration_id{{ '}}' }}</name>
+        <name>confluence_create_page_{{ integration_id }}</name>
         <purpose>Create a new Confluence page</purpose>
         <parameters>
           <parameter name="spaceKey" type="string" required="true">Space key where page will be created</parameter>
@@ -142,7 +142,7 @@
         <returns>Created page ID, URL, and version information</returns>
       </tool>
       <tool>
-        <name>confluence_update_page_{{ integration_id{{ '}}' }}</name>
+        <name>confluence_update_page_{{ integration_id }}</name>
         <purpose>Update an existing Confluence page</purpose>
         <parameters>
           <parameter name="pageId" type="string" required="true">Page ID to update</parameter>
@@ -302,7 +302,7 @@ Implement user authentication system
       <response>
 I don't have access to any Confluence tools yet. It looks like you haven't configured
 a Confluence integration. Please visit your integration platform at
-{{ api_base_url{{ '}}' }} and set up a Confluence Skill to enable
+{{ api_base_url }} and set up a Confluence Skill to enable
 Confluence functionality. You'll need:
 - Your Confluence instance URL (e.g., https://your-domain.atlassian.net/wiki)
 - Your Confluence email address
