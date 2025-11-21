@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-21
 
+### Changed
+- Simplified SharePoint search to single endpoint - AI agents now build KQL (Keyword Query Language) queries directly instead of using multiple search tools
+- SharePoint search now accepts full KQL syntax including wildcards, field filters (author:, filename:, filetype:), date ranges, and boolean operators for more powerful searches
+- Reduced SharePoint agent prompt complexity by 50% - cleaner, faster, more maintainable AI instructions
+
 ### Fixed
 - SharePoint search now returns comprehensive results - fixed issue where "filename:" prefix in queries caused post-filtering that excluded valid results
 - SharePoint agent now correctly uses the primary search tool (search_pages) for comprehensive document discovery matching native SharePoint search behavior

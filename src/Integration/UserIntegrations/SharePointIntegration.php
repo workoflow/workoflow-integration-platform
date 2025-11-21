@@ -35,38 +35,27 @@ class SharePointIntegration implements PersonalizedSkillInterface
     {
         return [
             new ToolDefinition(
-                'sharepoint_search_documents',
-                'Basic search within user accessible SharePoint sites and personal OneDrive. Searches site-by-site with limited scope. For comprehensive search across ALL SharePoint content, use sharepoint_search_pages instead.',
+                'sharepoint_search',
+                'Search ALL SharePoint content (Files, Sites, Pages, Lists, Drives) using KQL (Keyword Query Language). Returns results grouped by type.',
                 [
                     [
-                        'name' => 'query',
+                        'name' => 'kql',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search keywords (comma-separated for multiple). Example: "Urlaub, Ferien, vacation". DO NOT use filename: prefix.'
+                        'description' => 'KQL query for SharePoint search. Syntax examples:
+• OR search: vacation OR Urlaub OR leave OR Ferien
+• Exact phrase: "project status report"
+• Wildcard: budget* (matches budget, budgets, budgeting)
+• Field filters: author:John, filename:report, filetype:pdf, filetype:docx, title:Q4
+• Combined: (vacation OR Urlaub) AND filetype:docx
+• Date filter: LastModifiedTime>2024-01-01
+Tips: Use OR to include synonyms and translations (German+English) for bilingual workspaces.'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results (default: 10, max: 25)'
-                    ]
-                ]
-            ),
-            new ToolDefinition(
-                'sharepoint_search_pages',
-                'PRIMARY SEARCH TOOL - Comprehensive search across ALL SharePoint content using Microsoft Graph Search API. Returns results grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint native search. Supports KQL (Keyword Query Language) with automatic OR logic for comma-separated keywords.',
-                [
-                    [
-                        'name' => 'query',
-                        'type' => 'string',
-                        'required' => true,
-                        'description' => 'Search keywords (comma-separated for multiple variations). Example: "Urlaub, Ferien, vacation, leave policy". Automatically converted to KQL format. DO NOT use filename: prefix - just use plain keywords.'
-                    ],
-                    [
-                        'name' => 'limit',
-                        'type' => 'integer',
-                        'required' => false,
-                        'description' => 'Maximum results per type (default: 25, max: 50). Results grouped by Files, Sites, Pages, Lists, Drives.'
+                        'description' => 'Maximum results per type (default: 25, max: 50). Results are grouped by Files, Sites, Pages, Lists, Drives.'
                     ]
                 ]
             ),
@@ -187,16 +176,9 @@ class SharePointIntegration implements PersonalizedSkillInterface
         }
 
         return match ($toolName) {
-            'sharepoint_search_documents' => $this->executeSearchWithFilenameFilter(
-                'searchDocuments',
+            'sharepoint_search' => $this->sharePointService->search(
                 $credentials,
-                $parameters['query'],
-                min($parameters['limit'] ?? 10, 25)
-            ),
-            'sharepoint_search_pages' => $this->executeSearchWithFilenameFilter(
-                'searchPages',
-                $credentials,
-                $parameters['query'],
+                $parameters['kql'],
                 min($parameters['limit'] ?? 25, 50)
             ),
             'sharepoint_read_document' => $this->sharePointService->readDocument(
@@ -283,120 +265,5 @@ class SharePointIntegration implements PersonalizedSkillInterface
             'refresh_token' => $newTokens['refresh_token'],
             'expires_at' => $newTokens['expires_at']
         ]);
-    }
-
-    /**
-     * Execute search without filename filtering
-     *
-     * Previously this method would filter results by filename: patterns,
-     * but this caused issues where valid results were excluded.
-     * Now it simply cleans the query and passes through to the service.
-     *
-     * @param string $method Service method to call ('searchDocuments' or 'searchPages')
-     * @param array $credentials Authentication credentials
-     * @param string $query Raw query (filename: prefixes are now stripped as plain keywords)
-     * @param int $limit Maximum results
-     * @return array Search results
-     */
-    private function executeSearchWithFilenameFilter(
-        string $method,
-        array $credentials,
-        string $query,
-        int $limit
-    ): array {
-        // Clean query: strip filename: prefixes and use them as plain keywords
-        $cleanQuery = $this->stripFilenamePrefix($query);
-
-        // Execute the search with cleaned query - convert to KQL for searchPages
-        $kqlQuery = $this->parseQueryToKQL($cleanQuery);
-
-        return $this->sharePointService->$method(
-            $credentials,
-            $kqlQuery,
-            $limit
-        );
-    }
-
-    /**
-     * Strip filename: prefixes from query and convert to plain keywords
-     *
-     * @param string $query Raw query that may contain filename:value patterns
-     * @return string Clean query with filename: prefixes removed
-     */
-    private function stripFilenamePrefix(string $query): string
-    {
-        $cleanParts = [];
-
-        // Split by comma first
-        $parts = preg_split('/\s*,\s*/', trim($query));
-
-        foreach ($parts as $part) {
-            $part = trim($part);
-            if (empty($part)) {
-                continue;
-            }
-
-            // Remove filename: prefix if present (case-insensitive)
-            if (preg_match('/^filename:\s*(.+)$/i', $part, $matches)) {
-                // Add the value without the prefix as a plain keyword
-                $cleanParts[] = trim($matches[1], '"\'');
-            } else {
-                $cleanParts[] = $part;
-            }
-        }
-
-        // Remove duplicates
-        return implode(', ', array_unique($cleanParts));
-    }
-
-    /**
-     * Parse search query into KQL (Keyword Query Language) format
-     *
-     * Transforms various query formats into proper KQL syntax for Microsoft Graph Search:
-     * - Comma-separated keywords: "Urlaub, Ferien" → "Urlaub OR Ferien"
-     * - Multiple spaces: "Urlaub  Ferien" → "Urlaub OR Ferien"
-     * - Exact phrases: '"vacation policy"' → '"vacation policy"'
-     * - Mixed: "Urlaub, Ferien, \"vacation policy\"" → "Urlaub OR Ferien OR \"vacation policy\""
-     *
-     * @param string $query Raw search query from user/agent
-     * @return string Properly formatted KQL query
-     */
-    private function parseQueryToKQL(string $query): string
-    {
-        // Trim whitespace
-        $query = trim($query);
-
-        // If query is already in KQL format (contains OR, AND, NOT operators), return as-is
-        if (preg_match('/\b(OR|AND|NOT)\b/i', $query)) {
-            return $query;
-        }
-
-        // Extract exact phrases (anything in quotes)
-        $phrases = [];
-        $query = preg_replace_callback('/"([^"]+)"/', function ($matches) use (&$phrases) {
-            $phrases[] = '"' . $matches[1] . '"';
-            return '___PHRASE_' . (count($phrases) - 1) . '___';
-        }, $query);
-
-        // Split by comma or multiple spaces
-        $keywords = preg_split('/[,\s]+/', $query, -1, PREG_SPLIT_NO_EMPTY);
-
-        // Replace phrase placeholders back
-        $keywords = array_map(function ($keyword) use ($phrases) {
-            return preg_replace_callback('/___PHRASE_(\d+)___/', function ($matches) use ($phrases) {
-                return $phrases[(int)$matches[1]];
-            }, $keyword);
-        }, $keywords);
-
-        // Remove duplicates and empty values
-        $keywords = array_unique(array_filter($keywords));
-
-        // If only one keyword, return as-is
-        if (count($keywords) === 1) {
-            return $keywords[0];
-        }
-
-        // Join with OR operator for KQL
-        return implode(' OR ', $keywords);
     }
 }

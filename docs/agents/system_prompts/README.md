@@ -74,9 +74,9 @@ This directory contains system prompts for a multi-agent AI system designed to h
 #### SharePoint Agent
 - **File:** `sharepoint_agent.xml`
 - **Integration Type:** `sharepoint`
-- **Tools:** 7 (search docs/pages, read, list, download, lists)
+- **Tools:** 6 (search with KQL, read document/page, list files, download, list items)
 - **Capabilities:**
-  - **Intelligent multi-keyword search** (3-5 variations, bilingual)
+  - **Direct KQL (Keyword Query Language) search** - AI builds queries natively
   - Document reading (Word, Excel, PowerPoint, PDF)
   - File and folder management
   - SharePoint list operations
@@ -170,24 +170,23 @@ Execution:
 POST /api/integrations/{tenantID}/execute?workflow_user_id={userID}
 ```
 
-### 4. SharePoint Intelligent Search
+### 4. SharePoint KQL Search
 
-**Special Feature:** SharePoint Agent uses progressive multi-keyword search:
+**Special Feature:** SharePoint Agent uses direct KQL (Keyword Query Language) search:
 
-1. **Generate 3-5 keyword variations:**
-   - Exact terms from user query
-   - Synonyms and related terms
-   - German + English (bilingual workspaces)
-   - Acronyms and full forms
-   - Broader/narrower terms
+1. **AI builds KQL queries directly:**
+   - Agent naturally understands context and builds appropriate queries
+   - Uses OR operators for synonyms and translations
+   - Supports field filters (author:, filename:, filetype:, title:)
+   - Supports wildcards, exact phrases, and date filters
 
-2. **Progressive search (max 3 attempts):**
-   - Start with specific terms
-   - Broaden if < 3 results
-   - Combine unique results
+2. **Example KQL patterns:**
+   - `vacation OR Urlaub OR leave OR Ferien` (bilingual search)
+   - `"project status" AND filetype:docx` (exact phrase + filter)
+   - `budget* author:John` (wildcard + author filter)
 
 3. **User confirmation required:**
-   - Present ALL results
+   - Present ALL results grouped by type
    - Ask which to read
    - NEVER auto-read documents
    - Complete reading BEFORE responding
@@ -540,11 +539,11 @@ Verify: No error, clear guidance, integration platform URL included
 |-------|-------|------------------|---------------------|
 | JIRA Agent | 8 | jira | API Token |
 | Confluence Agent | 5 | confluence | API Token |
-| SharePoint Agent | 7 | sharepoint | OAuth2 (Microsoft) |
+| SharePoint Agent | 6 | sharepoint | OAuth2 (Microsoft) |
 | GitLab Agent | 26 | gitlab | Personal Access Token |
 | Trello Agent | 12 | trello | API Key + Token |
 | System Tools Agent | 13 | system | None (Platform-internal) |
-| **Total** | **71** | 6 types | 5 external + 1 internal |
+| **Total** | **70** | 6 types | 5 external + 1 internal |
 
 ## Future Enhancements
 

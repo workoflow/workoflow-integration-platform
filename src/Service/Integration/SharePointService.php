@@ -32,162 +32,10 @@ class SharePointService
         }
     }
 
-    public function searchDocuments(array $credentials, string $query, int $limit = 25): array
-    {
-        // The /search/query endpoint requires Application permissions
-        // With delegated permissions, we need to use site-specific search
-        // First, get the user's sites, then search within them
-
-        try {
-            $results = [];
-            $remainingLimit = $limit;
-
-            // 1. Search for matching sites
-            try {
-                $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                    'auth_bearer' => $credentials['access_token'],
-                    'query' => [
-                        'search' => $query,
-                        '$top' => min($remainingLimit, 10)
-                    ]
-                ]);
-
-                $sites = $sitesResponse->toArray();
-
-                if (isset($sites['value'])) {
-                    foreach ($sites['value'] as $site) {
-                        $results[] = [
-                            'type' => 'site',
-                            'id' => $site['id'] ?? '',
-                            'name' => $site['displayName'] ?? $site['name'] ?? '',
-                            'webUrl' => $site['webUrl'] ?? '',
-                            'description' => $site['description'] ?? ''
-                        ];
-                        $remainingLimit--;
-                        if ($remainingLimit <= 0) {
-                            break;
-                        }
-                    }
-
-                    // For each site found, also search for pages and documents within it
-                    foreach ($sites['value'] as $site) {
-                        if ($remainingLimit <= 0) {
-                            break;
-                        }
-
-                        // Search for pages in this site
-                        try {
-                            $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/pages', [
-                                'auth_bearer' => $credentials['access_token'],
-                                'query' => [
-                                    '$top' => min($remainingLimit, 10),
-                                    '$filter' => "contains(title,'" . str_replace("'", "''", $query) . "') or contains(name,'" . str_replace("'", "''", $query) . "')"
-                                ]
-                            ]);
-
-                            $pages = $pagesResponse->toArray();
-                            if (isset($pages['value'])) {
-                                foreach ($pages['value'] as $page) {
-                                    $results[] = [
-                                        'type' => 'page',
-                                        'id' => $page['id'] ?? '',
-                                        'name' => $page['title'] ?? $page['name'] ?? '',
-                                        'webUrl' => $page['webUrl'] ?? '',
-                                        'description' => $page['description'] ?? '',
-                                        'siteId' => $site['id'],
-                                        'siteName' => $site['displayName'] ?? $site['name'] ?? ''
-                                    ];
-                                    $remainingLimit--;
-                                    if ($remainingLimit <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            error_log('Pages search in site ' . $site['id'] . ' failed: ' . $e->getMessage());
-                        }
-
-                        // Search for documents in this site's drive
-                        try {
-                            $driveSearchResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/drive/search(q=\'' . urlencode($query) . '\')', [
-                                'auth_bearer' => $credentials['access_token'],
-                                'query' => [
-                                    '$top' => min($remainingLimit, 10)
-                                ]
-                            ]);
-
-                            $driveResults = $driveSearchResponse->toArray();
-                            if (isset($driveResults['value'])) {
-                                foreach ($driveResults['value'] as $item) {
-                                    $results[] = [
-                                        'type' => 'document',
-                                        'id' => $item['id'] ?? '',
-                                        'name' => $item['name'] ?? '',
-                                        'webUrl' => $item['webUrl'] ?? '',
-                                        'size' => $item['size'] ?? 0,
-                                        'lastModified' => $item['lastModifiedDateTime'] ?? '',
-                                        'siteId' => $site['id'],
-                                        'siteName' => $site['displayName'] ?? $site['name'] ?? ''
-                                    ];
-                                    $remainingLimit--;
-                                    if ($remainingLimit <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            error_log('Drive search in site ' . $site['id'] . ' failed: ' . $e->getMessage());
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log('Sites search failed: ' . $e->getMessage());
-            }
-
-            // 2. Also search in user's OneDrive if we still have room
-            if ($remainingLimit > 0) {
-                try {
-                    $driveSearchResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/me/drive/search(q=\'' . urlencode($query) . '\')', [
-                        'auth_bearer' => $credentials['access_token'],
-                        'query' => [
-                            '$top' => $remainingLimit
-                        ]
-                    ]);
-
-                    $driveResults = $driveSearchResponse->toArray();
-                    if (isset($driveResults['value'])) {
-                        foreach ($driveResults['value'] as $item) {
-                            $results[] = [
-                                'type' => 'driveItem',
-                                'id' => $item['id'] ?? '',
-                                'name' => $item['name'] ?? '',
-                                'webUrl' => $item['webUrl'] ?? '',
-                                'size' => $item['size'] ?? 0,
-                                'lastModified' => $item['lastModifiedDateTime'] ?? '',
-                                'siteId' => 'me',  // Personal OneDrive files use 'me' as siteId
-                                'siteName' => 'Personal OneDrive'
-                            ];
-                        }
-                    }
-                } catch (\Exception $e) {
-                    error_log('Personal drive search failed: ' . $e->getMessage());
-                }
-            }
-
-            return [
-                'value' => $results,
-                'count' => count($results)
-            ];
-        } catch (\Exception $e) {
-            error_log('SharePoint Search Error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    public function searchPages(array $credentials, string $query, int $limit = 25): array
+    public function search(array $credentials, string $kqlQuery, int $limit = 25): array
     {
         try {
-            error_log('SharePoint searchPages called with query: ' . $query . ', limit: ' . $limit);
+            error_log('SharePoint search called with KQL: ' . $kqlQuery . ', limit: ' . $limit);
             $results = [];
 
             // Use the Microsoft Graph Search API with comprehensive entity types
@@ -197,7 +45,7 @@ class SharePointService
                     [
                         'entityTypes' => ['driveItem', 'site', 'listItem', 'list', 'drive'],
                         'query' => [
-                            'queryString' => $query  // Now receives properly formatted KQL query
+                            'queryString' => $kqlQuery  // KQL query passed directly from agent
                         ],
                         'size' => $limit,
                         'fields' => [
@@ -315,7 +163,7 @@ class SharePointService
                 'grouped_results' => $groupedResults,  // New grouped format
                 'count' => count($results),
                 'grouped_summary' => $this->createGroupedSummary($groupedResults),
-                'searchQuery' => $query
+                'searchQuery' => $kqlQuery
             ];
         } catch (\Exception $e) {
             error_log('SharePoint Pages Search Error: ' . $e->getMessage());
@@ -327,7 +175,7 @@ class SharePointService
                 'error' => true,
                 'error_message' => $e->getMessage(),
                 'error_details' => [
-                    'query' => $query,
+                    'query' => $kqlQuery,
                     'limit' => $limit,
                     'timestamp' => date('Y-m-d H:i:s')
                 ],
