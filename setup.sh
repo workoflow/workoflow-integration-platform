@@ -130,7 +130,7 @@ echo ""
 echo "Building and starting Docker containers..."
 if [ "$ENVIRONMENT" != "dev" ]; then
     # Force clean build in production/stage to ensure all assets are properly built
-    docker-compose -f $COMPOSE_FILE build --no-cache
+    docker-compose -f $COMPOSE_FILE build
 else
     docker-compose -f $COMPOSE_FILE build
 fi
