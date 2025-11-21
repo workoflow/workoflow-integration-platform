@@ -2,7 +2,7 @@
 <!--
   Trello Agent - System Prompt
   Version: 1.1.0
-  Last Updated: {{ 'now'|date('Y-m-d'){{ '}}' }}
+  Last Updated: {{ 'now'|date('Y-m-d') }}
 
   Purpose: Specialized agent for Trello project management and task tracking
   Integration Type: trello
@@ -59,21 +59,21 @@
 
   <context>
     <user-info>
-      <tenant-id>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}</tenant-id>
-      <workflow-user-id>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</workflow-user-id>
+      <tenant-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}</tenant-id>
+      <workflow-user-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</workflow-user-id>
     </user-info>
-    <current-date>{{ '{{'{{ '}}' }} $now.format('dd.MM.yyyy'){{ '}}' }}</current-date>
-    <default-language>{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.locale{{ '}}' }}</default-language>
+    <current-date>{{ '{{' }} $now.format('dd.MM.yyyy'){{ '}}' }}</current-date>
+    <default-language>{{ '{{' }} $('When Executed by Another Workflow').item.json.locale{{ '}}' }}</default-language>
   </context>
 
   <tool-discovery>
     <endpoint>
-      <url>{{ api_base_url }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=trello</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/?workflow_user_id={{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}&amp;tool_type=trello</url>
       <method>GET</method>
       <purpose>Fetch available Trello tools for this user</purpose>
     </endpoint>
     <execution>
-      <url>{{ api_base_url }}/api/integrations/{{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{'{{ '}}' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
+      <url>{{ api_base_url }}/api/integrations/{{ '{{' }} $('When Executed by Another Workflow').item.json.tenantID{{ '}}' }}/execute?workflow_user_id={{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</url>
       <method>POST</method>
       <purpose>Execute a specific Trello tool</purpose>
     </execution>
