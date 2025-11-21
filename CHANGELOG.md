@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - SharePoint search now accepts full KQL syntax including wildcards, field filters (author:, filename:, filetype:), date ranges, and boolean operators for more powerful searches
 - Reduced SharePoint agent prompt complexity by 50% - cleaner, faster, more maintainable AI instructions
 
+### Improved
+- SharePoint search results now always include clickable links to documents and pages for faster access
+
 ### Fixed
 - SharePoint search now returns comprehensive results - fixed issue where "filename:" prefix in queries caused post-filtering that excluded valid results
 - SharePoint agent now correctly uses the primary search tool (search_pages) for comprehensive document discovery matching native SharePoint search behavior
