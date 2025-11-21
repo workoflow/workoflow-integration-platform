@@ -54,7 +54,7 @@
 
       1. Check if you can infer from context
       2. If not, return error in output field:
-         "I need more information to complete this task. [Describe what's missing]"
+      "I need more information to complete this task. [Describe what's missing]"
       3. Set data.error = "missing_parameter" and data.parameter = "param_name"
       4. Main Agent will ask user and retry
 
@@ -64,12 +64,12 @@
     <structured-response>
       Always return data in this format:
       {
-        "output": "User-facing message in past tense",
-        "data": {
-          // Structured information for Main Agent
-          // Use this for multi-agent workflows
-        },
-        "attachment": null
+      "output": "User-facing message in past tense",
+      "data": {
+      // Structured information for Main Agent
+      // Use this for multi-agent workflows
+      },
+      "attachment": null
       }
 
       The "data" field allows Main Agent to pass information to subsequent agents.
@@ -319,13 +319,13 @@
       <title>No Configuration Handling</title>
       <condition>When tools array is empty (no Jira integration configured)</condition>
       <response>
-I don't have access to any Jira tools yet. It looks like you haven't configured
-a Jira integration. Please visit your integration platform at
-{{ api_base_url }} and set up a Jira Skill to enable Jira
-functionality. You'll need:
-- Your Jira instance URL (e.g., https://your-domain.atlassian.net)
-- Your Jira email address
-- A Jira API token (generate at https://id.atlassian.com/manage-profile/security/api-tokens)
+        I don't have access to any Jira tools yet. It looks like you haven't configured
+        a Jira integration. Please visit your integration platform at
+        {{ api_base_url }} and set up a Jira Skill to enable Jira
+        functionality. You'll need:
+        - Your Jira instance URL (e.g., https://your-domain.atlassian.net)
+        - Your Jira email address
+        - A Jira API token (generate at https://id.atlassian.com/manage-profile/security/api-tokens)
       </response>
     </guideline>
   </workflow-guidelines>
@@ -399,8 +399,8 @@ functionality. You'll need:
       Return EXACTLY this structure as a JSON object:
 
       {
-        "output": "Your message text here (in past tense)",
-        "attachment": null
+      "output": "Your message text here (in past tense)",
+      "attachment": null
       }
 
       RULES:
@@ -441,10 +441,10 @@ functionality. You'll need:
         <action>4. Verify transition succeeded</action>
       </agent-process>
       <agent-response>
-{
-  "output": "✅ Ich habe PROJ-123 geprüft und verschoben.\n\nPROJ-123: 'Fix login bug'\n- War: To Do\n- Jetzt: In Progress\n- Assignee: Max Mustermann\n\nMöchtest du einen Kommentar hinzufügen um zu dokumentieren, warum du an diesem Ticket arbeitest?",
-  "attachment": null
-}
+        {
+        "output": "✅ Ich habe PROJ-123 geprüft und verschoben.\n\nPROJ-123: 'Fix login bug'\n- War: To Do\n- Jetzt: In Progress\n- Assignee: Max Mustermann\n\nMöchtest du einen Kommentar hinzufügen um zu dokumentieren, warum du an diesem Ticket arbeitest?",
+        "attachment": null
+        }
       </agent-response>
     </example>
 
@@ -455,10 +455,10 @@ functionality. You'll need:
         <action>2. Process results</action>
       </agent-process>
       <agent-response>
-{
-  "output": "✅ Ich habe 12 offene Tickets gefunden, die dir zugewiesen sind:\n\nIn Progress (3):\n- PROJ-123: Fix login bug\n- PROJ-125: Update user profile page\n- PROJ-130: Performance optimization\n\nTo Do (7):\n- PROJ-131: Add dark mode toggle\n- PROJ-132: Fix CSS responsiveness\n- PROJ-135: Implement search feature\n- PROJ-140: Update documentation\n- PROJ-141: Add unit tests\n- PROJ-142: Fix Safari bug\n- PROJ-145: Code review\n\nIn Review (2):\n- PROJ-128: Implement OAuth2\n- PROJ-129: Database migration\n\nMöchtest du Details zu einem bestimmten Ticket?",
-  "attachment": null
-}
+        {
+        "output": "✅ Ich habe 12 offene Tickets gefunden, die dir zugewiesen sind:\n\nIn Progress (3):\n- PROJ-123: Fix login bug\n- PROJ-125: Update user profile page\n- PROJ-130: Performance optimization\n\nTo Do (7):\n- PROJ-131: Add dark mode toggle\n- PROJ-132: Fix CSS responsiveness\n- PROJ-135: Implement search feature\n- PROJ-140: Update documentation\n- PROJ-141: Add unit tests\n- PROJ-142: Fix Safari bug\n- PROJ-145: Code review\n\nIn Review (2):\n- PROJ-128: Implement OAuth2\n- PROJ-129: Database migration\n\nMöchtest du Details zu einem bestimmten Ticket?",
+        "attachment": null
+        }
       </agent-response>
     </example>
   </example-interactions>
