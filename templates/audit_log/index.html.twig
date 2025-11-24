@@ -1,0 +1,246 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'audit_log.title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="dashboard-page audit-log-page">
+
+    <div class="dashboard-container">
+        <div class="page-header">
+            <div>
+                <h1 class="dashboard-title">{{ 'audit_log.title'|trans }}</h1>
+                <p class="page-subtitle">{{ 'audit_log.subtitle'|trans }}</p>
+            </div>
+        </div>
+
+        {# Filter Bar #}
+        <div class="filter-bar">
+            <form method="get" action="{{ path('app_audit_log') }}" class="filter-form">
+                <div class="filter-group">
+                    <label for="search" class="filter-label">{{ 'audit_log.search.placeholder'|trans }}</label>
+                    <input
+                        type="text"
+                        id="search"
+                        name="search"
+                        class="filter-input"
+                        placeholder="{{ 'audit_log.search.placeholder'|trans }}"
+                        value="{{ filters.search }}"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_from" class="filter-label">{{ 'audit_log.date_from'|trans }}</label>
+                    <input
+                        type="date"
+                        id="date_from"
+                        name="date_from"
+                        class="filter-input"
+                        value="{{ filters.date_from }}"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_to" class="filter-label">{{ 'audit_log.date_to'|trans }}</label>
+                    <input
+                        type="date"
+                        id="date_to"
+                        name="date_to"
+                        class="filter-input"
+                        value="{{ filters.date_to }}"
+                    >
+                </div>
+
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">{{ 'action.filter'|trans }}</button>
+                    <a href="{{ path('app_audit_log') }}" class="btn btn-secondary">{{ 'audit_log.clear_filters'|trans }}</a>
+                </div>
+            </form>
+        </div>
+
+        {# Results Info #}
+        {% if total > 0 %}
+            <div class="results-info">
+                {{ 'audit_log.showing_results'|trans({'%from%': ((current_page - 1) * per_page + 1), '%to%': min(current_page * per_page, total), '%total%': total}) }}
+            </div>
+        {% endif %}
+
+        {# Table #}
+        {% if logs|length == 0 %}
+            <div class="empty-state">
+                <p>{{ 'audit_log.empty'|trans }}</p>
+            </div>
+        {% else %}
+            <div class="audit-log-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{{ 'audit_log.columns.timestamp'|trans }}</th>
+                            <th>{{ 'audit_log.columns.action'|trans }}</th>
+                            <th>{{ 'audit_log.columns.user'|trans }}</th>
+                            <th class="hide-mobile">{{ 'audit_log.columns.ip'|trans }}</th>
+                            <th class="hide-mobile">{{ 'audit_log.columns.user_agent'|trans }}</th>
+                            <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                            <tr class="log-row" data-log-id="{{ log.id }}">
+                                <td class="timestamp" data-label="{{ 'audit_log.columns.timestamp'|trans }}">
+                                    {{ log.createdAt|date('d.m.Y H:i:s') }}
+                                </td>
+                                <td class="action" data-label="{{ 'audit_log.columns.action'|trans }}">
+                                    <span class="action-badge">{{ log.action }}</span>
+                                </td>
+                                <td class="user" data-label="{{ 'audit_log.columns.user'|trans }}">
+                                    {{ log.user ? log.user.displayName : '-' }}
+                                </td>
+                                <td class="ip hide-mobile" data-label="{{ 'audit_log.columns.ip'|trans }}">
+                                    {{ log.ip ?: '-' }}
+                                </td>
+                                <td class="user-agent hide-mobile" data-label="{{ 'audit_log.columns.user_agent'|trans }}">
+                                    {{ log.userAgent ? (log.userAgent|length > 30 ? log.userAgent|slice(0, 30) ~ '...' : log.userAgent) : '-' }}
+                                </td>
+                                <td class="data-preview hide-mobile" data-label="{{ 'audit_log.columns.data'|trans }}">
+                                    {% if log.data %}
+                                        {% set dataStr = log.data|json_encode %}
+                                        {{ dataStr|length > 50 ? dataStr|slice(0, 50) ~ '...' : dataStr }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="expand-toggle">
+                                    {% if log.data or log.userAgent %}
+                                        <button type="button" class="btn-expand" onclick="toggleDetails({{ log.id }})">
+                                            <span class="expand-icon">▼</span>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr class="details-row" id="details-{{ log.id }}" style="display: none;">
+                                <td colspan="7">
+                                    <div class="details-content">
+                                        {% if log.userAgent %}
+                                            <div class="detail-section">
+                                                <strong>{{ 'audit_log.columns.user_agent'|trans }}:</strong>
+                                                <div class="detail-value">{{ log.userAgent }}</div>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if log.data %}
+                                            {% set hasRequestPayload = log.data.request_payload is defined %}
+                                            {% set hasResponseData = log.data.response_data is defined %}
+                                            {% set hasOtherData = log.data|length > 0 and not (hasRequestPayload or hasResponseData) %}
+                                            {% set hasTabData = hasRequestPayload or hasResponseData %}
+
+                                            {% if hasTabData %}
+                                                {# Tabbed view for request/response #}
+                                                <div class="detail-section">
+                                                    <div class="tabs" id="tabs-{{ log.id }}">
+                                                        {% if hasRequestPayload %}
+                                                            <button class="tab active" onclick="switchTab({{ log.id }}, 'request')">
+                                                                {{ 'audit_log.request_payload'|trans }}
+                                                            </button>
+                                                        {% endif %}
+                                                        {% if hasResponseData %}
+                                                            <button class="tab {{ hasRequestPayload ? '' : 'active' }}" onclick="switchTab({{ log.id }}, 'response')">
+                                                                {{ 'audit_log.response_data'|trans }}
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <div class="tab-content">
+                                                        {% if hasRequestPayload %}
+                                                            <div class="tab-pane active" id="request-{{ log.id }}">
+                                                                <pre class="json-data">{{ log.data.request_payload|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                                            </div>
+                                                        {% endif %}
+                                                        {% if hasResponseData %}
+                                                            <div class="tab-pane {{ hasRequestPayload ? '' : 'active' }}" id="response-{{ log.id }}">
+                                                                {% if log.data.response_data._truncated is defined and log.data.response_data._truncated %}
+                                                                    <div class="truncation-notice">
+                                                                        {{ 'audit_log.truncated_notice'|trans({'%size%': (log.data.response_data._original_size / 1024)|number_format(2)}) }}
+                                                                    </div>
+                                                                    <pre class="json-data">{{ log.data.response_data._preview }}</pre>
+                                                                {% else %}
+                                                                    <pre class="json-data">{{ log.data.response_data|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if hasOtherData %}
+                                                {# Fallback for non-tool execution logs #}
+                                                <div class="detail-section">
+                                                    <strong>{{ 'audit_log.columns.data'|trans }}:</strong>
+                                                    <pre class="json-data">{{ log.data|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Pagination #}
+            {% if pages > 1 %}
+                <div class="pagination">
+                    {% if current_page > 1 %}
+                        <a href="{{ path('app_audit_log', filters|merge({'page': current_page - 1})) }}" class="pagination-link">
+                            ← {{ 'pagination.previous'|trans }}
+                        </a>
+                    {% endif %}
+
+                    <span class="pagination-info">
+                        {{ 'pagination.page_of'|trans({'%current%': current_page, '%total%': pages}) }}
+                    </span>
+
+                    {% if current_page < pages %}
+                        <a href="{{ path('app_audit_log', filters|merge({'page': current_page + 1})) }}" class="pagination-link">
+                            {{ 'pagination.next'|trans }} →
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleDetails(logId) {
+    const detailsRow = document.getElementById('details-' + logId);
+    const expandIcon = document.querySelector('[data-log-id="' + logId + '"] .expand-icon');
+
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        expandIcon.style.transform = 'rotate(180deg)';
+    } else {
+        detailsRow.style.display = 'none';
+        expandIcon.style.transform = 'rotate(0deg)';
+    }
+}
+
+function switchTab(logId, tabName) {
+    // Get all tabs and panes for this log entry
+    const tabsContainer = document.getElementById('tabs-' + logId);
+    const tabs = tabsContainer.querySelectorAll('.tab');
+    const panes = document.querySelectorAll('#request-' + logId + ', #response-' + logId);
+
+    // Remove active class from all tabs and panes
+    tabs.forEach(tab => tab.classList.remove('active'));
+    panes.forEach(pane => pane.classList.remove('active'));
+
+    // Add active class to selected tab and pane
+    const selectedTab = tabsContainer.querySelector('[onclick*="' + tabName + '"]');
+    const selectedPane = document.getElementById(tabName + '-' + logId);
+
+    if (selectedTab) selectedTab.classList.add('active');
+    if (selectedPane) selectedPane.classList.add('active');
+}
+</script>
+{% endblock %}

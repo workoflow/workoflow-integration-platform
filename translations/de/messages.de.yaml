@@ -12,6 +12,7 @@ nav:
   logout: Abmelden
   channel: Kanal
   members: Mitglieder
+  audit_log: Audit-Protokoll
   login: Anmelden
 
 home:
@@ -437,3 +438,38 @@ validation:
   field_required: Dieses Feld ist erforderlich
   email_invalid: Bitte geben Sie eine gültige E-Mail-Adresse ein
   url_invalid: Bitte geben Sie eine gültige URL ein
+
+audit_log:
+  title: Audit-Protokoll
+  subtitle: Alle Aktivitäten und Aktionen in Ihrem Konto anzeigen
+  search:
+    placeholder: Nach Aktionsname suchen...
+  date_from: Von Datum
+  date_to: Bis Datum
+  clear_filters: Filter löschen
+  empty: Keine Audit-Protokoll-Einträge gefunden
+  showing_results: Zeige %from% bis %to% von %total% Einträgen
+  columns:
+    timestamp: Zeitstempel
+    action: Aktion
+    user: Benutzer
+    ip: IP-Adresse
+    user_agent: User Agent
+    data: Daten
+  expand_details: Details erweitern
+  collapse_details: Details einklappen
+  request_payload: Anfrage-Payload
+  response_data: Antwort-Daten
+  truncated_notice: Antwort-Daten bei %size%KB gekürzt (Originalgröße)
+
+pagination:
+  previous: Zurück
+  next: Weiter
+  page_of: Seite %current% von %total%
+
+action:
+  filter: Filtern
+  actions: Aktionen
+  download: Herunterladen
+  delete: Löschen
+  cancel: Abbrechen

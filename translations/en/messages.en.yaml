@@ -12,6 +12,7 @@ nav:
   logout: Logout
   channel: Channel
   members: Members
+  audit_log: Audit Log
   login: Login
 
 home:
@@ -435,3 +436,38 @@ validation:
   field_required: This field is required
   email_invalid: Please enter a valid email address
   url_invalid: Please enter a valid URL
+
+audit_log:
+  title: Audit Log
+  subtitle: View all activities and actions in your account
+  search:
+    placeholder: Search by action name...
+  date_from: From Date
+  date_to: To Date
+  clear_filters: Clear Filters
+  empty: No audit log entries found
+  showing_results: Showing %from% to %to% of %total% entries
+  columns:
+    timestamp: Timestamp
+    action: Action
+    user: User
+    ip: IP Address
+    user_agent: User Agent
+    data: Data
+  expand_details: Expand details
+  collapse_details: Collapse details
+  request_payload: Request Payload
+  response_data: Response Data
+  truncated_notice: Response data truncated at %size%KB (original size)
+
+pagination:
+  previous: Previous
+  next: Next
+  page_of: Page %current% of %total%
+
+action:
+  filter: Filter
+  actions: Actions
+  download: Download
+  delete: Delete
+  cancel: Cancel

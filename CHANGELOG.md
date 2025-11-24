@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 ## 2025-11-24
 
 ### Added
+- **Audit Log page** - New page showing complete history of all activities in your account and organization including user actions, integration changes, file operations, and tool executions
+- **Audit Log search and filtering** - Search by action name and filter by date range to quickly find specific activities
+- **Audit Log detailed view** - Click to expand any log entry to see full details including complete data, IP addresses, and user agent information
+- **Tool execution tracking** - All API tool executions are now logged in the audit trail, providing visibility into what integrations are being used and when
+- **SAP Cloud for Customer (C4C) integration** - New integration for managing sales leads in SAP C4C with AI assistance
+- **SAP C4C lead creation** - Create new leads with customizable fields including contact information, company details, qualification levels, and custom SAP fields
+- **SAP C4C lead search** - Search leads using powerful filters (by status, company, qualification level, etc.) with support for complex queries
+- **SAP C4C lead management** - View detailed lead information, update lead fields, and track lead status changes through natural language
+- **SAP C4C pagination support** - Browse through large lead lists with automatic pagination for better performance
 - **Jira issue creation** - Create new Jira tickets (stories, bugs, tasks) directly from chat with automatic field discovery that adapts to your Jira configuration
 - **Jira issue updates** - Update any field on existing issues including summary, description, priority, assignee, labels, and custom fields
 - **Jira bulk operations** - Create up to 50 issues at once for faster sprint planning and task setup
@@ -26,6 +35,9 @@ All notable changes to this project will be documented in this file.
 - GitLab agent can now list your merge requests across all projects - see all MRs assigned to you or created by you without specifying individual projects, supports filtering by state (opened/closed/merged) and searching across your entire GitLab workspace
 
 ### Improved
+- **Audit Log now captures complete request payloads** - See exactly what parameters were sent to each tool execution with automatic redaction of sensitive fields like passwords and API keys for security
+- **Audit Log now stores response data** - View what data was returned by tool executions (up to 5KB per response) for debugging and compliance purposes
+- **Audit Log tabbed interface** - Easier navigation between request and response data with separate tabs, making it simple to inspect API calls and their results
 - GitLab agent provides more actionable pipeline debugging - instead of "pipeline failed, check the logs", AI now says "PHPStan job failed due to type error in UserController.php line 45"
 - GitLab job trace analysis now faster and more efficient - shows only the last 500 lines where errors typically appear, speeding up AI diagnostics while reducing processing overhead
 - GitLab integration now covers complete software development lifecycle - from creating branches and modifying code, to reviewing and merging changes, to managing CI/CD pipelines and creating release tags - all available through natural language commands

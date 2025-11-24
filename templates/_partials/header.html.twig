@@ -79,6 +79,7 @@
                 {% if app.user.isAdmin() %}
                     <a href="{{ path('app_organisation_members') }}" class="header-link">{{ 'nav.members'|trans }}</a>
                 {% endif %}
+                <a href="{{ path('app_audit_log') }}" class="header-link">{{ 'nav.audit_log'|trans }}</a>
                 <a href="{{ path('app_logout') }}" class="header-link">{{ 'nav.logout'|trans }}</a>
             {% else %}
                 <a href="{{ path('app_login') }}" class="header-link">{{ 'nav.login'|trans }}</a>

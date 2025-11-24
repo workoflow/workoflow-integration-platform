@@ -8,8 +8,8 @@ use App\Entity\Organisation;
 use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Repository\OrganisationRepository;
+use App\Service\AuditLogService;
 use App\Service\EncryptionService;
-use App\Service\IntegrationAuditService;
 use App\Service\ToolProviderService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,6 +28,7 @@ class IntegrationApiController extends AbstractController
         private EncryptionService $encryptionService,
         private IntegrationRegistry $integrationRegistry,
         private ToolProviderService $toolProviderService,
+        private AuditLogService $auditLogService,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $apiAuthUser,
@@ -123,6 +124,7 @@ class IntegrationApiController extends AbstractController
 
             // Get credentials if needed
             $credentials = null;
+            $user = null;
             if ($targetIntegration->requiresCredentials()) {
                 if (!$configId) {
                     return $this->json(['error' => 'Configuration ID required for user integration tools'], Response::HTTP_BAD_REQUEST);
@@ -136,6 +138,9 @@ class IntegrationApiController extends AbstractController
                 if (!$config->isActive() || $config->isToolDisabled($toolName)) {
                     return $this->json(['error' => 'Tool is disabled'], Response::HTTP_FORBIDDEN);
                 }
+
+                // Get user from config
+                $user = $config->getUser();
 
                 // Decrypt credentials
                 $encryptedCreds = $config->getEncryptedCredentials();
@@ -163,6 +168,20 @@ class IntegrationApiController extends AbstractController
             $parameters['organisationUuid'] = $organisation->getUuid();
             $parameters['workflowUserId'] = $workflowUserId;
 
+            // Log tool execution start with sanitized request payload
+            $this->auditLogService->logWithOrganisation(
+                'tool_execution.started',
+                $organisation,
+                $user,
+                [
+                    'tool_id' => $toolId,
+                    'tool_name' => $toolName,
+                    'integration_type' => $targetIntegration->getType(),
+                    'workflow_user_id' => $workflowUserId,
+                    'request_payload' => $this->auditLogService->sanitizeData($parameters),
+                ]
+            );
+
             // Execute the tool
             $result = $targetIntegration->executeTool($toolName, $parameters, $credentials);
 
@@ -171,6 +190,21 @@ class IntegrationApiController extends AbstractController
                 'tool_id' => $toolId,
                 'integration_type' => $targetIntegration->getType()
             ]);
+
+            // Log successful execution with truncated response
+            $this->auditLogService->logWithOrganisation(
+                'tool_execution.completed',
+                $organisation,
+                $user,
+                [
+                    'tool_id' => $toolId,
+                    'tool_name' => $toolName,
+                    'integration_type' => $targetIntegration->getType(),
+                    'workflow_user_id' => $workflowUserId,
+                    'success' => true,
+                    'response_data' => $this->auditLogService->truncateData($result, 5000),
+                ]
+            );
 
             return $this->json([
                 'success' => true,
@@ -182,6 +216,21 @@ class IntegrationApiController extends AbstractController
                 'tool_id' => $toolId,
                 'error' => $e->getMessage()
             ]);
+
+            // Log failed execution
+            $this->auditLogService->logWithOrganisation(
+                'tool_execution.failed',
+                $organisation,
+                $user ?? null,
+                [
+                    'tool_id' => $toolId,
+                    'tool_name' => $toolName,
+                    'integration_type' => $targetIntegration?->getType() ?? 'unknown',
+                    'workflow_user_id' => $workflowUserId,
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ]
+            );
 
             return $this->json([
                 'error' => 'Tool execution failed',
