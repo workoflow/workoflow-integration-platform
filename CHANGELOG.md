@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-24
 
+### Changed
+- **Compact navigation** - Grouped navigation items into two dropdown menus (Workspace and Settings) with icons for a cleaner header
+
 ### Added
 - **Projektron integration** - New integration for Projektron time tracking and project management system
 - **Projektron task discovery** - View all available projects and tasks from your Projektron account with direct booking URLs for quick time entry access
