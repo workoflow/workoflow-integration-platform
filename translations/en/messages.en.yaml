@@ -147,6 +147,7 @@ status:
   inactive: Inactive
   connected: Connected
   not_connected: Not Connected
+  experimental: Experimental
 
 badge:
   system: SYSTEM

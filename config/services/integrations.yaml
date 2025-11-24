@@ -69,3 +69,6 @@ services:
 
     App\Integration\UserIntegrations\SapC4cIntegration:
         tags: ['app.integration']
+
+    App\Integration\UserIntegrations\ProjektronIntegration:
+        tags: ['app.integration']

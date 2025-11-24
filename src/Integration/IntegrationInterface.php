@@ -46,4 +46,10 @@ interface IntegrationInterface
      * @return CredentialField[]
      */
     public function getCredentialFields(): array;
+
+    /**
+     * Check if this integration is experimental
+     * Experimental integrations are shown with a warning badge in the UI
+     */
+    public function isExperimental(): bool;
 }

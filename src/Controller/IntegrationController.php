@@ -124,7 +124,8 @@ class IntegrationController extends AbstractController
                     'hasCredentials' => false,
                     'active' => $config ? $config->isActive() : true,
                     'lastAccessedAt' => $config?->getLastAccessedAt(),
-                    'logoPath' => $this->getLogoPath($integration->getType(), true)
+                    'logoPath' => $this->getLogoPath($integration->getType(), true),
+                    'isExperimental' => $integration->isExperimental()
                 ];
             } else {
                 // For user integrations, show each instance
@@ -141,7 +142,8 @@ class IntegrationController extends AbstractController
                         'hasCredentials' => false,
                         'active' => false,
                         'lastAccessedAt' => null,
-                        'logoPath' => $this->getLogoPath($integration->getType(), false)
+                        'logoPath' => $this->getLogoPath($integration->getType(), false),
+                        'isExperimental' => $integration->isExperimental()
                     ];
                 } else {
                     // Show each configured instance
@@ -167,7 +169,8 @@ class IntegrationController extends AbstractController
                             'hasCredentials' => $config->hasCredentials(),
                             'active' => $config->isActive(),
                             'lastAccessedAt' => $config->getLastAccessedAt(),
-                            'logoPath' => $this->getLogoPath($integration->getType(), false)
+                            'logoPath' => $this->getLogoPath($integration->getType(), false),
+                            'isExperimental' => $integration->isExperimental()
                         ];
                     }
                 }

@@ -381,4 +381,8 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             'integration_id' => $config?->getId() ?? 'XXX',
         ]);
     }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
 }

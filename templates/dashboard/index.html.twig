@@ -73,7 +73,15 @@
                                 <tr>
                                     <td>{{ integration.name }}</td>
                                     <td>
-                                        <span class="badge badge-type">{{ integration.type|upper }}</span>
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <span class="badge badge-type">{{ integration.type|upper }}</span>
+                                            {% if integration.isExperimental %}
+                                                <span class="badge badge-experimental">
+                                                    <i class="fas fa-flask"></i>
+                                                    {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td>
                                         {% if integration.active %}

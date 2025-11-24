@@ -69,4 +69,8 @@ class ContentQueryIntegration implements PlatformSkillInterface
     {
         return []; // System tools don't need credential fields
     }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
 }

@@ -18,7 +18,7 @@
                         <select class="form-control" id="type" name="type" required>
                             <option value="">{{ 'integration.select_type'|trans }}</option>
                             {% for type, details in integrations %}
-                                <option value="{{ type }}">{{ details.name }}</option>
+                                <option value="{{ type }}">{{ details.name }}{% if details.isExperimental %} ({{ 'status.experimental'|trans|default('Experimental') }}){% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>

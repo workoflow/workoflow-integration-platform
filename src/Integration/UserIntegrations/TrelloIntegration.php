@@ -381,4 +381,8 @@ class TrelloIntegration implements PersonalizedSkillInterface
             'integration_id' => $config?->getId() ?? 'XXX',
         ]);
     }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
 }

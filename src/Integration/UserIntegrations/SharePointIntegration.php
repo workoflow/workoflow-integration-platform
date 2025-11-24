@@ -273,4 +273,8 @@ Tips: Use OR to include synonyms and translations (German+English) for bilingual
             'expires_at' => $newTokens['expires_at']
         ]);
     }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
 }

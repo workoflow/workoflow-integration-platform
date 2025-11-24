@@ -3509,6 +3509,17 @@ body {
     border: 1px solid rgba(251, 191, 36, 0.2);
   }
 
+  &.badge-experimental {
+    background: rgba(251, 191, 36, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    font-weight: 600;
+
+    i {
+      font-size: 0.7em;
+    }
+  }
+
   &.badge-disconnected {
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger-color);

@@ -32,10 +32,11 @@ This directory contains system prompts for a multi-agent AI system designed to h
 │   User Integrations   │   │   System Tools        │
 └───────────────────────┘   └───────────────────────┘
          │                           │
-    ┌────┼────┬────┬────┐           │
-    ▼    ▼    ▼    ▼    ▼           ▼
-  JIRA  Conf  SP  GitLab Trello   Platform
- Agent Agent Agent Agent Agent     Tools
+    ┌────┼────┬────┬────┬────┬────┐ │
+    ▼    ▼    ▼    ▼    ▼    ▼    ▼ ▼
+  JIRA  Conf  SP  GitLab Trello SAP Proj Platform
+ Agent Agent Agent Agent Agent  C4C tron  Tools
+                               Agent Agent
 ```
 
 ### Agent Responsibilities
@@ -102,6 +103,25 @@ This directory contains system prompts for a multi-agent AI system designed to h
   - Card creation and updates
   - Checklist management
   - Project progress tracking
+
+#### SAP C4C Agent
+- **File:** `sap_c4c_agent.xml` (to be created)
+- **Integration Type:** `sap_c4c`
+- **Tools:** 5 (create lead, get lead, search leads, update lead, list leads)
+- **Capabilities:**
+  - Lead management (create, read, update)
+  - OData-based search and filtering
+  - Lead qualification tracking
+  - Pagination support
+
+#### Projektron Agent
+- **File:** `projektron_agent.xml` (to be created)
+- **Integration Type:** `projektron`
+- **Tools:** 1 (get all tasks)
+- **Capabilities:**
+  - Fetch available projects and tasks
+  - Provide time booking URLs
+  - Task/project OID discovery for time tracking
 
 #### System Tools Agent
 - **File:** `system_tools_agent.xml`
@@ -581,8 +601,10 @@ Verify: No error, clear guidance, integration platform URL included
 | SharePoint Agent | 6 | sharepoint | OAuth2 (Microsoft) |
 | GitLab Agent | 26 | gitlab | Personal Access Token |
 | Trello Agent | 12 | trello | API Key + Token |
+| SAP C4C Agent | 5 | sap_c4c | Username + Password |
+| Projektron Agent | 1 | projektron | Username + Cookies (CSRF/JSESSION) |
 | System Tools Agent | 13 | system | None (Platform-internal) |
-| **Total** | **70** | 6 types | 5 external + 1 internal |
+| **Total** | **76** | 8 types | 7 external + 1 internal |
 
 ## Future Enhancements
 
