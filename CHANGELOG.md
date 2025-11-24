@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Workflow visualization reverted back to cloud-hosted n8n service for better reliability and maintenance-free operation
+- Experimental integrations indicator moved from separate badge to flask icon in type column with hover tooltip for cleaner table layout
 
 ### Fixed
 - Fixed Projektron task fetching error in AI workflows - resolved issue where n8n agent would fail with "schema validation error" when trying to get project and task lists

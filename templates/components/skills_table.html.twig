@@ -77,23 +77,17 @@
                         >
                             {# Instance Name #}
                             <td class="table-cell-primary">
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    {% if integration.isExperimental %}
-                                        <span class="badge badge-experimental" style="margin-left: 40px; width: fit-content;">
-                                            <i class="fas fa-flask"></i>
-                                            {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
-                                        </span>
-                                    {% endif %}
-                                    <div class="cell-with-logo">
-                                        <img src="{{ integration.logoPath }}" alt="{{ integration.name }}" class="integration-logo-small">
-                                        <span class="integration-name">{{ integration.instanceName|default(integration.name) }}</span>
-                                    </div>
+                                <div class="cell-with-logo">
+                                    <img src="{{ integration.logoPath }}" alt="{{ integration.name }}" class="integration-logo-small">
+                                    <span class="integration-name">{{ integration.instanceName|default(integration.name) }}</span>
                                 </div>
                             </td>
 
                             {# Type Badge #}
                             <td>
-                                <span class="badge badge-type">{{ integration.type|upper }}</span>
+                                <span class="badge badge-type"{% if integration.isExperimental %} title="{{ 'status.experimental'|trans|default('Experimental') }}"{% endif %}>
+                                    {% if integration.isExperimental %}<i class="fas fa-flask"></i> {% endif %}{{ integration.type|upper }}
+                                </span>
                             </td>
 
                             {# Status Badge #}
