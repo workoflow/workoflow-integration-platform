@@ -27,6 +27,10 @@ application.register('audit-log', auditLogController);
 import jsonModalController from './controllers/json_modal_controller';
 application.register('json-modal', jsonModalController);
 
+// Register the nav dropdown controller
+import navDropdownController from './controllers/nav_dropdown_controller';
+application.register('nav-dropdown', navDropdownController);
+
 // Export for debugging
 window.Stimulus = application;
 
