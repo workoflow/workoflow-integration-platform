@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-24
 
+### Changed
+- Workflow visualization now uses self-hosted n8n instance instead of external n8n cloud service - improves privacy, reduces external dependencies, and ensures workflow previews work even when n8n's cloud service is unavailable
+
 ### Fixed
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
 - Fixed language selector not displaying flag emojis - flags now render properly instead of showing country codes like "GB"

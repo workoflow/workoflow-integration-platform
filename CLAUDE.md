@@ -24,6 +24,19 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
         - `composer code-check` - Run both PHPStan and PHPCS
     - Ensure code passes both checks before considering task complete
 
+3. **llms.txt Maintenance**:
+    - `/public/llms.txt` serves AI agents and provides platform overview for LLM assistants
+    - Update llms.txt when making these changes:
+        - Adding new integration type (e.g., GitHub, Slack, MS Teams)
+        - Changing API endpoints or authentication methods
+        - Adding major documentation files
+        - Updating tool counts or capabilities
+        - Modifying architecture (e.g., new authentication mechanism)
+    - Keep content concise and AI-friendly (avoid jargon, use clear structure)
+    - Verify all links in llms.txt work correctly
+    - Test changes by asking Claude/GPT-4 questions about the platform
+    - Purpose: Enable AI assistants to understand and explain the platform without human documentation
+
 ### Main Features
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management
