@@ -71,17 +71,19 @@
                         <tbody>
                             {% for integration in integrations|slice(0, 5) %}
                                 <tr>
-                                    <td>{{ integration.name }}</td>
                                     <td>
-                                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <span>{{ integration.name }}</span>
                                             {% if integration.isExperimental %}
                                                 <span class="badge badge-experimental">
                                                     <i class="fas fa-flask"></i>
                                                     {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
                                                 </span>
                                             {% endif %}
-                                            <span class="badge badge-type">{{ integration.type|upper }}</span>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-type">{{ integration.type|upper }}</span>
                                     </td>
                                     <td>
                                         {% if integration.active %}

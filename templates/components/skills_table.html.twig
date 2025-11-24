@@ -77,23 +77,23 @@
                         >
                             {# Instance Name #}
                             <td class="table-cell-primary">
-                                <div class="cell-with-logo">
-                                    <img src="{{ integration.logoPath }}" alt="{{ integration.name }}" class="integration-logo-small">
-                                    <span class="integration-name">{{ integration.instanceName|default(integration.name) }}</span>
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <div class="cell-with-logo">
+                                        <img src="{{ integration.logoPath }}" alt="{{ integration.name }}" class="integration-logo-small">
+                                        <span class="integration-name">{{ integration.instanceName|default(integration.name) }}</span>
+                                    </div>
+                                    {% if integration.isExperimental %}
+                                        <span class="badge badge-experimental" style="margin-left: 40px;">
+                                            <i class="fas fa-flask"></i>
+                                            {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
+                                        </span>
+                                    {% endif %}
                                 </div>
                             </td>
 
                             {# Type Badge #}
                             <td>
-                                <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
-                                    {% if integration.isExperimental %}
-                                        <span class="badge badge-experimental">
-                                            <i class="fas fa-flask"></i>
-                                            {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
-                                        </span>
-                                    {% endif %}
-                                    <span class="badge badge-type">{{ integration.type|upper }}</span>
-                                </div>
+                                <span class="badge badge-type">{{ integration.type|upper }}</span>
                             </td>
 
                             {# Status Badge #}
