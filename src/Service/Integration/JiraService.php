@@ -1340,4 +1340,337 @@ class JiraService
             );
         }
     }
+
+    /**
+     * Update an existing Jira issue
+     *
+     * @param array $credentials Jira credentials (domain, email, apiToken)
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @param array $updates Fields to update
+     * @return array Updated issue information
+     */
+    public function updateIssue(array $credentials, string $issueKey, array $updates): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build payload with fields to update
+        $updatePayload = ['fields' => []];
+
+        if (isset($updates['summary'])) {
+            $updatePayload['fields']['summary'] = $updates['summary'];
+        }
+
+        if (isset($updates['description'])) {
+            $updatePayload['fields']['description'] = $this->convertPlainTextToADF($updates['description']);
+        }
+
+        if (isset($updates['priorityId'])) {
+            $updatePayload['fields']['priority'] = ['id' => $updates['priorityId']];
+        }
+
+        if (array_key_exists('assigneeId', $updates)) {
+            // Handle null assignee for unassignment
+            if ($updates['assigneeId'] === null) {
+                $updatePayload['fields']['assignee'] = null;
+            } else {
+                $updatePayload['fields']['assignee'] = ['id' => $updates['assigneeId']];
+            }
+        }
+
+        if (isset($updates['labels']) && is_array($updates['labels'])) {
+            $updatePayload['fields']['labels'] = $updates['labels'];
+        }
+
+        if (isset($updates['componentIds']) && is_array($updates['componentIds'])) {
+            $updatePayload['fields']['components'] = array_map(fn($id) => ['id' => $id], $updates['componentIds']);
+        }
+
+        // Handle custom fields
+        if (isset($updates['customFields']) && is_array($updates['customFields'])) {
+            foreach ($updates['customFields'] as $fieldId => $value) {
+                $updatePayload['fields'][$fieldId] = $value;
+            }
+        }
+
+        try {
+            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $updatePayload
+            ]);
+
+            // Update endpoint returns 204 No Content on success
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 204) {
+                return [
+                    'success' => true,
+                    'message' => "Issue '{$issueKey}' updated successfully"
+                ];
+            }
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+
+            // Build comprehensive error message
+            $errorText = '';
+            if (!empty($errorMessages)) {
+                $errorText = implode(', ', $errorMessages);
+            } elseif (!empty($errors)) {
+                $errorText = json_encode($errors);
+            } else {
+                $errorText = $message;
+            }
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Issue '{$issueKey}' may not exist or you don't have permission to view it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to edit this issue';
+            } elseif (stripos($errorText, 'required') !== false || !empty($errors)) {
+                $suggestion = ' - Some required fields may be missing or field values are invalid';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Bulk create issues (up to 50)
+     *
+     * @param array $credentials Jira credentials
+     * @param array $issuesData Array of issue data objects
+     * @return array Created issues and any errors
+     */
+    public function bulkCreateIssues(array $credentials, array $issuesData): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build issueUpdates array
+        $bulkPayload = ['issueUpdates' => []];
+
+        foreach ($issuesData as $issueData) {
+            $fields = [
+                'project' => ['key' => $issueData['projectKey']],
+                'issuetype' => ['id' => $issueData['issueTypeId']],
+                'summary' => $issueData['summary'],
+            ];
+
+            // Add description if provided
+            if (!empty($issueData['description'])) {
+                $fields['description'] = $this->convertPlainTextToADF($issueData['description']);
+            }
+
+            // Add optional standard fields
+            if (!empty($issueData['priorityId'])) {
+                $fields['priority'] = ['id' => $issueData['priorityId']];
+            }
+
+            if (!empty($issueData['assigneeId'])) {
+                $fields['assignee'] = ['id' => $issueData['assigneeId']];
+            }
+
+            if (!empty($issueData['labels']) && is_array($issueData['labels'])) {
+                $fields['labels'] = $issueData['labels'];
+            }
+
+            if (!empty($issueData['componentIds']) && is_array($issueData['componentIds'])) {
+                $fields['components'] = array_map(fn($id) => ['id' => $id], $issueData['componentIds']);
+            }
+
+            if (!empty($issueData['dueDate'])) {
+                $fields['duedate'] = $issueData['dueDate'];
+            }
+
+            // Add custom fields
+            if (isset($issueData['customFields']) && is_array($issueData['customFields'])) {
+                foreach ($issueData['customFields'] as $fieldId => $value) {
+                    $fields[$fieldId] = $value;
+                }
+            }
+
+            $bulkPayload['issueUpdates'][] = ['fields' => $fields];
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/bulk', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $bulkPayload
+            ]);
+
+            $result = $response->toArray();
+
+            // Return both successes and errors
+            return [
+                'success' => true,
+                'issues' => $result['issues'] ?? [],
+                'errors' => $result['errors'] ?? [],
+                'totalCreated' => count($result['issues'] ?? []),
+                'totalFailed' => count($result['errors'] ?? [])
+            ];
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+
+            // Build comprehensive error message
+            $errorText = '';
+            if (!empty($errorMessages)) {
+                $errorText = implode(', ', $errorMessages);
+            } elseif (!empty($errors)) {
+                $errorText = json_encode($errors);
+            } else {
+                $errorText = $message;
+            }
+
+            $suggestion = '';
+            if (stripos($errorText, 'required') !== false || !empty($errors)) {
+                $suggestion = ' - Some required fields may be missing. Check each issue\'s data structure';
+            } elseif ($statusCode === 400 && stripos($errorText, 'limit') !== false) {
+                $suggestion = ' - Bulk create is limited to 50 issues per request';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Assign issue to user
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key
+     * @param string|null $accountId User account ID (null to unassign)
+     * @return array Success status
+     */
+    public function assignIssue(array $credentials, string $issueKey, ?string $accountId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Payload: {"accountId": "xxx"} or {"accountId": null}
+        $payload = ['accountId' => $accountId];
+
+        try {
+            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey . '/assignee', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $payload
+            ]);
+
+            // Assign endpoint returns 204 No Content on success
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 204) {
+                $message = $accountId === null
+                    ? "Issue '{$issueKey}' unassigned successfully"
+                    : "Issue '{$issueKey}' assigned successfully";
+                return [
+                    'success' => true,
+                    'message' => $message
+                ];
+            }
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                if (stripos($errorText, 'user') !== false || stripos($errorText, 'account') !== false) {
+                    $suggestion = " - User account ID '{$accountId}' may not exist or is not valid";
+                } else {
+                    $suggestion = " - Issue '{$issueKey}' may not exist or you don't have permission to view it";
+                }
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to assign issues';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Search for users
+     *
+     * @param array $credentials Jira credentials
+     * @param string $query Search query
+     * @return array Array of users
+     */
+    public function searchUsers(array $credentials, string $query): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            // API: GET /rest/api/3/user/search?query={query}
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/user/search', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'query' => $query
+                ],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to browse users';
+            } elseif (empty($query)) {
+                $suggestion = ' - Search query cannot be empty';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
 }

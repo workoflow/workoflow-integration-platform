@@ -378,6 +378,102 @@ class JiraIntegration implements PersonalizedSkillInterface
                 [
                     // No parameters required
                 ]
+            ),
+            new ToolDefinition(
+                'jira_update_issue',
+                'Update fields on an existing Jira issue. Can update summary, description, priority, assignee, labels, components, and custom fields.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'summary',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New summary (optional)'
+                    ],
+                    [
+                        'name' => 'description',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New description in plain text (optional)'
+                    ],
+                    [
+                        'name' => 'priorityId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New priority ID (optional)'
+                    ],
+                    [
+                        'name' => 'assigneeId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New assignee account ID (optional, null to unassign)'
+                    ],
+                    [
+                        'name' => 'labels',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'New labels array - replaces existing labels (optional)'
+                    ],
+                    [
+                        'name' => 'componentIds',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'New component IDs array - replaces existing components (optional)'
+                    ],
+                    [
+                        'name' => 'customFields',
+                        'type' => 'object',
+                        'required' => false,
+                        'description' => 'Custom field updates as key-value pairs (optional)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_bulk_create_issues',
+                'Create multiple Jira issues at once (up to 50). Each issue requires projectKey, issueTypeId, and summary. Returns both successful creations and any errors.',
+                [
+                    [
+                        'name' => 'issues',
+                        'type' => 'array',
+                        'required' => true,
+                        'description' => 'Array of issue data objects. Each object has same structure as jira_create_issue parameters.'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_assign_issue',
+                'Assign a Jira issue to a user or unassign it. Quick shortcut for changing assignee without full update.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'accountId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'User account ID to assign to. Use null or omit to unassign.'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_search_users',
+                'Search for Jira users by name or email. Returns user account IDs needed for assigning issues.',
+                [
+                    [
+                        'name' => 'query',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Search query (name or email)'
+                    ]
+                ]
             )
         ];
     }
@@ -474,6 +570,24 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             'jira_get_priorities' => $this->jiraService->getPriorities(
                 $credentials
+            ),
+            'jira_update_issue' => $this->jiraService->updateIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters
+            ),
+            'jira_bulk_create_issues' => $this->jiraService->bulkCreateIssues(
+                $credentials,
+                $parameters['issues']
+            ),
+            'jira_assign_issue' => $this->jiraService->assignIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['accountId'] ?? null
+            ),
+            'jira_search_users' => $this->jiraService->searchUsers(
+                $credentials,
+                $parameters['query']
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };

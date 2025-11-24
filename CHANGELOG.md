@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## 2025-11-24
 
 ### Added
+- **Jira issue creation** - Create new Jira tickets (stories, bugs, tasks) directly from chat with automatic field discovery that adapts to your Jira configuration
+- **Jira issue updates** - Update any field on existing issues including summary, description, priority, assignee, labels, and custom fields
+- **Jira bulk operations** - Create up to 50 issues at once for faster sprint planning and task setup
+- **Jira user management** - Search for team members and assign issues with automatic user lookup
+- **Jira issue linking** - Link related issues together (blocks, relates to, duplicates) to show relationships between work items
+- **Jira priority and metadata discovery** - Automatically discover available priorities, components, and required fields for your specific Jira projects
+- **Jira custom field support** - Full support for custom fields across all operations, automatically handling different field types and validation rules
 - **GitLab merge request workflow completion** - AI agents can now merge merge requests, approve/unapprove changes, check approval status, assign reviewers, trigger merge request pipelines, and view all pipelines for a merge request - enabling fully automated code review workflows from review to merge
 - **GitLab CI/CD pipeline and job control** - AI can now retry or cancel failed pipelines and jobs, trigger new pipelines on any branch, and download job artifacts for analysis - giving you complete control over your continuous integration workflows
 - **GitLab repository file management** - AI agents can now create, update, and delete files directly in repositories with commit messages, compare branches to see what changed between any two points, and protect branches with access control rules - enabling automated code modifications and repository management
