@@ -162,7 +162,7 @@
                                     <span class="action-badge">{{ log.action }}</span>
                                 </td>
                                 <td class="user" data-label="{{ 'audit_log.columns.user'|trans }}">
-                                    {{ log.user ? log.user.displayName : '-' }}
+                                    {{ log.user ? log.user.name ~ ' (' ~ log.user.email ~ ')' : '-' }}
                                 </td>
                                 <td class="ip hide-mobile" data-label="{{ 'audit_log.columns.ip'|trans }}">
                                     {{ log.ip ?: '-' }}
