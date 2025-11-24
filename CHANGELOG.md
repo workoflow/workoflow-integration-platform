@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Workflow visualization reverted back to cloud-hosted n8n service for better reliability and maintenance-free operation
 
 ### Fixed
+- Fixed integration tools with no parameters not working in AI workflows - tools like Projektron task discovery, issue reporting, memory management, company events, and Trello board listing now work correctly in n8n and other automation platforms
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
 - Fixed language selector not displaying flag emojis - flags now render properly instead of showing country codes like "GB"
 

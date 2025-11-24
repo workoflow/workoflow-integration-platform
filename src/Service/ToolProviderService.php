@@ -252,15 +252,17 @@ class ToolProviderService
      */
     private function formatParameters(array $parameters): array
     {
+        $properties = array_reduce($parameters, function ($props, $param) {
+            $props[$param['name']] = [
+                'type' => $param['type'] ?? 'string',
+                'description' => $param['description'] ?? ''
+            ];
+            return $props;
+        }, []);
+
         return [
             'type' => 'object',
-            'properties' => array_reduce($parameters, function ($props, $param) {
-                $props[$param['name']] = [
-                    'type' => $param['type'] ?? 'string',
-                    'description' => $param['description'] ?? ''
-                ];
-                return $props;
-            }, []),
+            'properties' => empty($properties) ? (object)[] : $properties,
             'required' => array_values(array_filter(array_map(function ($param) {
                 return ($param['required'] ?? false) ? $param['name'] : null;
             }, $parameters)))
