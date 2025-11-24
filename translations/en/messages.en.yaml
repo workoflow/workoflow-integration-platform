@@ -465,6 +465,7 @@ audit_log:
   request_payload: Request Payload
   response_data: Response Data
   truncated_notice: Response data truncated at %size%KB (original size)
+  show_details: Show Details
   json_modal:
     title: Audit Log Data
     search_placeholder: Search in JSON...

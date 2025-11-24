@@ -172,14 +172,12 @@
                                 </td>
                                 <td class="data-preview hide-mobile" data-label="{{ 'audit_log.columns.data'|trans }}">
                                     {% if log.data %}
-                                        {% set dataStr = log.data|json_encode %}
                                         <button type="button"
-                                                class="data-cell-btn"
+                                                class="btn btn-sm btn-secondary"
                                                 data-action="click->audit-log#openJsonModal"
                                                 data-json="{{ log.data|json_encode|e('html_attr') }}"
                                                 data-title="{{ 'audit_log.json_modal.title'|trans }} - {{ log.action }}">
-                                            {{ dataStr|length > 50 ? dataStr|slice(0, 50) ~ '...' : dataStr }}
-                                            <i class="fas fa-external-link-alt"></i>
+                                            <i class="fas fa-eye"></i> {{ 'audit_log.show_details'|trans }}
                                         </button>
                                     {% else %}
                                         -

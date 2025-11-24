@@ -19,6 +19,14 @@ application.register('skills-table', skillsTableController);
 import integrationDropdownController from './controllers/integration_dropdown_controller';
 application.register('integration-dropdown', integrationDropdownController);
 
+// Register the audit log controller
+import auditLogController from './controllers/audit_log_controller';
+application.register('audit-log', auditLogController);
+
+// Register the json modal controller
+import jsonModalController from './controllers/json_modal_controller';
+application.register('json-modal', jsonModalController);
+
 // Export for debugging
 window.Stimulus = application;
 

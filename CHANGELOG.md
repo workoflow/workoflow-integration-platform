@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Experimental integrations indicator moved from separate badge to flask icon in type column with hover tooltip for cleaner table layout
 
 ### Fixed
+- Fixed Audit Log table not responding to clicks - sorting by column headers and JSON data modal now work correctly
 - Fixed Projektron task fetching error in AI workflows - resolved issue where n8n agent would fail with "schema validation error" when trying to get project and task lists
 - Fixed Projektron integration not working in n8n workflows - simplified system prompt to match working Jira pattern by removing overly detailed tool schema documentation that was confusing the AI agent
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
