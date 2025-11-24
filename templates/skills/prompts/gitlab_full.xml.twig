@@ -381,6 +381,30 @@
       </workflow>
     </guideline>
 
+    <guideline id="cross-project-vs-project-specific">
+      <title>Cross-Project vs Project-Specific Merge Request Search</title>
+      <description>Choose the right tool based on search scope</description>
+      <when-to-use-cross-project>
+        <use-case>User asks: "Show me all my open merge requests"</use-case>
+        <use-case>User asks: "What MRs am I assigned to review?"</use-case>
+        <use-case>User asks: "List all merge requests I created"</use-case>
+        <use-case>User asks: "Find my merged MRs" without specifying project</use-case>
+        <tool>Use gitlab_list_my_merge_requests</tool>
+      </when-to-use-cross-project>
+      <when-to-use-project-specific>
+        <use-case>User specifies a project: "Show open MRs in backend-api project"</use-case>
+        <use-case>User asks about team's MRs: "List all open MRs in our project"</use-case>
+        <use-case>User needs project context: "What MRs are targeting main branch?"</use-case>
+        <tool>Use gitlab_search_merge_requests with project parameter</tool>
+      </when-to-use-project-specific>
+      <best-practices>
+        <practice>gitlab_list_my_merge_requests defaults to scope=assigned_to_me, state=opened</practice>
+        <practice>For "my MRs I created" use gitlab_list_my_merge_requests with scope=created_by_me</practice>
+        <practice>Both tools support filtering by state (opened, closed, merged, all)</practice>
+        <practice>Cross-project search returns MRs from all accessible projects</practice>
+      </best-practices>
+    </guideline>
+
     <guideline id="pipeline-troubleshooting">
       <title>Pipeline Troubleshooting</title>
       <description>Steps to diagnose CI/CD failures with job-level error details</description>

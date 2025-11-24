@@ -379,6 +379,54 @@ class GitLabIntegration implements PersonalizedSkillInterface
                     ]
                 ]
             ),
+            new ToolDefinition(
+                'gitlab_list_my_merge_requests',
+                'List merge requests across all accessible projects. Defaults to merge requests assigned to you in opened state. Returns: Array of MRs with id, iid, project_id, title, description, state, web_url, author, assignee, source_branch, target_branch, created_at, updated_at, merge_status',
+                [
+                    [
+                        'name' => 'scope',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by scope: assigned_to_me (default), created_by_me, or all'
+                    ],
+                    [
+                        'name' => 'state',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by state: opened (default), closed, merged, or all'
+                    ],
+                    [
+                        'name' => 'search',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Search in title and description'
+                    ],
+                    [
+                        'name' => 'labels',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Comma-separated list of label names'
+                    ],
+                    [
+                        'name' => 'order_by',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Order by: created_at, updated_at, or title (default: created_at)'
+                    ],
+                    [
+                        'name' => 'sort',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Sort order: asc or desc (default: desc)'
+                    ],
+                    [
+                        'name' => 'per_page',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Number of results per page (default: 20, max: 100)'
+                    ]
+                ]
+            ),
 
             // Issues
             new ToolDefinition(
@@ -591,7 +639,7 @@ class GitLabIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'gitlab_get_job_trace',
-                'Get the trace log output from a job. Returns: Plain text log content showing console output, errors, and stack traces',
+                'Get the trace log output from a job. Returns last N lines only (configurable via GITLAB_JOB_TRACE_MAX_LINES, default: 500) to optimize for LLM processing. Response includes: trace (string with last N lines of console output, errors, and stack traces), metadata (object with total_lines, returned_lines, truncated boolean)',
                 [
                     [
                         'name' => 'project',
@@ -730,6 +778,16 @@ class GitLabIntegration implements PersonalizedSkillInterface
                 $parameters['project'],
                 $parameters['merge_request_iid'],
                 $parameters['body']
+            ),
+            'gitlab_list_my_merge_requests' => $this->gitLabService->listMyMergeRequests(
+                $credentials,
+                $parameters['scope'] ?? 'assigned_to_me',
+                $parameters['state'] ?? 'opened',
+                $parameters['search'] ?? null,
+                $parameters['labels'] ?? null,
+                $parameters['order_by'] ?? null,
+                $parameters['sort'] ?? null,
+                $parameters['per_page'] ?? 20
             ),
 
             // Issues

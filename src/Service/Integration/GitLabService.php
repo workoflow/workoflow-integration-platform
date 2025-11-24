@@ -474,6 +474,45 @@ class GitLabService
         return $response->toArray();
     }
 
+    public function listMyMergeRequests(
+        array $credentials,
+        string $scope = 'assigned_to_me',
+        string $state = 'opened',
+        ?string $search = null,
+        ?string $labels = null,
+        ?string $order_by = null,
+        ?string $sort = null,
+        int $per_page = 20
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+
+        $query = [
+            'scope' => $scope,
+            'state' => $state,
+            'per_page' => min($per_page, 100), // Ensure max 100
+        ];
+
+        if ($search !== null) {
+            $query['search'] = $search;
+        }
+        if ($labels !== null) {
+            $query['labels'] = $labels;
+        }
+        if ($order_by !== null) {
+            $query['order_by'] = $order_by;
+        }
+        if ($sort !== null) {
+            $query['sort'] = $sort;
+        }
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/merge_requests', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
+        ]);
+
+        return $response->toArray();
+    }
+
     // Issues
 
     public function searchIssues(array $credentials, string $project, ?string $state = null, ?string $scope = null): array
@@ -645,10 +684,34 @@ class GitLabService
             'headers' => $this->getAuthHeaders($credentials['api_token']),
         ]);
 
-        // Note: This returns plain text, not JSON
+        // Get full trace content
+        $fullTrace = $response->getContent();
+
+        // Split into lines and count
+        $lines = explode("\n", $fullTrace);
+        $totalLines = count($lines);
+
+        // Get max lines from environment (default: 500)
+        $maxLines = (int)($_ENV['GITLAB_JOB_TRACE_MAX_LINES'] ?? 500);
+
+        // Limit to last N lines if trace exceeds limit
+        $truncated = $totalLines > $maxLines;
+        if ($truncated) {
+            $lines = array_slice($lines, -$maxLines);
+        }
+        $returnedLines = count($lines);
+
+        // Reconstruct trace from limited lines
+        $limitedTrace = implode("\n", $lines);
+
         return [
             'job_id' => $jobId,
-            'trace' => $response->getContent()
+            'trace' => $limitedTrace,
+            'metadata' => [
+                'total_lines' => $totalLines,
+                'returned_lines' => $returnedLines,
+                'truncated' => $truncated,
+            ],
         ];
     }
 
