@@ -235,6 +235,7 @@ class ToolProviderService
                 'type' => 'function',
                 'function' => [
                     'name' => $toolName,
+                    'tool_id' => $toolName,
                     'description' => $description,
                     'parameters' => $this->formatParameters($tool->getParameters())
                 ]

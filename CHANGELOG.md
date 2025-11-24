@@ -56,6 +56,7 @@ All notable changes to this project will be documented in this file.
 - GitLab agent provides more actionable pipeline debugging - instead of "pipeline failed, check the logs", AI now says "PHPStan job failed due to type error in UserController.php line 45"
 - GitLab job trace analysis now faster and more efficient - shows only the last 500 lines where errors typically appear, speeding up AI diagnostics while reducing processing overhead
 - GitLab integration now covers complete software development lifecycle - from creating branches and modifying code, to reviewing and merging changes, to managing CI/CD pipelines and creating release tags - all available through natural language commands
+- **API tools now include tool_id field** - Tools endpoint response now provides both "name" and "tool_id" fields with the same value, improving consistency between tool discovery and tool execution endpoints for AI agents
 
 ## 2025-11-21
 
