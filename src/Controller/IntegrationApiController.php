@@ -59,7 +59,8 @@ class IntegrationApiController extends AbstractController
         // Delegate to service
         $tools = $this->toolProviderService->getToolsForOrganisation($organisation, $criteria);
 
-        return $this->json(['tools' => $tools]);
+        // Use manual json_encode to preserve stdClass as {} (Symfony serializer converts to [])
+        return new JsonResponse(json_encode(['tools' => $tools]), Response::HTTP_OK, [], true);
     }
 
     #[Route('/{organisationUuid}/execute', name: 'api_integration_execute', methods: ['POST'])]
