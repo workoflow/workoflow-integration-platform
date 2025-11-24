@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-24
 
+### Fixed
+- Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
+
 ### Added
 - **Audit Log page** - New page showing complete history of all activities in your account and organization including user actions, integration changes, file operations, and tool executions
 - **Audit Log search and filtering** - Search by action name and filter by date range to quickly find specific activities

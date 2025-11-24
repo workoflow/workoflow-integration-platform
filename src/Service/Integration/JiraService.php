@@ -6,11 +6,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use InvalidArgumentException;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriNormalizer;
+use Psr\Log\LoggerInterface;
 
 class JiraService
 {
     public function __construct(
-        private HttpClientInterface $httpClient
+        private HttpClientInterface $httpClient,
+        private LoggerInterface $logger
     ) {
     }
 
@@ -1127,6 +1129,15 @@ class JiraService
             ]);
             $issueTypesData = $issueTypesResponse->toArray();
 
+            // Log warning if no issue types are returned
+            if (empty($issueTypesData['issueTypes'])) {
+                $this->logger->warning('No issue types returned from Jira API for project', [
+                    'project_key' => $projectKey,
+                    'response_keys' => array_keys($issueTypesData),
+                    'url' => $url,
+                ]);
+            }
+
             // Combine the data
             return [
                 'id' => $projectData['id'],
@@ -1134,7 +1145,7 @@ class JiraService
                 'name' => $projectData['name'],
                 'description' => $projectData['description'] ?? '',
                 'projectTypeKey' => $projectData['projectTypeKey'] ?? '',
-                'issueTypes' => $issueTypesData['values'] ?? [],
+                'issueTypes' => $issueTypesData['issueTypes'] ?? [],
                 'components' => $projectData['components'] ?? [],
                 'versions' => $projectData['versions'] ?? [],
             ];
