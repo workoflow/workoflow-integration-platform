@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Workflow visualization reverted back to cloud-hosted n8n service for better reliability and maintenance-free operation
 
 ### Fixed
+- Fixed Projektron task fetching error in AI workflows - resolved issue where n8n agent would fail with "schema validation error" when trying to get project and task lists
 - Fixed Projektron integration not working in n8n workflows - simplified system prompt to match working Jira pattern by removing overly detailed tool schema documentation that was confusing the AI agent
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
 - Fixed language selector not displaying flag emojis - flags now render properly instead of showing country codes like "GB"
