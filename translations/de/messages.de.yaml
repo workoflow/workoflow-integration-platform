@@ -1,6 +1,7 @@
 common:
   save_changes: Änderungen speichern
   cancel: Abbrechen
+  close: Schließen
   optional: optional
 
 nav:
@@ -94,6 +95,9 @@ organisation:
   member:
     role_updated: Rolle erfolgreich aktualisiert!
     cannot_change_own_role: Sie können Ihre eigene Rolle nicht ändern.
+  make_admin: Zum Admin machen
+  make_member: Zum Mitglied machen
+  invite_member: Mitglied einladen
   invite:
     invalid_email: Ungültige E-Mail-Adresse.
     user_has_organisation: Dieser Benutzer gehört bereits einem Kanal an.
@@ -462,6 +466,11 @@ audit_log:
   request_payload: Anfrage-Payload
   response_data: Antwort-Daten
   truncated_notice: Antwort-Daten bei %size%KB gekürzt (Originalgröße)
+  json_modal:
+    title: Audit-Protokoll-Daten
+    search_placeholder: In JSON suchen...
+    copy: JSON kopieren
+    hint: Verwenden Sie ESC zum Schließen oder klicken Sie außerhalb des Modals
 
 pagination:
   previous: Zurück

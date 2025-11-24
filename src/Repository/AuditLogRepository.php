@@ -52,12 +52,21 @@ class AuditLogRepository extends ServiceEntityRepository
      * @param array $filters ['search' => string, 'date_from' => DateTime, 'date_to' => DateTime]
      * @param int $page
      * @param int $limit
+     * @param string $sortBy Sort field (createdAt, action, ip, user)
+     * @param string $sortDir Sort direction (ASC, DESC)
      * @return array ['results' => AuditLog[], 'total' => int, 'pages' => int]
      */
-    public function findByOrganisationWithFilters(int $organisationId, array $filters = [], int $page = 1, int $limit = 50): array
-    {
+    public function findByOrganisationWithFilters(
+        int $organisationId,
+        array $filters = [],
+        int $page = 1,
+        int $limit = 50,
+        string $sortBy = 'createdAt',
+        string $sortDir = 'DESC'
+    ): array {
         $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.user', 'u')
+            ->addSelect('u')
             ->andWhere('a.organisation = :org')
             ->setParameter('org', $organisationId);
 
@@ -81,8 +90,31 @@ class AuditLogRepository extends ServiceEntityRepository
                 ->setParameter('dateTo', $dateTo);
         }
 
-        // Order by newest first
-        $qb->orderBy('a.createdAt', 'DESC');
+        // Dynamic sorting
+        // Map column name to entity property/join
+        $sortField = match ($sortBy) {
+            'user' => 'u.email',  // Sort by user email for user column
+            'action' => 'a.action',
+            'ip' => 'a.ip',
+            default => 'a.createdAt',
+        };
+
+        // Apply sorting with NULL handling for user field
+        if ($sortBy === 'user') {
+            // Put NULL users at the end regardless of sort direction
+            if ($sortDir === 'ASC') {
+                $qb->orderBy('CASE WHEN u.email IS NULL THEN 1 ELSE 0 END', 'ASC')
+                    ->addOrderBy($sortField, 'ASC');
+            } else {
+                $qb->orderBy('CASE WHEN u.email IS NULL THEN 1 ELSE 0 END', 'ASC')
+                    ->addOrderBy($sortField, 'DESC');
+            }
+        } else {
+            $qb->orderBy($sortField, $sortDir);
+        }
+
+        // Add secondary sort by ID for consistency
+        $qb->addOrderBy('a.id', 'DESC');
 
         // Get total count before pagination
         $countQb = clone $qb;

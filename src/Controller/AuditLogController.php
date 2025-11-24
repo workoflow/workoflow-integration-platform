@@ -38,6 +38,21 @@ class AuditLogController extends AbstractController
         $page = max(1, (int) $request->query->get('page', '1'));
         $limit = 50; // Items per page
 
+        // Get sorting parameters with validation
+        $sortBy = $request->query->get('sortBy', 'createdAt');
+        $sortDir = strtoupper($request->query->get('sortDir', 'DESC'));
+
+        // Whitelist of sortable columns (mapped to entity properties)
+        $allowedSortFields = ['createdAt', 'action', 'ip', 'user'];
+        if (!in_array($sortBy, $allowedSortFields, true)) {
+            $sortBy = 'createdAt';
+        }
+
+        // Validate sort direction
+        if (!in_array($sortDir, ['ASC', 'DESC'], true)) {
+            $sortDir = 'DESC';
+        }
+
         // Build filters array
         $filters = [];
         if (!empty($search)) {
@@ -58,12 +73,14 @@ class AuditLogController extends AbstractController
             }
         }
 
-        // Get audit logs with filters and pagination
+        // Get audit logs with filters, pagination, and sorting
         $result = $this->auditLogRepository->findByOrganisationWithFilters(
             $organisation->getId(),
             $filters,
             $page,
-            $limit
+            $limit,
+            $sortBy,
+            $sortDir
         );
 
         return $this->render('audit_log/index.html.twig', [
@@ -77,6 +94,8 @@ class AuditLogController extends AbstractController
                 'search' => $search,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
+                'sortBy' => $sortBy,
+                'sortDir' => $sortDir,
             ],
         ]);
     }

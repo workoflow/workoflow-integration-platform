@@ -3,7 +3,7 @@
 {% block title %}{{ 'audit_log.title'|trans }} - Workoflow{% endblock %}
 
 {% block body %}
-<div class="dashboard-page audit-log-page">
+<div class="dashboard-page audit-log-page" data-controller="audit-log">
 
     <div class="dashboard-container">
         <div class="page-header">
@@ -15,7 +15,11 @@
 
         {# Filter Bar #}
         <div class="filter-bar">
-            <form method="get" action="{{ path('app_audit_log') }}" class="filter-form">
+            <form method="get" action="{{ path('app_audit_log') }}" class="filter-form" data-action="submit->audit-log#submitFilter">
+                {# Hidden fields to preserve sorting #}
+                <input type="hidden" name="sortBy" value="{{ filters.sortBy }}">
+                <input type="hidden" name="sortDir" value="{{ filters.sortDir }}">
+
                 <div class="filter-group">
                     <label for="search" class="filter-label">{{ 'audit_log.search.placeholder'|trans }}</label>
                     <input
@@ -74,10 +78,75 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>{{ 'audit_log.columns.timestamp'|trans }}</th>
-                            <th>{{ 'audit_log.columns.action'|trans }}</th>
-                            <th>{{ 'audit_log.columns.user'|trans }}</th>
-                            <th class="hide-mobile">{{ 'audit_log.columns.ip'|trans }}</th>
+                            {# Sortable column: Timestamp #}
+                            <th class="sortable {{ filters.sortBy == 'createdAt' ? 'sorted' : '' }}">
+                                <a href="#"
+                                   data-action="click->audit-log#sort"
+                                   data-column="createdAt"
+                                   data-current-sort="{{ filters.sortBy }}"
+                                   data-current-dir="{{ filters.sortDir }}"
+                                   class="sort-link">
+                                    {{ 'audit_log.columns.timestamp'|trans }}
+                                    {% if filters.sortBy == 'createdAt' %}
+                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort sort-icon-inactive"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            {# Sortable column: Action #}
+                            <th class="sortable {{ filters.sortBy == 'action' ? 'sorted' : '' }}">
+                                <a href="#"
+                                   data-action="click->audit-log#sort"
+                                   data-column="action"
+                                   data-current-sort="{{ filters.sortBy }}"
+                                   data-current-dir="{{ filters.sortDir }}"
+                                   class="sort-link">
+                                    {{ 'audit_log.columns.action'|trans }}
+                                    {% if filters.sortBy == 'action' %}
+                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort sort-icon-inactive"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            {# Sortable column: User #}
+                            <th class="sortable {{ filters.sortBy == 'user' ? 'sorted' : '' }}">
+                                <a href="#"
+                                   data-action="click->audit-log#sort"
+                                   data-column="user"
+                                   data-current-sort="{{ filters.sortBy }}"
+                                   data-current-dir="{{ filters.sortDir }}"
+                                   class="sort-link">
+                                    {{ 'audit_log.columns.user'|trans }}
+                                    {% if filters.sortBy == 'user' %}
+                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort sort-icon-inactive"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            {# Sortable column: IP #}
+                            <th class="hide-mobile sortable {{ filters.sortBy == 'ip' ? 'sorted' : '' }}">
+                                <a href="#"
+                                   data-action="click->audit-log#sort"
+                                   data-column="ip"
+                                   data-current-sort="{{ filters.sortBy }}"
+                                   data-current-dir="{{ filters.sortDir }}"
+                                   class="sort-link">
+                                    {{ 'audit_log.columns.ip'|trans }}
+                                    {% if filters.sortBy == 'ip' %}
+                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort sort-icon-inactive"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            {# Non-sortable columns #}
                             <th class="hide-mobile">{{ 'audit_log.columns.user_agent'|trans }}</th>
                             <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
                             <th></th>
@@ -104,7 +173,14 @@
                                 <td class="data-preview hide-mobile" data-label="{{ 'audit_log.columns.data'|trans }}">
                                     {% if log.data %}
                                         {% set dataStr = log.data|json_encode %}
-                                        {{ dataStr|length > 50 ? dataStr|slice(0, 50) ~ '...' : dataStr }}
+                                        <button type="button"
+                                                class="data-cell-btn"
+                                                data-action="click->audit-log#openJsonModal"
+                                                data-json="{{ log.data|json_encode|e('html_attr') }}"
+                                                data-title="{{ 'audit_log.json_modal.title'|trans }} - {{ log.action }}">
+                                            {{ dataStr|length > 50 ? dataStr|slice(0, 50) ~ '...' : dataStr }}
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </button>
                                     {% else %}
                                         -
                                     {% endif %}
@@ -210,6 +286,9 @@
         {% endif %}
     </div>
 </div>
+
+{# JSON Modal Component #}
+{% include 'components/json_modal.html.twig' %}
 
 <script>
 function toggleDetails(logId) {

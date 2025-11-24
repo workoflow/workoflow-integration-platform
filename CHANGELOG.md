@@ -6,8 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
+- Fixed language selector not displaying flag emojis - flags now render properly instead of showing country codes like "GB"
 
 ### Added
+- **Audit Log sorting** - Click column headers to sort audit logs by timestamp, action, user, or IP address in ascending or descending order
+- **Audit Log JSON viewer** - Click any data cell to open a formatted JSON viewer with syntax highlighting, search functionality, and copy-to-clipboard button for easy debugging
 - **Audit Log page** - New page showing complete history of all activities in your account and organization including user actions, integration changes, file operations, and tool executions
 - **Audit Log search and filtering** - Search by action name and filter by date range to quickly find specific activities
 - **Audit Log detailed view** - Click to expand any log entry to see full details including complete data, IP addresses, and user agent information
