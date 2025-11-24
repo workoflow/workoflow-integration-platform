@@ -317,9 +317,9 @@ body {
         }
 
         .lang-flag {
-          font-size: 1.2em;
-          line-height: 1;
-          font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+          width: 1.2em;
+          height: 0.9em;
+          display: inline-block;
         }
 
         .lang-name {
@@ -371,9 +371,9 @@ body {
           }
 
           .lang-flag {
-            font-size: 1.2em;
-            line-height: 1;
-            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+            width: 1.2em;
+            height: 0.9em;
+            display: inline-block;
           }
 
           .current-indicator {

@@ -17,7 +17,7 @@
                 {% set currentLocale = app.request.locale %}
                 <div class="language-switcher">
                     <button class="language-switcher-button" onclick="toggleLangDropdown(event)">
-                        <span class="lang-flag">{{ currentLocale == 'de' ? '🇩🇪' : '🇬🇧' }}</span>
+                        <span class="lang-flag fi fi-{{ currentLocale == 'de' ? 'de' : 'gb' }}"></span>
                         <span class="lang-name">{{ currentLocale == 'de' ? 'DE' : 'EN' }}</span>
                         <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
                             <path d="M6 9L1 4h10L6 9z"/>
@@ -26,7 +26,7 @@
                     <div class="language-dropdown" id="langDropdown" style="display: none;">
                         <a href="{{ path('app_locale_switch', {'locale': 'en'}) }}"
                            class="lang-item {% if currentLocale == 'en' %}active{% endif %}">
-                            <span class="lang-flag">🇬🇧</span>
+                            <span class="lang-flag fi fi-gb"></span>
                             <span>English</span>
                             {% if currentLocale == 'en' %}
                                 <span class="current-indicator">✓</span>
@@ -34,7 +34,7 @@
                         </a>
                         <a href="{{ path('app_locale_switch', {'locale': 'de'}) }}"
                            class="lang-item {% if currentLocale == 'de' %}active{% endif %}">
-                            <span class="lang-flag">🇩🇪</span>
+                            <span class="lang-flag fi fi-de"></span>
                             <span>Deutsch</span>
                             {% if currentLocale == 'de' %}
                                 <span class="current-indicator">✓</span>
