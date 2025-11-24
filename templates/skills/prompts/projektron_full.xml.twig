@@ -98,42 +98,9 @@
         <name>projektron_get_all_tasks_{{ integration_id }}</name>
         <purpose>Get all available projects and tasks from Projektron project browser</purpose>
         <parameters>
-          <!-- No parameters required - fetches all available tasks -->
+          <!-- No parameters required -->
         </parameters>
-        <returns>
-          <field name="success" type="boolean">Operation success status</field>
-          <field name="count" type="integer">Number of tasks/projects found</field>
-          <field name="tasks" type="array">Array of task/project objects</field>
-        </returns>
-        <task-object-structure>
-          <field name="oid" type="string">Unique Projektron identifier (e.g., 12345_JTask or 67890_JProject)</field>
-          <field name="type" type="string">Either "task" or "project"</field>
-          <field name="booking_url" type="string">Direct URL to time booking form for this task</field>
-        </task-object-structure>
-        <usage-notes>
-          <note>This tool requires valid authentication (CSRF_Token and JSESSIONID cookies)</note>
-          <note>If cookies expire, user will receive authentication error</note>
-          <note>Returns all tasks/projects visible to the authenticated user</note>
-          <note>Both projects (_JProject) and tasks (_JTask) can be used for time booking</note>
-        </usage-notes>
-        <example-response>
-{
-  "success": true,
-  "count": 42,
-  "tasks": [
-    {
-      "oid": "12345_JTask",
-      "type": "task",
-      "booking_url": "https://projektron.valantic.com/bcs/taskdetail/effortrecording/edit?oid=12345_JTask"
-    },
-    {
-      "oid": "67890_JProject",
-      "type": "project",
-      "booking_url": "https://projektron.valantic.com/bcs/taskdetail/effortrecording/edit?oid=67890_JProject"
-    }
-  ]
-}
-        </example-response>
+        <returns>List of tasks and projects with OIDs and booking URLs</returns>
       </tool>
     </tool-category>
   </available-tools>

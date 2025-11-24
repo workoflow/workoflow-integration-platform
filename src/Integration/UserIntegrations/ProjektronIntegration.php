@@ -33,14 +33,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             new ToolDefinition(
                 'projektron_get_all_tasks',
                 'Get all available projects and tasks from Projektron. Returns an array of items, each containing: oid (unique identifier), type (project or task), and booking_url (URL for time tracking). Use this to discover available projects and tasks before booking time entries.',
-                [
-                    [
-                        'name' => '_internal',
-                        'type' => 'string',
-                        'description' => 'Internal parameter (leave empty)',
-                        'required' => false
-                    ]
-                ]
+                []
             ),
         ];
     }
