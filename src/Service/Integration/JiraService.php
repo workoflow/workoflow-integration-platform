@@ -861,4 +861,483 @@ class JiraService
             );
         }
     }
+
+    /**
+     * Convert plain text to Atlassian Document Format (ADF)
+     * Helper method for comment formatting
+     *
+     * @param string $text Plain text to convert
+     * @return array ADF document structure
+     */
+    private function convertPlainTextToADF(string $text): array
+    {
+        return [
+            'type' => 'doc',
+            'version' => 1,
+            'content' => [
+                [
+                    'type' => 'paragraph',
+                    'content' => [
+                        [
+                            'text' => $text,
+                            'type' => 'text'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+    /**
+     * Get edit metadata for an issue
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @return array Editable fields metadata with field definitions, allowed values, and required status
+     */
+    public function getEditMetadata(array $credentials, string $issueKey): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/editmeta', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Issue '{$issueKey}' may not exist or you don't have permission to view it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to edit this issue';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Delete an issue
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @return array Success status
+     */
+    public function deleteIssue(array $credentials, string $issueKey): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('DELETE', $url . '/rest/api/3/issue/' . $issueKey, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            // DELETE endpoint returns 204 No Content on success
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 204) {
+                return [
+                    'success' => true,
+                    'message' => "Issue '{$issueKey}' deleted successfully"
+                ];
+            }
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Issue '{$issueKey}' may not exist or was already deleted";
+            } elseif ($statusCode === 403 || stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - You do not have permission to delete this issue. Check your project role and Jira permissions.';
+            } elseif ($statusCode === 400 && stripos($errorText, 'subtask') !== false) {
+                $suggestion = ' - This issue has subtasks. Delete subtasks first or use deleteSubtasks=true parameter.';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get available issue link types
+     *
+     * @param array $credentials Jira credentials
+     * @return array Available link types with IDs, names, inward/outward descriptions
+     */
+    public function getIssueLinkTypes(array $credentials): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issueLinkType', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to view issue link types';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Link two issues together
+     *
+     * @param array $credentials Jira credentials
+     * @param string $inwardIssue Inward issue key (e.g., PROJ-123)
+     * @param string $outwardIssue Outward issue key (e.g., PROJ-456)
+     * @param string $linkTypeId Link type ID from getIssueLinkTypes
+     * @param string|null $comment Optional comment to add with the link
+     * @return array Link creation result
+     */
+    public function linkIssues(
+        array $credentials,
+        string $inwardIssue,
+        string $outwardIssue,
+        string $linkTypeId,
+        ?string $comment = null
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        $linkPayload = [
+            'type' => ['id' => $linkTypeId],
+            'inwardIssue' => ['key' => $inwardIssue],
+            'outwardIssue' => ['key' => $outwardIssue]
+        ];
+
+        if ($comment) {
+            $linkPayload['comment'] = [
+                'body' => $this->convertPlainTextToADF($comment)
+            ];
+        }
+
+        try {
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issueLink', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $linkPayload
+            ]);
+
+            // Link creation returns 201 Created on success
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 201) {
+                return [
+                    'success' => true,
+                    'message' => "Issues linked successfully: '{$inwardIssue}' and '{$outwardIssue}'"
+                ];
+            }
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - One or both issues ('{$inwardIssue}', '{$outwardIssue}') may not exist";
+            } elseif ($statusCode === 400 && stripos($errorText, 'link type') !== false) {
+                $suggestion = " - Link type ID '{$linkTypeId}' may not be valid. Use jira_get_issue_link_types to get valid IDs";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to link issues';
+            } elseif (stripos($errorText, 'already exists') !== false || stripos($errorText, 'duplicate') !== false) {
+                $suggestion = ' - This link may already exist between these issues';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get project metadata including issue types and components
+     *
+     * @param array $credentials Jira credentials
+     * @param string $projectKey Project key (e.g., PROJ, TEST)
+     * @return array Project metadata with issue types, components, versions, and project info
+     */
+    public function getProjectMetadata(array $credentials, string $projectKey): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            // Get basic project info
+            $projectResponse = $this->httpClient->request('GET', $url . '/rest/api/3/project/' . $projectKey, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+            $projectData = $projectResponse->toArray();
+
+            // Get issue types for this project with field information
+            $issueTypesResponse = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+            $issueTypesData = $issueTypesResponse->toArray();
+
+            // Combine the data
+            return [
+                'id' => $projectData['id'],
+                'key' => $projectData['key'],
+                'name' => $projectData['name'],
+                'description' => $projectData['description'] ?? '',
+                'projectTypeKey' => $projectData['projectTypeKey'] ?? '',
+                'issueTypes' => $issueTypesData['values'] ?? [],
+                'components' => $projectData['components'] ?? [],
+                'versions' => $projectData['versions'] ?? [],
+            ];
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Project '{$projectKey}' may not exist or you don't have permission to view it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to view project metadata';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get create field metadata for a specific issue type
+     *
+     * @param array $credentials Jira credentials
+     * @param string $projectKey Project key (e.g., PROJ, TEST)
+     * @param string $issueTypeId Issue type ID
+     * @return array Field metadata for creating issues of this type
+     */
+    public function getCreateFieldMetadata(array $credentials, string $projectKey, string $issueTypeId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes/' . $issueTypeId, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Project '{$projectKey}' or issue type ID '{$issueTypeId}' may not exist or you don't have permission to access it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to view issue metadata';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Create a new Jira issue
+     *
+     * @param array $credentials Jira credentials
+     * @param array $issueData Issue data including project, issueType, summary, description, etc.
+     * @return array Created issue data with key, id, and self URL
+     */
+    public function createIssue(array $credentials, array $issueData): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build the fields object
+        $fields = [
+            'project' => ['key' => $issueData['projectKey']],
+            'issuetype' => ['id' => $issueData['issueTypeId']],
+            'summary' => $issueData['summary'],
+        ];
+
+        // Add description if provided
+        if (!empty($issueData['description'])) {
+            $fields['description'] = $this->convertPlainTextToADF($issueData['description']);
+        }
+
+        // Add optional standard fields
+        if (!empty($issueData['priorityId'])) {
+            $fields['priority'] = ['id' => $issueData['priorityId']];
+        }
+
+        if (!empty($issueData['assigneeId'])) {
+            $fields['assignee'] = ['id' => $issueData['assigneeId']];
+        }
+
+        if (!empty($issueData['labels']) && is_array($issueData['labels'])) {
+            $fields['labels'] = $issueData['labels'];
+        }
+
+        if (!empty($issueData['componentIds']) && is_array($issueData['componentIds'])) {
+            $fields['components'] = array_map(fn($id) => ['id' => $id], $issueData['componentIds']);
+        }
+
+        if (!empty($issueData['dueDate'])) {
+            $fields['duedate'] = $issueData['dueDate'];
+        }
+
+        // Add custom fields
+        if (isset($issueData['customFields']) && is_array($issueData['customFields'])) {
+            foreach ($issueData['customFields'] as $fieldId => $value) {
+                $fields[$fieldId] = $value;
+            }
+        }
+
+        $payload = ['fields' => $fields];
+
+        try {
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ],
+                'json' => $payload
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $errors = $errorData['errors'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+
+            // Build comprehensive error message
+            $errorText = '';
+            if (!empty($errorMessages)) {
+                $errorText = implode(', ', $errorMessages);
+            } elseif (!empty($errors)) {
+                $errorText = json_encode($errors);
+            } else {
+                $errorText = $message;
+            }
+
+            $suggestion = '';
+            if (stripos($errorText, 'required') !== false || !empty($errors)) {
+                $suggestion = ' - Some required fields may be missing. Use jira_get_create_field_metadata to see all required fields for this issue type';
+            } elseif ($statusCode === 404) {
+                $suggestion = ' - Project or issue type may not exist';
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to create issues in this project';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get all available priorities
+     *
+     * @param array $credentials Jira credentials
+     * @return array List of priorities with id, name, description, iconUrl, statusColor
+     */
+    public function getPriorities(array $credentials): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/priority', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}",
+                $statusCode,
+                $e
+            );
+        }
+    }
 }

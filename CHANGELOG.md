@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 ## 2025-11-24
 
 ### Added
+- **GitLab merge request workflow completion** - AI agents can now merge merge requests, approve/unapprove changes, check approval status, assign reviewers, trigger merge request pipelines, and view all pipelines for a merge request - enabling fully automated code review workflows from review to merge
+- **GitLab CI/CD pipeline and job control** - AI can now retry or cancel failed pipelines and jobs, trigger new pipelines on any branch, and download job artifacts for analysis - giving you complete control over your continuous integration workflows
+- **GitLab repository file management** - AI agents can now create, update, and delete files directly in repositories with commit messages, compare branches to see what changed between any two points, and protect branches with access control rules - enabling automated code modifications and repository management
+- **GitLab branch and tag operations** - AI can now create and delete branches for feature development, create and delete tags for releases (with automatic version detection for semantic versioning), enabling release automation workflows like "create tag v2.4.0 from main branch"
+- **GitLab issue collaboration** - AI agents can now add comments to issues, list all issue discussions, assign users to issues, and search issues across all your projects - making issue management and team collaboration easier
+- **GitLab merge request discussions** - AI can now create discussion threads on merge requests, resolve discussions when feedback is addressed, and reply to existing threads - improving code review collaboration
+- **GitLab project organization** - AI agents can now list project labels, list project milestones with filtering by state, and view all issues in a milestone - helping you track project progress and organize work
+- **GitLab team collaboration** - AI can now list project members with their access levels and search for users by name or username - making team management and user lookup easier
 - GitLab agent can now identify specific failing jobs in CI/CD pipelines - AI can tell you exactly which build, test, or deployment step failed instead of just showing "pipeline failed"
 - GitLab agent can now read actual error logs from failed jobs - AI analyzes error messages, stack traces, and console output to explain what went wrong and suggest fixes
 - GitLab pipeline troubleshooting now includes detailed job information - see job names, stages, failure reasons, and execution times for comprehensive debugging
@@ -13,6 +21,7 @@ All notable changes to this project will be documented in this file.
 ### Improved
 - GitLab agent provides more actionable pipeline debugging - instead of "pipeline failed, check the logs", AI now says "PHPStan job failed due to type error in UserController.php line 45"
 - GitLab job trace analysis now faster and more efficient - shows only the last 500 lines where errors typically appear, speeding up AI diagnostics while reducing processing overhead
+- GitLab integration now covers complete software development lifecycle - from creating branches and modifying code, to reviewing and merging changes, to managing CI/CD pipelines and creating release tags - all available through natural language commands
 
 ## 2025-11-21
 

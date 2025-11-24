@@ -297,6 +297,42 @@ class GitLabService
         return $response->toArray();
     }
 
+    public function createTag(array $credentials, string $project, string $tagName, string $ref, ?string $message = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = [
+            'tag_name' => $tagName,
+            'ref' => $ref,
+        ];
+
+        if ($message !== null) {
+            $payload['message'] = $message;
+        }
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/repository/tags', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function deleteTag(array $credentials, string $project, string $tagName): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('DELETE', $url . '/api/v4/projects/' . $projectId . '/repository/tags/' . urlencode($tagName), [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        // DELETE typically returns empty content with 204 status
+        $statusCode = $response->getStatusCode();
+        return ['status' => $statusCode === 204 ? 'deleted' : 'success'];
+    }
+
     public function listBranches(array $credentials, string $project): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
@@ -467,6 +503,128 @@ class GitLabService
         $payload = ['body' => $body];
 
         $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/notes', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function mergeMergeRequest(
+        array $credentials,
+        string $project,
+        int $mergeRequestIid,
+        ?string $mergeCommitMessage = null,
+        ?bool $squash = null,
+        ?bool $shouldRemoveSourceBranch = null,
+        ?bool $mergeWhenPipelineSucceeds = null
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = [];
+        if ($mergeCommitMessage !== null) {
+            $payload['merge_commit_message'] = $mergeCommitMessage;
+        }
+        if ($squash !== null) {
+            $payload['squash'] = $squash;
+        }
+        if ($shouldRemoveSourceBranch !== null) {
+            $payload['should_remove_source_branch'] = $shouldRemoveSourceBranch;
+        }
+        if ($mergeWhenPipelineSucceeds !== null) {
+            $payload['merge_when_pipeline_succeeds'] = $mergeWhenPipelineSucceeds;
+        }
+
+        $response = $this->httpClient->request('PUT', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/merge', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function approveMergeRequest(array $credentials, string $project, int $mergeRequestIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/approve', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function unapproveMergeRequest(array $credentials, string $project, int $mergeRequestIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/unapprove', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        // Unapprove typically returns 201 with empty or minimal content
+        $statusCode = $response->getStatusCode();
+        return ['status' => $statusCode === 201 ? 'unapproved' : 'success'];
+    }
+
+    public function getMergeRequestApprovals(array $credentials, string $project, int $mergeRequestIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/approvals', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function listMergeRequestPipelines(array $credentials, string $project, int $mergeRequestIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/pipelines', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function createMergeRequestPipeline(array $credentials, string $project, int $mergeRequestIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/pipelines', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function updateMergeRequestAssignees(
+        array $credentials,
+        string $project,
+        int $mergeRequestIid,
+        ?array $assigneeIds = null,
+        ?array $reviewerIds = null
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = [];
+        if ($assigneeIds !== null) {
+            $payload['assignee_ids'] = $assigneeIds;
+        }
+        if ($reviewerIds !== null) {
+            $payload['reviewer_ids'] = $reviewerIds;
+        }
+
+        $response = $this->httpClient->request('PUT', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid, [
             'headers' => $this->getAuthHeaders($credentials['api_token']),
             'json' => $payload,
         ]);
@@ -722,6 +880,410 @@ class GitLabService
 
         $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId, [
             'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function retryPipeline(array $credentials, string $project, int $pipelineId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/pipelines/' . $pipelineId . '/retry', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function cancelPipeline(array $credentials, string $project, int $pipelineId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/pipelines/' . $pipelineId . '/cancel', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function createPipeline(array $credentials, string $project, string $ref, ?array $variables = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['ref' => $ref];
+        if ($variables !== null) {
+            $payload['variables'] = $variables;
+        }
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/pipeline', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function retryJob(array $credentials, string $project, int $jobId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId . '/retry', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function cancelJob(array $credentials, string $project, int $jobId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId . '/cancel', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function downloadJobArtifacts(array $credentials, string $project, int $jobId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId . '/artifacts', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        // Artifacts are returned as binary data
+        $content = $response->getContent();
+
+        return [
+            'artifacts_file' => base64_encode($content),
+            'filename' => 'artifacts.zip',
+            'size' => strlen($content),
+        ];
+    }
+
+    // Repository Comparison & File Management
+
+    public function compareBranches(array $credentials, string $project, string $from, string $to, ?bool $straight = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $query = ['from' => $from, 'to' => $to];
+        if ($straight !== null) {
+            $query['straight'] = $straight ? 'true' : 'false';
+        }
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/repository/compare', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function createFile(array $credentials, string $project, string $filePath, string $branch, string $content, string $commitMessage): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+        $encodedPath = urlencode($filePath);
+
+        $payload = [
+            'branch' => $branch,
+            'content' => $content,
+            'commit_message' => $commitMessage,
+        ];
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/repository/files/' . $encodedPath, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function updateFile(array $credentials, string $project, string $filePath, string $branch, string $content, string $commitMessage): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+        $encodedPath = urlencode($filePath);
+
+        $payload = [
+            'branch' => $branch,
+            'content' => $content,
+            'commit_message' => $commitMessage,
+        ];
+
+        $response = $this->httpClient->request('PUT', $url . '/api/v4/projects/' . $projectId . '/repository/files/' . $encodedPath, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function deleteFile(array $credentials, string $project, string $filePath, string $branch, string $commitMessage): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+        $encodedPath = urlencode($filePath);
+
+        $payload = [
+            'branch' => $branch,
+            'commit_message' => $commitMessage,
+        ];
+
+        $response = $this->httpClient->request('DELETE', $url . '/api/v4/projects/' . $projectId . '/repository/files/' . $encodedPath, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        $statusCode = $response->getStatusCode();
+        return ['status' => $statusCode === 204 ? 'deleted' : 'success'];
+    }
+
+    public function protectBranch(array $credentials, string $project, string $branch, ?int $pushAccessLevel = null, ?int $mergeAccessLevel = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['name' => $branch];
+        if ($pushAccessLevel !== null) {
+            $payload['push_access_level'] = $pushAccessLevel;
+        }
+        if ($mergeAccessLevel !== null) {
+            $payload['merge_access_level'] = $mergeAccessLevel;
+        }
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/protected_branches', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    // Branch Management
+
+    public function createBranch(array $credentials, string $project, string $branch, string $ref): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['branch' => $branch, 'ref' => $ref];
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/repository/branches', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function deleteBranch(array $credentials, string $project, string $branch): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('DELETE', $url . '/api/v4/projects/' . $projectId . '/repository/branches/' . urlencode($branch), [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        $statusCode = $response->getStatusCode();
+        return ['status' => $statusCode === 204 ? 'deleted' : 'success'];
+    }
+
+    // Issue Enhancements
+
+    public function addIssueNote(array $credentials, string $project, int $issueIid, string $body): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['body' => $body];
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/issues/' . $issueIid . '/notes', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function listIssueNotes(array $credentials, string $project, int $issueIid): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/issues/' . $issueIid . '/notes', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function updateIssueAssignees(array $credentials, string $project, int $issueIid, array $assigneeIds): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['assignee_ids' => $assigneeIds];
+
+        $response = $this->httpClient->request('PUT', $url . '/api/v4/projects/' . $projectId . '/issues/' . $issueIid, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function listAllIssues(array $credentials, string $scope = 'assigned_to_me', string $state = 'opened', ?string $search = null, int $perPage = 20): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+
+        $query = [
+            'scope' => $scope,
+            'state' => $state,
+            'per_page' => min($perPage, 100),
+        ];
+
+        if ($search !== null) {
+            $query['search'] = $search;
+        }
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/issues', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
+        ]);
+
+        return $response->toArray();
+    }
+
+    // Discussion Threads
+
+    public function createDiscussion(array $credentials, string $project, int $mergeRequestIid, string $body): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['body' => $body];
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/discussions', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function resolveDiscussion(array $credentials, string $project, int $mergeRequestIid, string $discussionId, bool $resolved): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['resolved' => $resolved];
+
+        $response = $this->httpClient->request('PUT', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/discussions/' . $discussionId, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function addDiscussionNote(array $credentials, string $project, int $mergeRequestIid, string $discussionId, string $body): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $payload = ['body' => $body];
+
+        $response = $this->httpClient->request('POST', $url . '/api/v4/projects/' . $projectId . '/merge_requests/' . $mergeRequestIid . '/discussions/' . $discussionId . '/notes', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'json' => $payload,
+        ]);
+
+        return $response->toArray();
+    }
+
+    // Labels & Milestones
+
+    public function listLabels(array $credentials, string $project): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/labels', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function listMilestones(array $credentials, string $project, ?string $state = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $query = [];
+        if ($state !== null) {
+            $query['state'] = $state;
+        }
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/milestones', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function getMilestoneIssues(array $credentials, string $project, int $milestoneId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/milestones/' . $milestoneId . '/issues', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    // Users & Project Members
+
+    public function listProjectMembers(array $credentials, string $project): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/members', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function searchUsers(array $credentials, string $search, int $perPage = 20): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+
+        $query = [
+            'search' => $search,
+            'per_page' => $perPage,
+        ];
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/users', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
         ]);
 
         return $response->toArray();

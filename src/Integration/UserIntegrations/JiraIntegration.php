@@ -215,6 +215,169 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'description' => 'Maximum number of results (default: 50)'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_get_edit_metadata',
+                'Get all editable fields for an existing issue. Use this before updating an issue to know what fields can be modified and their allowed values. Returns: Object with fields property containing field definitions, including field types, required status, allowed values, and schema information for each editable field',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_delete_issue',
+                'Delete a Jira issue permanently. WARNING: This action cannot be undone. The issue and all its data will be permanently removed. Use with caution. Returns: Success confirmation message',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key to delete (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_issue_link_types',
+                'Get all available issue link types for the Jira instance. Link types define relationships between issues (e.g., "blocks"/"is blocked by", "relates to", "duplicates"/"is duplicated by"). Returns: Object with issueLinkTypes array containing id, name, inward (description from target issue perspective), outward (description from source issue perspective), and self URL for each link type',
+                [
+                ]
+            ),
+            new ToolDefinition(
+                'jira_link_issues',
+                'Link two Jira issues together with a specific relationship type. The link direction matters: inward issue is the "target" and outward issue is the "source". For example, with "blocks" link type: if PROJ-123 blocks PROJ-456, then PROJ-123 is inward and PROJ-456 is outward. Returns: Success confirmation message',
+                [
+                    [
+                        'name' => 'inwardIssue',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Inward issue key - the target of the link (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'outwardIssue',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Outward issue key - the source of the link (e.g., PROJ-456)'
+                    ],
+                    [
+                        'name' => 'linkTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Link type ID from jira_get_issue_link_types (e.g., "10000")'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add with the link'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_project_metadata',
+                'Get project information including available issue types, components, versions, and project configuration. Use this before creating issues to discover what issue types and components are available. Returns: Object with id, key, name, description, projectTypeKey, issueTypes array (with id, name, description, subtask flag), components array (with id, name, description), and versions array (with id, name, released status)',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_create_field_metadata',
+                'Get detailed field metadata for creating a specific issue type. Use this to discover all required and optional fields, including custom fields, for issue creation. Returns: Object with fields object containing field definitions. Each field includes: fieldId, name, required status, schema (type information), allowedValues (for select fields), and operations',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ],
+                    [
+                        'name' => 'issueTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue type ID from jira_get_project_metadata'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_create_issue',
+                'Create a new Jira issue with standard and custom fields. Use jira_get_project_metadata first to get project info and issue types, then jira_get_create_field_metadata to discover required fields. Returns: Object with id, key (issue key like PROJ-123), and self (URL)',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ],
+                    [
+                        'name' => 'issueTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue type ID from jira_get_project_metadata'
+                    ],
+                    [
+                        'name' => 'summary',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue summary/title'
+                    ],
+                    [
+                        'name' => 'description',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Issue description (plain text, will be converted to Jira format)'
+                    ],
+                    [
+                        'name' => 'priorityId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Priority ID from jira_get_priorities'
+                    ],
+                    [
+                        'name' => 'assigneeId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Assignee account ID'
+                    ],
+                    [
+                        'name' => 'labels',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Array of label strings'
+                    ],
+                    [
+                        'name' => 'componentIds',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Array of component IDs from project metadata'
+                    ],
+                    [
+                        'name' => 'dueDate',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Due date in YYYY-MM-DD format'
+                    ],
+                    [
+                        'name' => 'customFields',
+                        'type' => 'object',
+                        'required' => false,
+                        'description' => 'Object with custom field IDs as keys (e.g., {"customfield_10000": "value"})'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_priorities',
+                'Get all available priorities in Jira. Use this to find priority IDs for creating or updating issues. Returns: Array of priority objects, each with id, self, iconUrl, name, description, statusColor, and isDefault flag',
+                [
+                    // No parameters required
+                ]
             )
         ];
     }
@@ -277,6 +440,40 @@ class JiraIntegration implements PersonalizedSkillInterface
                 $credentials,
                 $parameters['boardId'],
                 $parameters['maxResults'] ?? 50
+            ),
+            'jira_get_edit_metadata' => $this->jiraService->getEditMetadata(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_delete_issue' => $this->jiraService->deleteIssue(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_get_issue_link_types' => $this->jiraService->getIssueLinkTypes(
+                $credentials
+            ),
+            'jira_link_issues' => $this->jiraService->linkIssues(
+                $credentials,
+                $parameters['inwardIssue'],
+                $parameters['outwardIssue'],
+                $parameters['linkTypeId'],
+                $parameters['comment'] ?? null
+            ),
+            'jira_get_project_metadata' => $this->jiraService->getProjectMetadata(
+                $credentials,
+                $parameters['projectKey']
+            ),
+            'jira_get_create_field_metadata' => $this->jiraService->getCreateFieldMetadata(
+                $credentials,
+                $parameters['projectKey'],
+                $parameters['issueTypeId']
+            ),
+            'jira_create_issue' => $this->jiraService->createIssue(
+                $credentials,
+                $parameters
+            ),
+            'jira_get_priorities' => $this->jiraService->getPriorities(
+                $credentials
             ),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };
