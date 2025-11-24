@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Projektron task discovery** - View all available projects and tasks from your Projektron account with direct booking URLs for quick time entry access
 
 ### Changed
-- Workflow visualization now uses self-hosted n8n instance instead of external n8n cloud service - improves privacy, reduces external dependencies, and ensures workflow previews work even when n8n's cloud service is unavailable
+- Workflow visualization reverted back to cloud-hosted n8n service for better reliability and maintenance-free operation
 
 ### Fixed
 - Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues

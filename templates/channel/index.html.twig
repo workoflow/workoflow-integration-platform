@@ -447,7 +447,7 @@
                              data-org-id="{{ organisation.uuid }}"
                              data-workflow-url="{{ organisation.workflowUrl ?? '' }}"
                              class="{% if not organisation.workflowUrl %}hidden{% endif %}">
-                            <n8n-demo id="workflow-viewer" theme="dark" src="https://workflows.vcec.cloud/workflows/demo"></n8n-demo>
+                            <n8n-demo id="workflow-viewer" theme="dark"></n8n-demo>
                         </div>
                     </div>
                 </div>
@@ -467,7 +467,7 @@
                 </div>
                 <div class="modal-body" style="padding: 0; flex: 1; overflow: hidden;">
                     <div id="modal-workflow-container" style="width: 100%; height: 100%;">
-                        <n8n-demo id="modal-workflow-viewer" theme="dark" src="https://workflows.vcec.cloud/workflows/demo"></n8n-demo>
+                        <n8n-demo id="modal-workflow-viewer" theme="dark"></n8n-demo>
                     </div>
                 </div>
             </div>
