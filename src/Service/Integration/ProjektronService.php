@@ -70,29 +70,30 @@ class ProjektronService
                 $credentials['jsessionid']
             );
 
-            $projectBrowserUrl = $url . '/bcs/projectbrowser/main/display?oid=3_JProjects&default,default,sourcechoice,tab=projecttree';
+            $taskListUrl = $url . '/bcs/mybcs/tasklist';
 
-            $response = $this->httpClient->request('GET', $projectBrowserUrl, [
+            $response = $this->httpClient->request('GET', $taskListUrl, [
                 'headers' => [
                     'Cookie' => $cookieHeader,
                     'User-Agent' => 'Workoflow-Integration/1.0',
                 ],
                 'timeout' => 10,
+                'max_redirects' => 5,
             ]);
 
             $statusCode = $response->getStatusCode();
             if ($statusCode !== 200) {
                 $this->logger->warning('Projektron connection test failed', [
                     'status_code' => $statusCode,
-                    'url' => $projectBrowserUrl
+                    'url' => $taskListUrl
                 ]);
                 return false;
             }
 
             $html = $response->getContent();
 
-            // Check if we got a valid Projektron page (not a login page)
-            if (strpos($html, 'projectbrowser') === false && strpos($html, 'login') !== false) {
+            // Check if we got a valid Projektron task list page (not a login page)
+            if (strpos($html, 'tasklist') === false && strpos($html, 'login') !== false) {
                 $this->logger->warning('Projektron returned login page - authentication failed');
                 return false;
             }
@@ -107,10 +108,10 @@ class ProjektronService
     }
 
     /**
-     * Get all tasks and projects from Projektron
+     * Get all bookable tasks from the user's personal Projektron task list
      *
      * @param array $credentials Projektron credentials (domain, csrf_token, jsessionid)
-     * @return array Array of tasks/projects with oid, type, and booking_url
+     * @return array Array of tasks with oid, name, and booking_url
      * @throws InvalidArgumentException If credentials are invalid or request fails
      */
     public function getAllTasks(array $credentials): array
@@ -121,27 +122,29 @@ class ProjektronService
             $credentials['jsessionid']
         );
 
-        $projectBrowserUrl = $url . '/bcs/projectbrowser/main/display?oid=3_JProjects&default,default,sourcechoice,tab=projecttree';
+        // Fetch user's task list - follows redirect to get user-specific task list
+        $taskListUrl = $url . '/bcs/mybcs/tasklist';
 
         try {
-            $response = $this->httpClient->request('GET', $projectBrowserUrl, [
+            $response = $this->httpClient->request('GET', $taskListUrl, [
                 'headers' => [
                     'Cookie' => $cookieHeader,
                     'User-Agent' => 'Workoflow-Integration/1.0',
                 ],
                 'timeout' => 30,
+                'max_redirects' => 5,
             ]);
 
             $html = $response->getContent();
 
             // Check if we got redirected to login
-            if (strpos($html, 'projectbrowser') === false && strpos($html, 'login') !== false) {
+            if (strpos($html, 'tasklist') === false && strpos($html, 'login') !== false) {
                 throw new InvalidArgumentException(
                     'Authentication failed. Your session may have expired. Please update your CSRF_Token and JSESSIONID cookies.'
                 );
             }
 
-            return $this->parseProjectsAndTasks($html, $url);
+            return $this->parseTaskList($html, $url);
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $statusCode = $e->getResponse()->getStatusCode();
 
@@ -162,13 +165,15 @@ class ProjektronService
     }
 
     /**
-     * Parse HTML to extract project and task OIDs using PHP 8.4 DOM Selector
+     * Parse task list HTML to extract bookable tasks using PHP 8.4 DOM Selector
      *
-     * @param string $html HTML content from Projektron
+     * Extracts task OIDs from data-tt attribute and task names from span.hover elements.
+     *
+     * @param string $html HTML content from Projektron task list
      * @param string $baseUrl Base URL for building booking URLs
-     * @return array Array of tasks with oid, type, and booking_url
+     * @return array Array of tasks with oid, name, and booking_url
      */
-    private function parseProjectsAndTasks(string $html, string $baseUrl): array
+    private function parseTaskList(string $html, string $baseUrl): array
     {
         $tasks = [];
 
@@ -176,39 +181,40 @@ class ProjektronService
             // Use PHP 8.4 DOM\HTMLDocument with CSS selectors
             $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Find all links containing oid parameter
-            $links = $dom->querySelectorAll('a[href*="oid="]');
+            // Find all task links with data-tt attribute containing _JTask
+            $taskLinks = $dom->querySelectorAll('a[data-tt*="_JTask"]');
 
-            foreach ($links as $link) {
-                $href = $link->getAttribute('href');
+            foreach ($taskLinks as $link) {
+                $oid = $link->getAttribute('data-tt');
 
-                // Extract OID using regex (more reliable than parsing query string)
-                if (preg_match('/oid=([0-9]+_J(?:Task|Project))/i', $href, $matches)) {
-                    $oid = $matches[1];
-
-                    // Determine type
-                    $type = stripos($oid, '_JTask') !== false ? 'task' : 'project';
-
-                    // Build booking URL
-                    $bookingUrl = $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid;
-
-                    $tasks[$oid] = [
-                        'oid' => $oid,
-                        'type' => $type,
-                        'booking_url' => $bookingUrl
-                    ];
+                if (empty($oid)) {
+                    continue;
                 }
+
+                // Extract task name from child span.hover element
+                $nameSpan = $link->querySelector('span.hover');
+                $name = $nameSpan ? trim($nameSpan->textContent) : '';
+
+                // Build booking URL
+                $bookingUrl = $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid;
+
+                // Use OID as key to ensure uniqueness
+                $tasks[$oid] = [
+                    'oid' => $oid,
+                    'name' => $name,
+                    'booking_url' => $bookingUrl,
+                ];
             }
 
             // Return unique results (array_values to remove keys)
             return array_values($tasks);
         } catch (\Exception $e) {
-            $this->logger->error('Failed to parse Projektron HTML', [
+            $this->logger->error('Failed to parse Projektron task list HTML', [
                 'error' => $e->getMessage()
             ]);
 
             throw new InvalidArgumentException(
-                'Failed to parse Projektron project browser: ' . $e->getMessage()
+                'Failed to parse Projektron task list: ' . $e->getMessage()
             );
         }
     }
