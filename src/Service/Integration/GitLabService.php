@@ -617,4 +617,50 @@ class GitLabService
 
         return $response->toArray();
     }
+
+    public function getPipelineJobs(array $credentials, string $project, int $pipelineId, ?array $scope = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $query = [];
+        if ($scope !== null) {
+            $query['scope'] = $scope;
+        }
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/pipelines/' . $pipelineId . '/jobs', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+            'query' => $query,
+        ]);
+
+        return $response->toArray();
+    }
+
+    public function getJobTrace(array $credentials, string $project, int $jobId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId . '/trace', [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        // Note: This returns plain text, not JSON
+        return [
+            'job_id' => $jobId,
+            'trace' => $response->getContent()
+        ];
+    }
+
+    public function getJob(array $credentials, string $project, int $jobId): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['gitlab_url']);
+        $projectId = $this->parseProjectParameter($project);
+
+        $response = $this->httpClient->request('GET', $url . '/api/v4/projects/' . $projectId . '/jobs/' . $jobId, [
+            'headers' => $this->getAuthHeaders($credentials['api_token']),
+        ]);
+
+        return $response->toArray();
+    }
 }

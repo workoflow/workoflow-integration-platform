@@ -565,6 +565,66 @@ class GitLabIntegration implements PersonalizedSkillInterface
                     ]
                 ]
             ),
+            new ToolDefinition(
+                'gitlab_get_pipeline_jobs',
+                'Get all jobs in a pipeline. Returns: Array of jobs with id, status, stage, name, ref, tag, coverage, allow_failure, created_at, started_at, finished_at, erased_at, duration, queued_duration, user, commit, pipeline, failure_reason, web_url',
+                [
+                    [
+                        'name' => 'project',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project ID or URL-encoded path'
+                    ],
+                    [
+                        'name' => 'pipeline_id',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Pipeline ID'
+                    ],
+                    [
+                        'name' => 'scope',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Filter by job scope: created, pending, running, failed, success, canceled, skipped, manual'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'gitlab_get_job_trace',
+                'Get the trace log output from a job. Returns: Plain text log content showing console output, errors, and stack traces',
+                [
+                    [
+                        'name' => 'project',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project ID or URL-encoded path'
+                    ],
+                    [
+                        'name' => 'job_id',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Job ID'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'gitlab_get_job',
+                'Get detailed information about a specific job. Returns: Object with id, status, stage, name, ref, tag, coverage, allow_failure, created_at, started_at, finished_at, erased_at, duration, queued_duration, user, commit, pipeline, failure_reason, web_url, runner, artifacts_expire_at, artifacts',
+                [
+                    [
+                        'name' => 'project',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project ID or URL-encoded path'
+                    ],
+                    [
+                        'name' => 'job_id',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Job ID'
+                    ]
+                ]
+            ),
         ];
     }
 
@@ -722,6 +782,22 @@ class GitLabIntegration implements PersonalizedSkillInterface
                 $credentials,
                 $parameters['project'],
                 $parameters['pipeline_id']
+            ),
+            'gitlab_get_pipeline_jobs' => $this->gitLabService->getPipelineJobs(
+                $credentials,
+                $parameters['project'],
+                $parameters['pipeline_id'],
+                $parameters['scope'] ?? null
+            ),
+            'gitlab_get_job_trace' => $this->gitLabService->getJobTrace(
+                $credentials,
+                $parameters['project'],
+                $parameters['job_id']
+            ),
+            'gitlab_get_job' => $this->gitLabService->getJob(
+                $credentials,
+                $parameters['project'],
+                $parameters['job_id']
             ),
 
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")

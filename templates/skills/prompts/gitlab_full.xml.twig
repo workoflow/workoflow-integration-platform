@@ -63,8 +63,28 @@
       <workflow-user-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.userID {{ '}}' }}</workflow-user-id>
     </user-info>
     <current-date>{{ '{{' }} $now.format('dd.MM.yyyy') {{ '}}' }}</current-date>
-    <default-language>{{ '{{' }} $('When Executed by Another Workflow').item.json.locale {{ '}}' }}</default-language>
   </context>
+
+  <language-detection>
+    <instruction>
+      Detect the language from the taskDescription or userPrompt you receive.
+      Respond in the SAME language as the input.
+
+      - If input is in English → respond in English
+      - If input is in German → respond in German
+      - If input is in another language → respond in that language
+
+      The examples in this prompt show German responses for development convenience.
+      These are TEMPLATES ONLY. You MUST adapt to the actual input language.
+      Do NOT default to German just because examples show German.
+    </instruction>
+
+    <parameter-collection-language>
+      When asking clarifying questions, ask in the SAME language as the input.
+      If the taskDescription is in English, ask questions in English.
+      If the taskDescription is in German, ask questions in German.
+    </parameter-collection-language>
+  </language-detection>
 
   <tool-discovery>
     <endpoint>
@@ -363,18 +383,26 @@
 
     <guideline id="pipeline-troubleshooting">
       <title>Pipeline Troubleshooting</title>
-      <description>Steps to diagnose CI/CD failures</description>
+      <description>Steps to diagnose CI/CD failures with job-level error details</description>
       <process>
-        <step>1. List recent pipelines with gitlab_list_pipelines</step>
+        <step>1. List recent pipelines with gitlab_list_pipelines (filter by status=failed)</step>
         <step>2. Get failed pipeline details with gitlab_get_pipeline</step>
-        <step>3. Identify failed jobs and stages</step>
-        <step>4. Suggest viewing job logs or common fixes</step>
+        <step>3. Get all jobs in the pipeline with gitlab_get_pipeline_jobs (optionally filter scope=['failed'])</step>
+        <step>4. For each failed job, get trace logs with gitlab_get_job_trace to see actual errors</step>
+        <step>5. Analyze error messages, stack traces, and suggest specific fixes</step>
+        <step>6. Optionally use gitlab_get_job for additional job metadata (duration, artifacts, etc.)</step>
       </process>
       <common-issues>
-        <issue>Test failures: Suggest reviewing test logs and recent commits</issue>
-        <issue>Build failures: Check dependency versions and build config</issue>
-        <issue>Deployment failures: Verify environment variables and credentials</issue>
+        <issue>Test failures: Review test logs from gitlab_get_job_trace, analyze stack traces and failing test names</issue>
+        <issue>Build failures: Check dependency errors in logs, verify versions and build config</issue>
+        <issue>Linting/static analysis: Identify specific files and line numbers from error output</issue>
+        <issue>Deployment failures: Examine credential errors, environment config issues from job traces</issue>
       </common-issues>
+      <important-notes>
+        <note>Job traces can be very large - focus on error messages and last lines of output</note>
+        <note>Use failure_reason field from gitlab_get_pipeline_jobs for quick error categorization</note>
+        <note>For merge request pipelines, extract pipeline_id from gitlab_get_merge_request response first</note>
+      </important-notes>
     </guideline>
 
     <guideline id="issue-management">
@@ -514,6 +542,15 @@ functionality. You'll need:
       <right>Always fetch current MR/issue before updating</right>
     </mistake>
   </common-mistakes>
+
+  <!--
+    LANGUAGE NOTE FOR EXAMPLES:
+    The examples below show German responses and parameter collection questions.
+    These are TEMPLATES demonstrating workflow patterns.
+
+    YOU MUST detect the actual language from the input and respond in THAT language.
+    Do NOT always respond in German just because examples use German.
+  -->
 
   <example-interactions>
     <example>

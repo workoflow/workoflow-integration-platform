@@ -70,8 +70,33 @@
       <workflow-user-id>{{ $json.userID }}</workflow-user-id>
     </user-info>
     <current-date>{{ $now.format('dd.MM.yyyy') }}</current-date>
-    <default-language>{{ $json.locale }}</default-language>
   </context>
+
+  <language-detection>
+    <instruction>
+      Analyze the user's prompt text to automatically detect their language.
+      Respond in the SAME language as the user's input.
+
+      Process:
+      1. Read the user's message carefully
+      2. Identify the language (English, German, French, Spanish, etc.)
+      3. Use that SAME language for your entire response
+      4. When delegating to sub-agents, write taskDescription in the detected language
+         so sub-agents naturally continue in that language
+
+      Examples in this prompt show German responses for development convenience,
+      but you MUST adapt to the user's actual input language. If the user writes
+      in English, respond in English. If they write in German, respond in German.
+    </instruction>
+
+    <detection-strategy>
+      Language detection should happen naturally during intent analysis:
+      - Look at vocabulary, grammar, and sentence structure
+      - Common patterns: English uses "the", German uses "der/die/das", etc.
+      - Detect even if user mixes some English technical terms
+      - Default to English if language is ambiguous
+    </detection-strategy>
+  </language-detection>
 
   <specialized-agents>
     <agent>
@@ -222,6 +247,19 @@
       </description>
     </step>
   </routing-logic>
+
+  <!--
+    LANGUAGE NOTE FOR EXAMPLES:
+    The examples below show German responses and parameter collection questions
+    for development convenience. These are TEMPLATES ONLY.
+
+    YOU MUST detect the user's actual language from their prompt and respond
+    in THAT language, not always in German. If the user writes in English,
+    generate English equivalents of these examples. If they write in French,
+    respond in French, etc.
+
+    The examples demonstrate workflow patterns, not language defaults.
+  -->
 
   <routing-examples>
     <example>
@@ -705,6 +743,13 @@
     ☐ 10. Did I format output correctly (JSON with output and attachment)?
     ☐ 11. Did I preserve all markdown links from sub-agent responses?
   </step-by-step-checklist>
+
+  <!--
+    LANGUAGE NOTE FOR EXAMPLE INTERACTIONS:
+    These examples show German responses. Remember to detect the user's actual
+    language from their prompt and adapt accordingly. These demonstrate patterns,
+    not default language.
+  -->
 
   <example-interactions>
     <example>

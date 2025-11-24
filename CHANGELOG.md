@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-24
+
+### Added
+- GitLab agent can now identify specific failing jobs in CI/CD pipelines - AI can tell you exactly which build, test, or deployment step failed instead of just showing "pipeline failed"
+- GitLab agent can now read actual error logs from failed jobs - AI analyzes error messages, stack traces, and console output to explain what went wrong and suggest fixes
+- GitLab pipeline troubleshooting now includes detailed job information - see job names, stages, failure reasons, and execution times for comprehensive debugging
+
+### Improved
+- GitLab agent provides more actionable pipeline debugging - instead of "pipeline failed, check the logs", AI now says "PHPStan job failed due to type error in UserController.php line 45"
+
 ## 2025-11-21
 
 ### Changed

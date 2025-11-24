@@ -114,7 +114,6 @@
       <workflow-user-id>{{ '{{' }} $('When Executed by Another Workflow').item.json.userID{{ '}}' }}</workflow-user-id>
     </user-info>
     <current-date>{{ '{{' }} $now.format('dd.MM.yyyy'){{ '}}' }}</current-date>
-    <default-language>{{ '{{' }} $('When Executed by Another Workflow').item.json.locale{{ '}}' }}</default-language>
 
     <multi-agent-context>
       <previous-agent-data>{{ '{{' }} $('When Executed by Another Workflow').item.json.previousAgentData || null{{ '}}' }}</previous-agent-data>
@@ -130,6 +129,27 @@
       </explanation>
     </multi-agent-context>
   </context>
+
+  <language-detection>
+    <instruction>
+      Detect the language from the taskDescription or userPrompt you receive.
+      Respond in the SAME language as the input.
+
+      - If input is in English → respond in English
+      - If input is in German → respond in German
+      - If input is in another language → respond in that language
+
+      The examples in this prompt show German responses for development convenience.
+      These are TEMPLATES ONLY. You MUST adapt to the actual input language.
+      Do NOT default to German just because examples show German.
+    </instruction>
+
+    <parameter-collection-language>
+      When asking clarifying questions, ask in the SAME language as the input.
+      If the taskDescription is in English, ask questions in English.
+      If the taskDescription is in German, ask questions in German.
+    </parameter-collection-language>
+  </language-detection>
 
   <tool-discovery>
     <endpoint>
@@ -511,6 +531,15 @@
       <right>Use jira_transition_issue_to_status for simple status changes, or call jira_get_available_transitions first</right>
     </mistake>
   </common-mistakes>
+
+  <!--
+    LANGUAGE NOTE FOR EXAMPLES:
+    The examples below show German responses and parameter collection questions.
+    These are TEMPLATES demonstrating workflow patterns.
+
+    YOU MUST detect the actual language from the input and respond in THAT language.
+    Do NOT always respond in German just because examples use German.
+  -->
 
   <example-interactions>
     <example>
