@@ -372,6 +372,7 @@ action:
   back_to_skills: Zurück zu Skills
   configure: Konfigurieren
   manage_platform_skills: Platform Skills verwalten
+  filter: Filtern
 
 file:
   title: Dateien
@@ -466,10 +467,3 @@ pagination:
   previous: Zurück
   next: Weiter
   page_of: Seite %current% von %total%
-
-action:
-  filter: Filtern
-  actions: Aktionen
-  download: Herunterladen
-  delete: Löschen
-  cancel: Abbrechen
