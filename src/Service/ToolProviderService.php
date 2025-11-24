@@ -263,7 +263,7 @@ class ToolProviderService
 
         return [
             'type' => 'object',
-            'properties' => empty($properties) ? (object)[] : $properties,
+            'properties' => empty($properties) ? new \stdClass() : $properties,
             'required' => array_values(array_filter(array_map(function ($param) {
                 return ($param['required'] ?? false) ? $param['name'] : null;
             }, $parameters)))
