@@ -73,13 +73,13 @@
                                 <tr>
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 4px;">
-                                            <span>{{ integration.name }}</span>
                                             {% if integration.isExperimental %}
-                                                <span class="badge badge-experimental">
+                                                <span class="badge badge-experimental" style="width: fit-content;">
                                                     <i class="fas fa-flask"></i>
                                                     {{ 'status.experimental'|trans|default('EXPERIMENTAL') }}
                                                 </span>
                                             {% endif %}
+                                            <span>{{ integration.name }}</span>
                                         </div>
                                     </td>
                                     <td>
