@@ -365,6 +365,12 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'description' => 'Due date in YYYY-MM-DD format'
                     ],
                     [
+                        'name' => 'reporterId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Reporter account ID (from jira_get_myself or jira_search_users). Get your own accountId using jira_get_myself first.'
+                    ],
+                    [
                         'name' => 'customFields',
                         'type' => 'object',
                         'required' => false,
@@ -474,6 +480,11 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'description' => 'Search query (name or email)'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_get_myself',
+                'Get the current authenticated user information. IMPORTANT: Call this first when creating issues to get your accountId for the reporter field. Returns: User object with accountId (unique identifier to use as reporter/assignee), displayName, emailAddress, active status, avatarUrls, and timeZone',
+                []
             )
         ];
     }
@@ -589,6 +600,7 @@ class JiraIntegration implements PersonalizedSkillInterface
                 $credentials,
                 $parameters['query']
             ),
+            'jira_get_myself' => $this->jiraService->getMyself($credentials),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };
     }

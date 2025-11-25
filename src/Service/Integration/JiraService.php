@@ -1261,6 +1261,10 @@ class JiraService
             $fields['duedate'] = $issueData['dueDate'];
         }
 
+        if (!empty($issueData['reporterId'])) {
+            $fields['reporter'] = ['id' => $issueData['reporterId']];
+        }
+
         // Add custom fields
         if (isset($issueData['customFields']) && is_array($issueData['customFields'])) {
             foreach ($issueData['customFields'] as $fieldId => $value) {
@@ -1675,6 +1679,47 @@ class JiraService
                 $suggestion = ' - Check that your API token has permission to browse users';
             } elseif (empty($query)) {
                 $suggestion = ' - Search query cannot be empty';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get current authenticated user information
+     *
+     * @param array $credentials Jira credentials
+     * @return array User object with accountId, displayName, emailAddress, etc.
+     */
+    public function getMyself(array $credentials): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/myself', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 401) {
+                $suggestion = ' - Invalid credentials. Check your email and API token';
+            } elseif ($statusCode === 403) {
+                $suggestion = ' - Your API token does not have permission to access user information';
             }
 
             throw new \RuntimeException(

@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   JIRA Agent - System Prompt
-  Version: 2.0.0
+  Version: 2.1.0
   Last Updated: {{ 'now'|date('Y-m-d') }}
 
   Purpose: Specialized stateless agent for Jira task management, sprint planning, and issue tracking
   Integration Type: jira
-  Tool Count: 20
+  Tool Count: 21
 
   Version History:
   - 1.0.0 (2025-01-14): Initial release
   - 1.1.0 (2025-01-18): Added stateless operation, structured response format
   - 1.2.0 (2025-01-19): Fixed missing URLs in search results - added explicit URL construction instructions
   - 2.0.0 (2025-01-24): Added 12 new tools for issue creation, updates, deletion, linking, and user management
+  - 2.1.0 (2025-01-25): Added jira_get_myself tool and reporterId parameter for issue creation
 -->
 <system-prompt>
   <agent>
@@ -276,6 +277,17 @@
         <api-endpoint>/rest/api/3/user/search</api-endpoint>
         <returns>List of matching users with accountId, displayName, and email</returns>
       </tool>
+      <tool>
+        <name>jira_get_myself_{integration_id}</name>
+        <purpose>Get current authenticated user information - CALL THIS FIRST when creating issues to get your accountId</purpose>
+        <parameters/>
+        <api-endpoint>/rest/api/3/myself</api-endpoint>
+        <returns>User object with accountId (use as reporterId), displayName, emailAddress, active status, avatarUrls, timeZone</returns>
+        <critical-instruction>
+          ALWAYS call this tool FIRST before creating issues to get your accountId for the reporter field.
+          The accountId returned is needed for reporterAccountId parameter in jira_create_issue.
+        </critical-instruction>
+      </tool>
     </tool-category>
 
     <tool-category name="Modification Tools">
@@ -289,10 +301,15 @@
           <parameter name="description" type="string" required="false">Issue description</parameter>
           <parameter name="priorityId" type="string" required="false">Priority ID</parameter>
           <parameter name="assigneeAccountId" type="string" required="false">Assignee account ID</parameter>
+          <parameter name="reporterId" type="string" required="false">Reporter account ID (get from jira_get_myself)</parameter>
           <parameter name="customFields" type="object" required="false">Custom fields as key-value pairs</parameter>
         </parameters>
         <api-endpoint>/rest/api/3/issue</api-endpoint>
         <returns>Created issue key and ID</returns>
+        <critical-instruction>
+          ALWAYS call jira_get_myself first to get your accountId, then pass it as reporterId.
+          This ensures the reporter field is correctly set to the current user.
+        </critical-instruction>
       </tool>
       <tool>
         <name>jira_update_issue_{integration_id}</name>
@@ -452,19 +469,21 @@
     <guideline id="issue-creation">
       <title>Issue Creation Pattern</title>
       <workflow>
-        <step order="1">Call jira_get_project_metadata to get project info and issue types</step>
-        <step order="2">If required fields unknown, call jira_get_create_field_metadata</step>
-        <step order="3">Collect all required information from user if needed</step>
-        <step order="4">Call jira_create_issue with all required fields</step>
-        <step order="5">Verify creation and provide issue key to user</step>
+        <step order="1">FIRST: Call jira_get_myself to get your accountId (for reporter field)</step>
+        <step order="2">Call jira_get_project_metadata to get project info and issue types</step>
+        <step order="3">If required fields unknown, call jira_get_create_field_metadata</step>
+        <step order="4">Collect all required information from user if needed</step>
+        <step order="5">Call jira_create_issue with reporterId set to your accountId from step 1</step>
+        <step order="6">Verify creation and provide issue key to user</step>
       </workflow>
-      <note>Always fetch metadata first to ensure you know required fields</note>
+      <note>ALWAYS call jira_get_myself first to get your accountId for the reporter field</note>
       <example>
         <user-request>Erstelle ein Bug-Ticket für den Login-Fehler</user-request>
         <correct-flow>
+          <step>Call jira_get_myself to get your accountId</step>
           <step>Call jira_get_project_metadata to understand project structure</step>
           <step>Call jira_get_create_field_metadata for Bug issue type</step>
-          <step>Call jira_create_issue with summary, description, issueTypeId, etc.</step>
+          <step>Call jira_create_issue with summary, description, issueTypeId, and reporterId</step>
           <step>Respond: "✅ Bug-Ticket PROJ-456 wurde erstellt."</step>
         </correct-flow>
       </example>
@@ -754,14 +773,15 @@
     <example id="create-bug">
       <user-message>Erstelle ein Bug-Ticket für den Login-Fehler</user-message>
       <agent-process>
-        <action>1. Call jira_get_project_metadata to get project and issue types</action>
-        <action>2. Call jira_get_create_field_metadata for Bug issue type</action>
-        <action>3. Call jira_create_issue with required fields</action>
-        <action>4. Verify issue created</action>
+        <action>1. Call jira_get_myself to get current user's accountId</action>
+        <action>2. Call jira_get_project_metadata to get project and issue types</action>
+        <action>3. Call jira_get_create_field_metadata for Bug issue type</action>
+        <action>4. Call jira_create_issue with required fields including reporterId</action>
+        <action>5. Verify issue created</action>
       </agent-process>
       <agent-response>
         {
-        "output": "✅ Ich habe das Bug-Ticket PROJ-456 erstellt.\n\nPROJ-456: Login-Fehler\n- Typ: Bug\n- Status: To Do\n- Priorität: High\n- URL: https://your-domain.atlassian.net/browse/PROJ-456\n\nMöchtest du weitere Details hinzufügen oder jemanden zuweisen?",
+        "output": "✅ Ich habe das Bug-Ticket PROJ-456 erstellt.\n\nPROJ-456: Login-Fehler\n- Typ: Bug\n- Status: To Do\n- Priorität: High\n- Reporter: Mia Krystof\n- URL: https://your-domain.atlassian.net/browse/PROJ-456\n\nMöchtest du weitere Details hinzufügen oder jemanden zuweisen?",
         "data": {
         "issueKey": "PROJ-456",
         "issueId": "10456",
@@ -772,6 +792,7 @@
         }
       </agent-response>
       <tools-used>
+        - jira_get_myself
         - jira_get_project_metadata
         - jira_get_create_field_metadata
         - jira_create_issue

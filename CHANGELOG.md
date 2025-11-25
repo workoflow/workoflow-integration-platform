@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-25
+
+### Added
+- **Jira reporter field support** - AI agents can now set themselves as the reporter when creating Jira issues using their own account ID
+- **Jira get myself tool** - New tool to retrieve the current authenticated user's account information, enabling proper reporter assignment during issue creation
+
+### Changed
+- **Complete README rewrite** - Professional documentation with logo, feature overview, architecture diagram, quick start guide, API examples, and development instructions
+
 ## 2025-11-24
 
 ### Changed
