@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2025-11-26
 
 ### Fixed
+- **Jira agent HTTP tool confusion** - Fixed issue where Jira AI agent incorrectly passed system prompt data to HTTP tools; simplified prompt to match working Confluence pattern
 - **Skills API user isolation** - Fixed security issue where Skills API could return integration data from all users in an organisation; now requires workflow_user_id parameter and properly filters by user
 - **Cleaner magic link login experience** - Removed unnecessary success notification banner after logging in via magic link for a smoother user experience
 
