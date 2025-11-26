@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-01
+ - revert gpt 5 prompt changes
+
 ## 2025-11-27
 
 ### Fixed
