@@ -891,6 +891,34 @@ class JiraService
     }
 
     /**
+     * Format a custom field value based on its schema
+     *
+     * @param mixed $value The value to format
+     * @param array $schema The field schema from Jira metadata
+     * @return mixed The formatted value
+     */
+    private function formatCustomFieldValue(mixed $value, array $schema): mixed
+    {
+        // Already formatted as array/object - pass through
+        if (is_array($value)) {
+            return $value;
+        }
+
+        // Textarea fields need Atlassian Document Format
+        $custom = $schema['custom'] ?? '';
+        if (str_contains($custom, 'textarea')) {
+            return $this->convertPlainTextToADF((string) $value);
+        }
+
+        // Option fields (radio buttons, single select) need {"id": value}
+        if (($schema['type'] ?? '') === 'option') {
+            return ['id' => (string) $value];
+        }
+
+        return $value;
+    }
+
+    /**
      * Get edit metadata for an issue
      *
      * @param array $credentials Jira credentials
@@ -1265,10 +1293,22 @@ class JiraService
             $fields['reporter'] = ['id' => $issueData['reporterId']];
         }
 
-        // Add custom fields
+        // Add custom fields with auto-formatting
         if (isset($issueData['customFields']) && is_array($issueData['customFields'])) {
+            // Get field metadata to determine proper formatting
+            $fieldMetadata = $this->getCreateFieldMetadata(
+                $credentials,
+                $issueData['projectKey'],
+                $issueData['issueTypeId']
+            );
+            $schemaMap = [];
+            foreach ($fieldMetadata['fields'] ?? [] as $field) {
+                $schemaMap[$field['fieldId']] = $field['schema'] ?? [];
+            }
+
             foreach ($issueData['customFields'] as $fieldId => $value) {
-                $fields[$fieldId] = $value;
+                $schema = $schemaMap[$fieldId] ?? [];
+                $fields[$fieldId] = $this->formatCustomFieldValue($value, $schema);
             }
         }
 
@@ -1400,10 +1440,24 @@ class JiraService
             $updatePayload['fields']['components'] = array_map(fn($id) => ['id' => $id], $updates['componentIds']);
         }
 
-        // Handle custom fields
+        // Handle custom fields with auto-formatting
         if (isset($updates['customFields']) && is_array($updates['customFields'])) {
+            // Get issue details to determine project and issue type for field metadata
+            $issue = $this->getIssue($credentials, $issueKey);
+            $projectKey = $issue['fields']['project']['key'] ?? null;
+            $issueTypeId = $issue['fields']['issuetype']['id'] ?? null;
+
+            $schemaMap = [];
+            if ($projectKey && $issueTypeId) {
+                $fieldMetadata = $this->getCreateFieldMetadata($credentials, $projectKey, $issueTypeId);
+                foreach ($fieldMetadata['fields'] ?? [] as $field) {
+                    $schemaMap[$field['fieldId']] = $field['schema'] ?? [];
+                }
+            }
+
             foreach ($updates['customFields'] as $fieldId => $value) {
-                $updatePayload['fields'][$fieldId] = $value;
+                $schema = $schemaMap[$fieldId] ?? [];
+                $updatePayload['fields'][$fieldId] = $this->formatCustomFieldValue($value, $schema);
             }
         }
 
@@ -1511,10 +1565,22 @@ class JiraService
                 $fields['duedate'] = $issueData['dueDate'];
             }
 
-            // Add custom fields
+            // Add custom fields with auto-formatting
             if (isset($issueData['customFields']) && is_array($issueData['customFields'])) {
+                // Get field metadata to determine proper formatting
+                $fieldMetadata = $this->getCreateFieldMetadata(
+                    $credentials,
+                    $issueData['projectKey'],
+                    $issueData['issueTypeId']
+                );
+                $schemaMap = [];
+                foreach ($fieldMetadata['fields'] ?? [] as $field) {
+                    $schemaMap[$field['fieldId']] = $field['schema'] ?? [];
+                }
+
                 foreach ($issueData['customFields'] as $fieldId => $value) {
-                    $fields[$fieldId] = $value;
+                    $schema = $schemaMap[$fieldId] ?? [];
+                    $fields[$fieldId] = $this->formatCustomFieldValue($value, $schema);
                 }
             }
 
