@@ -899,20 +899,58 @@ class JiraService
      */
     private function formatCustomFieldValue(mixed $value, array $schema): mixed
     {
-        // Already formatted as array/object - pass through
+        $schemaType = $schema['type'] ?? '';
+        $custom = $schema['custom'] ?? '';
+        $itemsType = $schema['items'] ?? '';
+
+        // Handle array types (multiselect, labels, etc.)
+        if ($schemaType === 'array') {
+            // Ensure value is an array
+            $values = is_array($value) ? $value : [$value];
+
+            // Array of options (multiselect) - each element needs {"id": value}
+            if ($itemsType === 'option') {
+                return array_map(fn($v) => is_array($v) ? $v : ['id' => (string) $v], $values);
+            }
+
+            // Array of strings (labels, etc.) - pass through
+            if ($itemsType === 'string') {
+                return array_map('strval', $values);
+            }
+
+            // Other array types - pass through as-is
+            return $values;
+        }
+
+        // Already formatted as array/object for non-array schema - pass through
         if (is_array($value)) {
             return $value;
         }
 
         // Textarea fields need Atlassian Document Format
-        $custom = $schema['custom'] ?? '';
         if (str_contains($custom, 'textarea')) {
             return $this->convertPlainTextToADF((string) $value);
         }
 
         // Option fields (radio buttons, single select) need {"id": value}
-        if (($schema['type'] ?? '') === 'option') {
+        if ($schemaType === 'option') {
             return ['id' => (string) $value];
+        }
+
+        // User fields need {"id": accountId}
+        if ($schemaType === 'user') {
+            return ['id' => (string) $value];
+        }
+
+        // Date fields - validate format
+        if ($schemaType === 'date') {
+            $dateValue = (string) $value;
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateValue)) {
+                throw new \InvalidArgumentException(
+                    "Date field must be in YYYY-MM-DD format (e.g., 2025-12-25). Got: {$dateValue}"
+                );
+            }
+            return $dateValue;
         }
 
         return $value;
@@ -1286,7 +1324,13 @@ class JiraService
         }
 
         if (!empty($issueData['dueDate'])) {
-            $fields['duedate'] = $issueData['dueDate'];
+            $dueDate = $issueData['dueDate'];
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dueDate)) {
+                throw new \InvalidArgumentException(
+                    "Due date must be in YYYY-MM-DD format (e.g., 2025-12-25). Got: {$dueDate}"
+                );
+            }
+            $fields['duedate'] = $dueDate;
         }
 
         if (!empty($issueData['reporterId'])) {
@@ -1562,7 +1606,13 @@ class JiraService
             }
 
             if (!empty($issueData['dueDate'])) {
-                $fields['duedate'] = $issueData['dueDate'];
+                $dueDate = $issueData['dueDate'];
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dueDate)) {
+                    throw new \InvalidArgumentException(
+                        "Due date must be in YYYY-MM-DD format (e.g., 2025-12-25). Got: {$dueDate}"
+                    );
+                }
+                $fields['duedate'] = $dueDate;
             }
 
             // Add custom fields with auto-formatting
@@ -1598,14 +1648,19 @@ class JiraService
             ]);
 
             $result = $response->toArray();
+            $issues = $result['issues'] ?? [];
+            $errors = $result['errors'] ?? [];
+            $hasErrors = count($errors) > 0;
+            $hasSuccess = count($issues) > 0;
 
-            // Return both successes and errors
+            // Return both successes and errors with accurate success flag
             return [
-                'success' => true,
-                'issues' => $result['issues'] ?? [],
-                'errors' => $result['errors'] ?? [],
-                'totalCreated' => count($result['issues'] ?? []),
-                'totalFailed' => count($result['errors'] ?? [])
+                'success' => !$hasErrors,
+                'partial' => $hasErrors && $hasSuccess,
+                'issues' => $issues,
+                'errors' => $errors,
+                'totalCreated' => count($issues),
+                'totalFailed' => count($errors)
             ];
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {

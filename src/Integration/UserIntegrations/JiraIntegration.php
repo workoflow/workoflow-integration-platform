@@ -134,7 +134,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_transition_issue',
-                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs. Returns: HTTP 204 No Content on success (no response body), or error details if the transition fails',
+                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs. Note: Some transitions require additional fields (e.g., Resolution when closing). If you get a "required field" error, check the transition screen configuration. Returns: HTTP 204 on success, or error details',
                 [
                     [
                         'name' => 'issueKey',
@@ -248,19 +248,19 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_link_issues',
-                'Link two Jira issues together with a specific relationship type. The link direction matters: inward issue is the "target" and outward issue is the "source". For example, with "blocks" link type: if PROJ-123 blocks PROJ-456, then PROJ-123 is inward and PROJ-456 is outward. Returns: Success confirmation message',
+                'Link two Jira issues together with a specific relationship type. For "Blocks" link type: outwardIssue blocks inwardIssue (e.g., if PROJ-123 blocks PROJ-456, pass outwardIssue=PROJ-123, inwardIssue=PROJ-456). Returns: Success confirmation message',
                 [
                     [
                         'name' => 'inwardIssue',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Inward issue key - the target of the link (e.g., PROJ-123)'
+                        'description' => 'Inward issue key - receives the action (e.g., "is blocked by", "is duplicated by")'
                     ],
                     [
                         'name' => 'outwardIssue',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Outward issue key - the source of the link (e.g., PROJ-456)'
+                        'description' => 'Outward issue key - performs the action (e.g., "blocks", "duplicates")'
                     ],
                     [
                         'name' => 'linkTypeId',
@@ -290,7 +290,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_create_field_metadata',
-                'Get detailed field metadata for creating a specific issue type. Use this to discover all required and optional fields, including custom fields, for issue creation. Returns: Object with fields object containing field definitions. Each field includes: fieldId, name, required status, schema (type information), allowedValues (for select fields), and operations',
+                'Get detailed field metadata for creating a specific issue type. Use this to discover required/optional fields including custom fields. Each field has: fieldId, name, required (true/false), schema (type info), allowedValues (for select fields). Check "required: true" to identify mandatory fields.',
                 [
                     [
                         'name' => 'projectKey',
@@ -362,7 +362,7 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'name' => 'dueDate',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'Due date in YYYY-MM-DD format'
+                        'description' => 'Due date in YYYY-MM-DD format (e.g., 2025-12-25). Must be exact format.'
                     ],
                     [
                         'name' => 'reporterId',
@@ -471,7 +471,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_search_users',
-                'Search for Jira users by name or email. Returns user account IDs needed for assigning issues.',
+                'Search for Jira users by name or email. Returns array of user objects with accountId (use for assignee/reporter), displayName, emailAddress, and active status. Always use accountId field for issue assignments.',
                 [
                     [
                         'name' => 'query',
