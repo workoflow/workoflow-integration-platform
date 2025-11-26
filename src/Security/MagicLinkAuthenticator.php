@@ -101,11 +101,6 @@ class MagicLinkAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        // Store success message in session
-        if ($request->hasSession()) {
-            $request->getSession()->getFlashBag()->add('success', 'Successfully logged in via magic link');
-        }
-
         // Redirect to dashboard or originally requested page
         $targetPath = $request->getSession()->get('_security.' . $firewallName . '.target_path');
 

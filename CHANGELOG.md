@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **Skills API user isolation** - Fixed security issue where Skills API could return integration data from all users in an organisation; now requires workflow_user_id parameter and properly filters by user
+- **Cleaner magic link login experience** - Removed unnecessary success notification banner after logging in via magic link for a smoother user experience
 
 ### Added
 - **Smart document format selection** - AI agent now intelligently chooses between PDF and PowerPoint based on user request
