@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-26
+
+### Added
+- **Smart document format selection** - AI agent now intelligently chooses between PDF and PowerPoint based on user request
+- **Explicit format override support** - When you explicitly mention "als PDF" or "PDF Datei", the agent respects your choice even when asking for a "Präsentation"
+- **Format clarification prompts** - For ambiguous requests like "Erstelle Unterlagen", the agent asks which format you prefer instead of guessing
+
+### Fixed
+- **PDF/PowerPoint format confusion** - Fixed issue where requesting a "Präsentation in Form einer PDF Datei" would incorrectly create a PowerPoint instead of respecting the explicit PDF request
+
+### Improved
+- **Detailed API error messages** - Tool execution errors now include specific error details, HTTP status codes, context (tool_id, tool_name, integration_type), and actionable hints for troubleshooting
+- **Credential validation** - Clear error message when integration credentials are missing or invalid
+
 ## 2025-11-25
 
 ### Added

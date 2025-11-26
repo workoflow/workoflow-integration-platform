@@ -149,6 +149,22 @@ class IntegrationApiController extends AbstractController
                     $credentials = json_decode($this->encryptionService->decrypt($encryptedCreds), true);
                 }
 
+                // Validate credentials are available for user integrations
+                if (empty($credentials)) {
+                    return $this->json([
+                        'success' => false,
+                        'error' => 'Credentials not available',
+                        'message' => 'Failed to retrieve or decrypt credentials for this integration',
+                        'error_code' => 400,
+                        'context' => [
+                            'tool_id' => $toolId,
+                            'tool_name' => $toolName,
+                            'integration_type' => $targetIntegration->getType(),
+                        ],
+                        'hint' => 'Re-configure the integration with valid credentials',
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+
                 // Update last accessed
                 $this->integrationConfigRepository->updateLastAccessed($config);
             } else {
@@ -212,10 +228,15 @@ class IntegrationApiController extends AbstractController
                 'result' => $result
             ]);
         } catch (\Exception $e) {
+            $errorDetails = $this->formatExceptionDetails($e);
+
             $this->logger->error('API Tool execution failed', [
                 'organisation' => $organisation->getName(),
                 'tool_id' => $toolId,
-                'error' => $e->getMessage()
+                'tool_name' => $toolName,
+                'error' => $errorDetails['message'],
+                'exception_class' => get_class($e),
+                'error_code' => $errorDetails['code'],
             ]);
 
             // Log failed execution
@@ -229,13 +250,21 @@ class IntegrationApiController extends AbstractController
                     'integration_type' => $targetIntegration?->getType() ?? 'unknown',
                     'workflow_user_id' => $workflowUserId,
                     'success' => false,
-                    'error' => $e->getMessage(),
+                    'error' => $errorDetails['message'],
                 ]
             );
 
             return $this->json([
+                'success' => false,
                 'error' => 'Tool execution failed',
-                'message' => $e->getMessage()
+                'message' => $errorDetails['message'],
+                'error_code' => $errorDetails['code'],
+                'context' => [
+                    'tool_id' => $toolId,
+                    'tool_name' => $toolName,
+                    'integration_type' => $targetIntegration?->getType() ?? 'unknown',
+                ],
+                'hint' => $errorDetails['hint'],
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -256,5 +285,79 @@ class IntegrationApiController extends AbstractController
         [$username, $password] = explode(':', $decoded, 2);
 
         return $username === $this->apiAuthUser && $password === $this->apiAuthPassword;
+    }
+
+    /**
+     * Format exception details for API response.
+     * Handles HttpClient exceptions (ClientException, ServerException, TransportException)
+     * and extracts error details from API responses.
+     *
+     * @return array{message: string, code: int, hint: string}
+     */
+    private function formatExceptionDetails(\Throwable $e): array
+    {
+        // Handle Symfony HttpClient ClientException (4xx errors)
+        if ($e instanceof \Symfony\Component\HttpClient\Exception\ClientException) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            try {
+                $errorData = $response->toArray(false);
+                // Extract from various API response formats (Jira, Confluence, SharePoint, etc.)
+                $errorText = $errorData['errorMessages'][0]
+                    ?? $errorData['message']
+                    ?? $errorData['error']['message']
+                    ?? $errorData['error_description']
+                    ?? (!empty($errorData['errors']) ? json_encode($errorData['errors']) : null)
+                    ?? 'Client error';
+            } catch (\Throwable) {
+                $errorText = $e->getMessage();
+            }
+            return [
+                'message' => "API Error (HTTP {$statusCode}): {$errorText}",
+                'code' => $statusCode,
+                'hint' => 'Request error - check parameters and credentials',
+            ];
+        }
+
+        // Handle Symfony HttpClient ServerException (5xx errors)
+        if ($e instanceof \Symfony\Component\HttpClient\Exception\ServerException) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            return [
+                'message' => "Server Error (HTTP {$statusCode}): The external service encountered an internal error",
+                'code' => $statusCode,
+                'hint' => 'External service returned a server error (5xx) - try again later',
+            ];
+        }
+
+        // Handle Symfony HttpClient TransportException (network errors)
+        if ($e instanceof \Symfony\Component\HttpClient\Exception\TransportException) {
+            return [
+                'message' => "Connection Error: Cannot reach external service. Details: " . $e->getMessage(),
+                'code' => 0,
+                'hint' => 'Network error - check if the external service is reachable',
+            ];
+        }
+
+        // Handle generic exceptions with smart hint detection
+        $msg = strtolower($e->getMessage());
+        $hint = match (true) {
+            str_contains($msg, 'undefined array key') || str_contains($msg, 'credentials')
+                => 'Credentials may be missing or invalid - verify integration configuration',
+            str_contains($msg, 'required')
+                => 'Required field missing - check API documentation for required parameters',
+            str_contains($msg, 'not found') || str_contains($msg, '404')
+                => 'Resource not found - verify the ID/key exists',
+            str_contains($msg, 'permission') || str_contains($msg, 'forbidden') || str_contains($msg, '403')
+                => 'Permission denied - check API token permissions',
+            str_contains($msg, 'unauthorized') || str_contains($msg, '401')
+                => 'Authentication failed - verify credentials',
+            default => 'Check the error message for details',
+        };
+
+        return [
+            'message' => $e->getMessage() ?: 'Unknown error occurred',
+            'code' => $e->getCode() ?: 500,
+            'hint' => $hint,
+        ];
     }
 }
