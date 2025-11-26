@@ -70,6 +70,17 @@ class SkillsApiController extends AbstractController
     {
         $skills = [];
 
+        // Security: Require workflow_user_id for user integrations to prevent cross-user data leakage
+        if ($workflowUserId === null) {
+            return $skills;
+        }
+
+        // Get all configs for this user using proper UserOrganisation join filtering
+        $allUserConfigs = $this->integrationConfigRepository->findByOrganisationAndWorkflowUser(
+            $organisation,
+            $workflowUserId
+        );
+
         // Get user integrations
         foreach ($this->integrationRegistry->getUserIntegrations() as $integration) {
             $integrationType = $integration->getType();
@@ -79,21 +90,11 @@ class SkillsApiController extends AbstractController
                 continue;
             }
 
-            // Get all configs for this integration type
-            $configs = $this->integrationConfigRepository->findBy([
-                'organisation' => $organisation,
-                'integrationType' => $integrationType,
-                'active' => true,
-            ]);
-
-            // Filter by user if specified (check organisation's users)
-            if ($workflowUserId) {
-                $configs = array_filter($configs, function ($config) use ($workflowUserId) {
-                    // Match by user ID or organisation ID (workflowUserId can be either)
-                    return $config->getUser()?->getId() == $workflowUserId
-                        || $config->getOrganisation()->getUuid() === $workflowUserId;
-                });
-            }
+            // Filter configs by integration type and active status
+            $configs = array_filter(
+                $allUserConfigs,
+                fn($config) => $config->getIntegrationType() === $integrationType && $config->isActive()
+            );
 
             // Create skill entry for each configured instance
             foreach ($configs as $config) {
