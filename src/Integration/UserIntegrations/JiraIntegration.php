@@ -374,7 +374,7 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'name' => 'customFields',
                         'type' => 'object',
                         'required' => false,
-                        'description' => 'Object with custom field IDs as keys (e.g., {"customfield_10000": "value"})'
+                        'description' => 'Object with custom field IDs as keys. IMPORTANT: Check field schema from jira_get_create_field_metadata to determine format. For rich-text fields (schema.custom contains "textarea" or schema.type is "doc"), use Atlassian Document Format: {"customfield_xxx": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Your text"}]}]}}. For select/option fields (has allowedValues with id), use object format: {"customfield_xxx": {"id": "option_id"}}. For simple string fields, use plain values: {"customfield_xxx": "value"}'
                     ]
                 ]
             ),
