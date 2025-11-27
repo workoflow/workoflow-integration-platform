@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-11-27
+
+### Improved
+- **Simpler Projektron setup** - Removed CSRF token requirement from Projektron integration; only JSESSIONID cookie is now needed for authentication
+
 ## 2025-11-26
 
 ### Fixed

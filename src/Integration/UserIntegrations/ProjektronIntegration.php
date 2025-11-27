@@ -57,7 +57,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        $requiredFields = ['domain', 'username', 'csrf_token', 'jsessionid'];
+        $requiredFields = ['domain', 'username', 'jsessionid'];
 
         foreach ($requiredFields as $field) {
             if (empty($credentials[$field])) {
@@ -86,14 +86,6 @@ class ProjektronIntegration implements PersonalizedSkillInterface
                 'your.name@company.com',
                 true,
                 'Your Projektron username or email address'
-            ),
-            new CredentialField(
-                'csrf_token',
-                'password',
-                'CSRF Token',
-                null,
-                true,
-                'Open Browser DevTools (F12) → Application → Cookies → Find CSRF_Token value. Or use console: <code>document.cookie.match(/CSRF_Token=([^;]+)/)?.[1]</code>'
             ),
             new CredentialField(
                 'jsessionid',

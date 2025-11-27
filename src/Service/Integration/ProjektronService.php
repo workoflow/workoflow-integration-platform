@@ -56,19 +56,16 @@ class ProjektronService
         }
     }
 
-    private function buildCookieHeader(string $csrfToken, string $jsessionid): string
+    private function buildCookieHeader(string $jsessionid): string
     {
-        return sprintf('CSRF_Token=%s; JSESSIONID=%s', $csrfToken, $jsessionid);
+        return sprintf('JSESSIONID=%s', $jsessionid);
     }
 
     public function testConnection(array $credentials): bool
     {
         try {
             $url = $this->validateAndNormalizeUrl($credentials['domain']);
-            $cookieHeader = $this->buildCookieHeader(
-                $credentials['csrf_token'],
-                $credentials['jsessionid']
-            );
+            $cookieHeader = $this->buildCookieHeader($credentials['jsessionid']);
 
             $taskListUrl = $url . '/bcs/mybcs/tasklist';
 
@@ -110,17 +107,14 @@ class ProjektronService
     /**
      * Get all bookable tasks from the user's personal Projektron task list
      *
-     * @param array $credentials Projektron credentials (domain, csrf_token, jsessionid)
+     * @param array $credentials Projektron credentials (domain, jsessionid)
      * @return array Array of tasks with oid, name, and booking_url
      * @throws InvalidArgumentException If credentials are invalid or request fails
      */
     public function getAllTasks(array $credentials): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['domain']);
-        $cookieHeader = $this->buildCookieHeader(
-            $credentials['csrf_token'],
-            $credentials['jsessionid']
-        );
+        $cookieHeader = $this->buildCookieHeader($credentials['jsessionid']);
 
         // Fetch user's task list - follows redirect to get user-specific task list
         $taskListUrl = $url . '/bcs/mybcs/tasklist';
@@ -140,7 +134,7 @@ class ProjektronService
             // Check if we got redirected to login
             if (strpos($html, 'tasklist') === false && strpos($html, 'login') !== false) {
                 throw new InvalidArgumentException(
-                    'Authentication failed. Your session may have expired. Please update your CSRF_Token and JSESSIONID cookies.'
+                    'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
                 );
             }
 
@@ -150,7 +144,7 @@ class ProjektronService
 
             if ($statusCode === 401 || $statusCode === 403) {
                 throw new InvalidArgumentException(
-                    'Authentication failed. Please verify your CSRF_Token and JSESSIONID are correct and not expired.'
+                    'Authentication failed. Please verify your JSESSIONID is correct and not expired.'
                 );
             }
 
