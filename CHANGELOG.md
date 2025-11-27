@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-11-27
 
+### Fixed
+- **Agent response display issues** - Fixed encoding problems that could cause garbled characters (like corrupted checkmarks) in AI agent responses
+
 ### Improved
 - **Simpler Projektron setup** - Removed CSRF token requirement from Projektron integration; only JSESSIONID cookie is now needed for authentication
+- **Better AI agent compatibility** - Streamlined agent instructions for improved performance with newer AI models including GPT-5
 
 ## 2025-11-26
 
