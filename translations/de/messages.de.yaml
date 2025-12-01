@@ -14,6 +14,7 @@ nav:
   channel: Kanal
   members: Mitglieder
   audit_log: Audit-Protokoll
+  release_notes: Versionshinweise
   login: Anmelden
   workspace: Arbeitsbereich
   settings: Einstellungen
@@ -480,3 +481,26 @@ pagination:
   previous: Zurück
   next: Weiter
   page_of: Seite %current% von %total%
+
+release_notes:
+  title: Versionshinweise
+  subtitle: Neueste Updates aller Workoflow-Komponenten
+  last_updated: Zuletzt aktualisiert
+  error: Versionshinweise konnten nicht geladen werden
+  view_on_github: Auf GitHub ansehen
+  projects:
+    bot:
+      name: Workoflow Bot
+      description: MS Teams Bot zur Verbindung von n8n-Automatisierungs-Workflows mit Microsoft Teams. Ermöglicht KI-gestützte Kommunikation bei gleichzeitiger Wahrung der Datensicherheit durch Self-Hosting.
+    platform:
+      name: Workoflow Plattform
+      description: Enterprise-Integrationshub zur Verbindung von KI-Agenten mit Business-Tools wie Jira, Confluence und SharePoint. Mit verschlüsselter Credential-Speicherung und umfassendem Audit-Logging.
+    tests:
+      name: Workoflow Tests
+      description: Semantisches Validierungs-Framework für KI-Agenten mittels Azure OpenAI. Validiert Bedeutung statt exakter Textübereinstimmung, unterstützt deutsche und englische Antworten.
+    loadtests:
+      name: Workoflow Lasttests
+      description: k6-basierte Lasttest-Infrastruktur für den MS Teams Bot mit Smoke-Tests, Volllasttests und Grafana Cloud-Integration für Performance-Monitoring.
+    infrastructure:
+      name: Workoflow Infrastruktur
+      description: DSGVO-konforme Self-Hosted-Infrastruktur mit EU-basierten Diensten. Betreibt n8n, Qdrant, MinIO, Redis und PostgreSQL mit ISO 27001/27018-Zertifizierungen.

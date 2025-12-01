@@ -124,6 +124,10 @@
                                 <span>{{ 'nav.members'|trans }}</span>
                             </a>
                         {% endif %}
+                        <a href="{{ path('app_release_notes') }}" class="dropdown-item">
+                            <i class="fas fa-file-alt" aria-hidden="true"></i>
+                            <span>{{ 'nav.release_notes'|trans }}</span>
+                        </a>
                         <a href="{{ path('app_audit_log') }}" class="dropdown-item">
                             <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                             <span>{{ 'nav.audit_log'|trans }}</span>

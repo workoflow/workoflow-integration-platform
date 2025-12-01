@@ -3,7 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ## 2025-12-01
- - revert gpt 5 prompt changes
+
+### Added
+- **Release Notes page** - New page displaying changelogs from all Workoflow components (Bot, Platform, Tests, Load Tests, Infrastructure) with GitHub links and project descriptions
+- Accessible via Settings dropdown → Release Notes
+- Content cached for 1 hour for performance
 
 ## 2025-11-27
 
