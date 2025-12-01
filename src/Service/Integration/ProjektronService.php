@@ -56,9 +56,76 @@ class ProjektronService
         }
     }
 
-    private function buildCookieHeader(string $jsessionid): string
+    private function buildCookieHeader(string $jsessionid, ?string $csrfToken = null): string
     {
+        if ($csrfToken !== null) {
+            return sprintf('JSESSIONID=%s; CSRF_Token=%s', $jsessionid, $csrfToken);
+        }
         return sprintf('JSESSIONID=%s', $jsessionid);
+    }
+
+    /**
+     * Extract CSRF token from Projektron page
+     *
+     * @param array $credentials Projektron credentials (domain, jsessionid)
+     * @return string CSRF token
+     * @throws InvalidArgumentException If CSRF token cannot be found
+     */
+    public function getCsrfToken(array $credentials): string
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['domain']);
+        $cookieHeader = $this->buildCookieHeader($credentials['jsessionid']);
+
+        $taskListUrl = $url . '/bcs/mybcs/tasklist';
+
+        try {
+            $response = $this->httpClient->request('GET', $taskListUrl, [
+                'headers' => [
+                    'Cookie' => $cookieHeader,
+                    'User-Agent' => 'Workoflow-Integration/1.0',
+                ],
+                'timeout' => 30,
+                'max_redirects' => 5,
+            ]);
+
+            $html = $response->getContent();
+
+            // Try to extract CSRF token from hidden input field
+            if (preg_match('/name="CSRF_Token"[^>]*value="([^"]+)"/', $html, $matches)) {
+                return $matches[1];
+            }
+
+            // Try alternative pattern - value before name
+            if (preg_match('/value="([^"]+)"[^>]*name="CSRF_Token"/', $html, $matches)) {
+                return $matches[1];
+            }
+
+            // Try to extract from JavaScript variable
+            if (preg_match('/CSRF_Token["\']?\s*[:=]\s*["\']([^"\']+)["\']/', $html, $matches)) {
+                return $matches[1];
+            }
+
+            // Check response headers for Set-Cookie with CSRF_Token
+            $responseHeaders = $response->getHeaders();
+            if (isset($responseHeaders['set-cookie'])) {
+                foreach ($responseHeaders['set-cookie'] as $cookie) {
+                    if (preg_match('/CSRF_Token=([^;]+)/', $cookie, $matches)) {
+                        return $matches[1];
+                    }
+                }
+            }
+
+            throw new InvalidArgumentException(
+                'Could not find CSRF token in Projektron response. Your session may have expired or the page structure has changed.'
+            );
+        } catch (\Exception $e) {
+            if ($e instanceof InvalidArgumentException) {
+                throw $e;
+            }
+            throw new InvalidArgumentException(
+                'Failed to retrieve CSRF token: ' . $e->getMessage()
+            );
+        }
     }
 
     /**
@@ -503,5 +570,162 @@ class ProjektronService
         }
 
         return $taskNames;
+    }
+
+    /**
+     * Add a worklog entry to a Projektron task
+     *
+     * @param array $credentials Projektron credentials (domain, username, jsessionid)
+     * @param string $taskOid Task OID (e.g., "1744315212023_JTask")
+     * @param int $day Day of month (1-31)
+     * @param int $month Month (1-12)
+     * @param int $year Year (e.g., 2025)
+     * @param int $hours Hours to book (0-23)
+     * @param int $minutes Minutes to book (0-59)
+     * @param string $description Work description
+     * @param bool $chargeable Whether time is chargeable to client
+     * @return array Result with success flag and message
+     * @throws InvalidArgumentException If request fails
+     */
+    public function addWorklog(
+        array $credentials,
+        string $taskOid,
+        int $day,
+        int $month,
+        int $year,
+        int $hours,
+        int $minutes,
+        string $description,
+        bool $chargeable
+    ): array {
+        $url = $this->validateAndNormalizeUrl($credentials['domain']);
+
+        // Get CSRF token
+        $csrfToken = $this->getCsrfToken($credentials);
+
+        // Build cookie header with both JSESSIONID and CSRF_Token
+        $cookieHeader = $this->buildCookieHeader($credentials['jsessionid'], $csrfToken);
+
+        // Build date timestamp with Projektron quirks:
+        // - Subtract 1 day (Projektron auto-adds +1 day)
+        // - Set time to 22:00 (required for save to work)
+        $date = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
+        $date->sub(new \DateInterval('P1D'));
+        $date->setTime(22, 0, 0);
+        $timestamp = (string) ($date->getTimestamp() * 1000);
+
+        // Build form payload
+        $payload = [
+            'daytimerecording,formsubmitted' => 'true',
+            'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,Data_CustomTitle' => 'Einzelbuchen',
+            'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,Data_FirstOnPage' => 'daytimerecording',
+            'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,task,task' => $taskOid,
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortStart,effortStart_hour' => '',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortStart,effortStart_minute' => '',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_hour' => '',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_minute' => '',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_hour' => (string) $hours,
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_minute' => str_pad((string) $minutes, 2, '0', STR_PAD_LEFT),
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortChargeability,effortChargeability' => $chargeable
+                ? 'effortIsChargable_true+effortIsShown_true'
+                : 'effortIsChargable_false+effortIsShown_false',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortActivity,effortActivity' => $chargeable
+                ? 'anrechenbar'
+                : 'nicht_anrechenbar',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,description,description' => $description,
+            'daytimerecording,Content,singleeffort,recordType' => 'neweffort',
+            'daytimerecording,Content,singleeffort,recordOid' => '',
+            'daytimerecording,Content,singleeffort,recordDate' => $timestamp,
+            'daytimerecording,editableComponentNames' => 'daytimerecording,Content,singleeffort daytimerecording,Content,daytimerecordingAllBookingsOfTheDay',
+            'oid' => $taskOid,
+            'user' => $credentials['username'],
+            'action,MultiComponentDayTimeRecordingAction,daytimerecording' => '0',
+            'BCS.ConfirmDiscardChangesDialog,InitialApplyButtonsOnError' => 'daytimerecording,Apply',
+            'CSRF_Token' => $csrfToken,
+            'daytimerecording,Apply' => 'daytimerecording,Apply',
+            'submitButtonPressed' => 'daytimerecording,Apply',
+        ];
+
+        $bookingUrl = $url . '/bcs/taskdetail/effortrecording/edit?oid=' . urlencode($taskOid);
+
+        try {
+            $response = $this->httpClient->request('POST', $bookingUrl, [
+                'headers' => [
+                    'Cookie' => $cookieHeader,
+                    'User-Agent' => 'Workoflow-Integration/1.0',
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                ],
+                'body' => http_build_query($payload),
+                'timeout' => 30,
+                'max_redirects' => 5,
+            ]);
+
+            $html = $response->getContent();
+
+            // Check for success indicator
+            if (strpos($html, '<div class="msg affirmation">') !== false) {
+                $this->logger->info('Projektron worklog added successfully', [
+                    'task_oid' => $taskOid,
+                    'date' => sprintf('%04d-%02d-%02d', $year, $month, $day),
+                    'hours' => $hours,
+                    'minutes' => $minutes,
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => sprintf(
+                        'Successfully booked %dh %02dm to task on %04d-%02d-%02d',
+                        $hours,
+                        $minutes,
+                        $year,
+                        $month,
+                        $day
+                    ),
+                    'task_oid' => $taskOid,
+                    'date' => sprintf('%04d-%02d-%02d', $year, $month, $day),
+                    'hours' => $hours,
+                    'minutes' => $minutes,
+                    'description' => $description,
+                    'chargeable' => $chargeable,
+                ];
+            }
+
+            // Check if we got redirected to login
+            if (strpos($html, 'login') !== false) {
+                throw new InvalidArgumentException(
+                    'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
+                );
+            }
+
+            // Log the failure for debugging
+            $this->logger->error('Projektron worklog booking failed - no success indicator', [
+                'task_oid' => $taskOid,
+                'response_length' => strlen($html),
+            ]);
+
+            throw new InvalidArgumentException(
+                'Failed to book worklog entry. The request was processed but Projektron did not confirm success. ' .
+                'Please verify the task OID is valid and you have permission to book time to this task.'
+            );
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+
+            if ($statusCode === 401 || $statusCode === 403) {
+                throw new InvalidArgumentException(
+                    'Authentication failed. Please verify your JSESSIONID is correct and not expired.'
+                );
+            }
+
+            throw new InvalidArgumentException(
+                'Failed to book Projektron worklog: HTTP ' . $statusCode . ' - ' . $e->getMessage()
+            );
+        } catch (\Exception $e) {
+            if ($e instanceof InvalidArgumentException) {
+                throw $e;
+            }
+            throw new InvalidArgumentException(
+                'Failed to book Projektron worklog: ' . $e->getMessage()
+            );
+        }
     }
 }

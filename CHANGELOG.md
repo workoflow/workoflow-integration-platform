@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Accessible via Settings dropdown → Release Notes
 - Content cached for 1 hour for performance
 - **Projektron worklog retrieval** - AI agents can now fetch time entries from Projektron by specifying a date, returning the full week's bookings with task names and hour breakdowns
+- **Projektron time booking** - AI agents can now book time entries directly to Projektron tasks with support for hours, minutes, description, and billable/non-billable classification
 
 ## 2025-11-27
 
