@@ -437,6 +437,9 @@ class ProjektronService
                 ksort($entries[$taskOid]['daily_entries']);
             }
 
+            // Filter out entries with zero total time (empty entries)
+            $entries = array_filter($entries, fn($entry) => $entry['week_total_minutes'] > 0);
+
             return [
                 'date' => [
                     'day' => $day,
