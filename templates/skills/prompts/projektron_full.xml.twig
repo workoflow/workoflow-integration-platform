@@ -87,6 +87,23 @@
         <returns>List of tasks and projects with OIDs and booking URLs</returns>
       </tool>
     </tool-category>
+    <tool-category name="Time Tracking">
+      <tool>
+        <name>projektron_get_worklog_{{ integration_id }}</name>
+        <purpose>Get time entries (worklog) for a specific date. Returns the week containing that date.</purpose>
+        <parameters>
+          <param name="day" type="integer" required="true">Day of month (1-31)</param>
+          <param name="month" type="integer" required="true">Month (1-12)</param>
+          <param name="year" type="integer" required="true">Year (e.g., 2025)</param>
+        </parameters>
+        <returns>
+          Week's time entries including:
+          - week_dates: Array of dates in the week (YYYY-MM-DD format)
+          - total_hours: Sum of all booked hours
+          - entries: Array of task entries, each with task_oid, task_name, total_minutes, total_hours, and daily_entries
+        </returns>
+      </tool>
+    </tool-category>
   </available-tools>
 
   <workflow-guidelines>
@@ -101,6 +118,26 @@
         <step>5. Present findings in an organized format to Main Agent</step>
         <step>6. Confirm completion using past-tense summary to Main Agent</step>
       </correct-flow>
+    </guideline>
+
+    <guideline id="fetch-worklog">
+      <title>Fetching Time Entries (Worklog)</title>
+      <description>How to retrieve booked time for a specific date</description>
+      <correct-flow>
+        <step>1. User asks about their booked time or worklog (communicated by Main Agent)</step>
+        <step>2. Call projektron_get_worklog with day, month, year parameters</step>
+        <step>3. Receive response with week_dates, total_hours, and entries array</step>
+        <step>4. Each entry contains task_oid, task_name, total_minutes, total_hours, daily_entries</step>
+        <step>5. Present summary: total hours for week, breakdown by task</step>
+        <step>6. Confirm completion using past-tense summary to Main Agent</step>
+      </correct-flow>
+      <example-usage>
+        User: "How much time did I book last week?"
+        → Extract date from user context (e.g., 25, 11, 2025)
+        → Call projektron_get_worklog(day=25, month=11, year=2025)
+        → Response includes entire week's data
+        → Present: "You booked 32.5 hours across 4 tasks: Task A (8h), Task B (16h), ..."
+      </example-usage>
     </guideline>
 
     <guideline id="authentication-errors">
