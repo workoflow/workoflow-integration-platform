@@ -351,98 +351,90 @@ class ProjektronService
     private function parseWorklogData(string $html, string $baseUrl, int $day, int $month, int $year): array
     {
         try {
-            // Extract BCS_UI_LOAD_EVENTS JSON from script tag
-            if (!preg_match('/<script\s+id="BCS_UI_LOAD_EVENTS"[^>]*>(.+?)<\/script>/s', $html, $jsonMatch)) {
-                throw new InvalidArgumentException('Could not find worklog data in response');
-            }
-
-            /** @var array<int, array{event: array<string, mixed>}> $events */
-            $events = json_decode($jsonMatch[1], true);
-            if (!is_array($events)) {
-                throw new InvalidArgumentException('Invalid worklog data format');
-            }
-
             // Extract task names from HTML using DOM
             $taskNames = $this->extractTaskNames($html);
 
-            // Process events to extract time entries
+            // Extract daily hours from input fields
+            // Pattern: name="...listeditoid_TASKOID.days_TIMESTAMP...hour" value="X"
             $entries = [];
             $weekDates = [];
 
-            foreach ($events as $eventData) {
-                if (!isset($eventData['event'])) {
-                    continue;
+            // Find all hour input fields with values
+            // Pattern: name="...listeditoid_1744315212023_JTask.days_1763938800000,..._hour" value="8"
+            preg_match_all(
+                '/name="[^"]*listeditoid_(\d+_JTask)\.days_(\d+)[^"]*_hour"[^>]*value="(\d*)"/',
+                $html,
+                $hourMatches,
+                PREG_SET_ORDER
+            );
+
+            // Find all minute input fields with values
+            preg_match_all(
+                '/name="[^"]*listeditoid_(\d+_JTask)\.days_(\d+)[^"]*_minute"[^>]*value="(\d*)"/',
+                $html,
+                $minuteMatches,
+                PREG_SET_ORDER
+            );
+
+            // Process hour matches
+            foreach ($hourMatches as $match) {
+                $taskOid = $match[1];
+                $timestamp = (int) $match[2];
+                $hours = (int) ($match[3] !== '' ? $match[3] : 0);
+                $date = date('Y-m-d', $timestamp / 1000);
+
+                // Track week dates
+                if (!in_array($date, $weekDates)) {
+                    $weekDates[] = $date;
                 }
-                $event = $eventData['event'];
 
-                // Extract total hours per task from "attribute.duration.initValuesAndPatterns" events
-                if (isset($event['$key']) && $event['$key'] === 'attribute.duration.initValuesAndPatterns') {
-                    if (isset($event['attributeName']) && $event['attributeName'] === 'indicatorSumRealExpense') {
-                        $taskOid = $event['entityOid'] ?? null;
-                        $totalMinutes = $event['value'] ?? 0;
-
-                        if ($taskOid && str_contains($taskOid, '_JTask')) {
-                            if (!isset($entries[$taskOid])) {
-                                $entries[$taskOid] = [
-                                    'task_oid' => $taskOid,
-                                    'task_name' => $taskNames[$taskOid] ?? '',
-                                    'total_minutes' => 0,
-                                    'total_hours' => 0.0,
-                                    'daily_entries' => [],
-                                ];
-                            }
-                            $entries[$taskOid]['total_minutes'] = (int) $totalMinutes;
-                            $entries[$taskOid]['total_hours'] = round($totalMinutes / 60, 2);
-                        }
-                    }
+                // Initialize entry if not exists
+                if (!isset($entries[$taskOid])) {
+                    $entries[$taskOid] = [
+                        'task_oid' => $taskOid,
+                        'task_name' => $taskNames[$taskOid] ?? '',
+                        'daily_entries' => [],
+                    ];
                 }
 
-                // Extract daily entries from "attribute.initSetAndGet" events
-                if (isset($event['$key']) && $event['$key'] === 'attribute.initSetAndGet') {
-                    $attributeName = $event['attributeName'] ?? '';
+                // Initialize or update daily entry
+                if (!isset($entries[$taskOid]['daily_entries'][$date])) {
+                    $entries[$taskOid]['daily_entries'][$date] = [
+                        'hours' => 0,
+                        'minutes' => 0,
+                    ];
+                }
+                $entries[$taskOid]['daily_entries'][$date]['hours'] = $hours;
+            }
 
-                    // Pattern: listeditoid_1234567890_JTask.days_1736722800000
-                    if (preg_match('/listeditoid_(\d+_JTask)\.days_(\d+)$/', $attributeName, $matches)) {
-                        $taskOid = $matches[1];
-                        $timestamp = (int) $matches[2];
-                        $date = date('Y-m-d', $timestamp / 1000);
+            // Process minute matches
+            foreach ($minuteMatches as $match) {
+                $taskOid = $match[1];
+                $timestamp = (int) $match[2];
+                $minutes = (int) ($match[3] !== '' ? $match[3] : 0);
+                $date = date('Y-m-d', $timestamp / 1000);
 
-                        // Track week dates
-                        if (!in_array($date, $weekDates)) {
-                            $weekDates[] = $date;
-                        }
-
-                        // Initialize entry if not exists
-                        if (!isset($entries[$taskOid])) {
-                            $entries[$taskOid] = [
-                                'task_oid' => $taskOid,
-                                'task_name' => $taskNames[$taskOid] ?? '',
-                                'total_minutes' => 0,
-                                'total_hours' => 0.0,
-                                'daily_entries' => [],
-                            ];
-                        }
-
-                        // Initialize daily entry
-                        /** @var array<string, array{hours: int, minutes: int}> $dailyEntries */
-                        $dailyEntries = $entries[$taskOid]['daily_entries'];
-                        if (!array_key_exists($date, $dailyEntries)) {
-                            $entries[$taskOid]['daily_entries'][$date] = [
-                                'hours' => 0,
-                                'minutes' => 0,
-                            ];
-                        }
-                    }
+                if (isset($entries[$taskOid]['daily_entries'][$date])) {
+                    $entries[$taskOid]['daily_entries'][$date]['minutes'] = $minutes;
                 }
             }
 
             // Sort week dates
             sort($weekDates);
 
-            // Calculate total hours across all entries
-            $totalHours = 0.0;
-            foreach ($entries as $entry) {
-                $totalHours += $entry['total_hours'];
+            // Calculate week total for each entry and overall total
+            $totalWeekMinutes = 0;
+            foreach ($entries as $taskOid => $entry) {
+                $taskWeekMinutes = 0;
+                foreach ($entry['daily_entries'] as $dailyEntry) {
+                    $taskWeekMinutes += ($dailyEntry['hours'] * 60) + $dailyEntry['minutes'];
+                }
+                $entries[$taskOid]['week_total_minutes'] = $taskWeekMinutes;
+                $entries[$taskOid]['week_total_hours'] = round($taskWeekMinutes / 60, 2);
+                $totalWeekMinutes += $taskWeekMinutes;
+
+                // Sort daily entries by date
+                ksort($entries[$taskOid]['daily_entries']);
             }
 
             return [
@@ -452,7 +444,7 @@ class ProjektronService
                     'year' => $year,
                 ],
                 'week_dates' => $weekDates,
-                'total_hours' => round($totalHours, 2),
+                'total_week_hours' => round($totalWeekMinutes / 60, 2),
                 'entries' => array_values($entries),
             ];
         } catch (\Exception $e) {

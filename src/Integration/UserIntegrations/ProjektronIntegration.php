@@ -176,7 +176,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             'success' => true,
             'date' => $worklog['date'],
             'week_dates' => $worklog['week_dates'],
-            'total_hours' => $worklog['total_hours'],
+            'total_week_hours' => $worklog['total_week_hours'],
             'count' => count($worklog['entries']),
             'entries' => $worklog['entries'],
         ];
