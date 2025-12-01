@@ -173,7 +173,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
                 'JSESSIONID',
                 null,
                 true,
-                'Open Browser DevTools (F12) → Application → Cookies → Find JSESSIONID value. Or use console: <code>document.cookie.match(/JSESSIONID=([^;]+)/)?.[1]</code>'
+                'Open Browser DevTools (F12) → Application → Cookies → Find JSESSIONID value'
             ),
             new CredentialField(
                 'csrf_token',
