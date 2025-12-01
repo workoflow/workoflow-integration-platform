@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-02
+
+### Changed
+- **Projektron time booking requires CSRF token** - Users must now provide their CSRF_Token cookie alongside JSESSIONID for worklog booking; this improves reliability by using the browser's existing token instead of trying to extract it from HTML
+
 ## 2025-12-01
 
 ### Added

@@ -600,8 +600,13 @@ class ProjektronService
     ): array {
         $url = $this->validateAndNormalizeUrl($credentials['domain']);
 
-        // Get CSRF token
-        $csrfToken = $this->getCsrfToken($credentials);
+        // Use provided CSRF token from credentials
+        if (empty($credentials['csrf_token'])) {
+            throw new InvalidArgumentException(
+                'CSRF token is required for worklog booking. Please update your Projektron credentials with the CSRF_Token from your browser cookies.'
+            );
+        }
+        $csrfToken = $credentials['csrf_token'];
 
         // Build cookie header with both JSESSIONID and CSRF_Token
         $cookieHeader = $this->buildCookieHeader($credentials['jsessionid'], $csrfToken);
