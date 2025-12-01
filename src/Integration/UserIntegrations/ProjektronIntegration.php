@@ -181,7 +181,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
                 'CSRF Token',
                 null,
                 true,
-                'Open Browser DevTools (F12) → Application → Cookies → Find CSRF_Token value. Or use console: <code>document.cookie.match(/CSRF_Token=([^;]+)/)?.[1]</code>'
+                'Open Browser DevTools (F12) → Application → Cookies → Find CSRF_Token value'
             ),
         ];
     }
