@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-12-02
 
+### Added
+- **SAP C4C Opportunity management** - AI agents can now create, search, update, and list sales opportunities in SAP Cloud for Customer with support for linking to accounts and contacts
+- **SAP C4C Account management** - AI agents can now manage corporate accounts including address and contact information, with optional expansion to show linked contacts
+- **SAP C4C Contact management** - AI agents can now create and manage contact persons with support for linking to corporate accounts
+
 ### Fixed
 - **Projektron time booking now works correctly** - Fixed issue where worklog entries appeared to save successfully but were not actually created; added missing required form fields (effortWorkingTimeType, effortChargeability, edit_form_data_submitted) that Projektron expects
 

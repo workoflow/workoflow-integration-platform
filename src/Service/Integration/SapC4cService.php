@@ -463,4 +463,441 @@ class SapC4cService
     {
         return $this->searchLeads($credentials, null, $top, $skip, null);
     }
+
+    // ========================================================================
+    // GENERIC COLLECTION METHODS
+    // ========================================================================
+
+    /**
+     * Generic method to search any OData collection
+     */
+    private function searchCollection(
+        array $credentials,
+        string $collectionName,
+        string $resultKey,
+        ?string $filter = null,
+        int $top = 50,
+        int $skip = 0,
+        ?string $orderby = null,
+        ?string $expand = null
+    ): array {
+        $url = $this->buildApiUrl($credentials['base_url'], '/' . $collectionName);
+
+        $query = [
+            '$format' => 'json',
+            '$top' => $top,
+            '$skip' => $skip,
+        ];
+
+        if ($filter !== null) {
+            $query['$filter'] = $filter;
+        }
+
+        if ($orderby !== null) {
+            $query['$orderby'] = $orderby;
+        }
+
+        if ($expand !== null) {
+            $query['$expand'] = $expand;
+        }
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => $this->getAuthHeaders(
+                    $credentials['username'],
+                    $credentials['password']
+                ),
+                'query' => $query,
+            ]);
+
+            $data = $response->toArray();
+            $results = $this->unwrapODataResponse($data);
+
+            return [
+                $resultKey => $results,
+                'count' => count($results),
+                'top' => $top,
+                'skip' => $skip,
+                'has_more' => count($results) === $top,
+                'next_skip' => $skip + $top,
+            ];
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                "Failed to search {$collectionName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Generic method to get a single entity by ObjectID
+     */
+    private function getEntity(
+        array $credentials,
+        string $collectionName,
+        string $entityId,
+        string $entityName,
+        ?string $expand = null
+    ): array {
+        $url = $this->buildApiUrl($credentials['base_url'], "/{$collectionName}('{$entityId}')");
+
+        $query = ['$format' => 'json'];
+        if ($expand !== null) {
+            $query['$expand'] = $expand;
+        }
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => $this->getAuthHeaders(
+                    $credentials['username'],
+                    $credentials['password']
+                ),
+                'query' => $query,
+            ]);
+
+            $data = $response->toArray();
+            return $this->unwrapODataResponse($data);
+        } catch (ClientExceptionInterface $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            if ($statusCode === 404) {
+                throw new \RuntimeException("{$entityName} with ID '{$entityId}' not found", 404, $e);
+            }
+            throw new \RuntimeException(
+                "Failed to get {$entityName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                "Failed to get {$entityName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Generic method to create a new entity
+     */
+    private function createEntity(
+        array $credentials,
+        string $collectionName,
+        array $entityData,
+        string $entityName
+    ): array {
+        $url = $this->buildApiUrl($credentials['base_url'], '/' . $collectionName);
+
+        $csrfToken = $this->fetchCsrfToken(
+            $credentials['base_url'],
+            $credentials['username'],
+            $credentials['password']
+        );
+
+        try {
+            $response = $this->httpClient->request('POST', $url, [
+                'headers' => $this->getAuthHeaders(
+                    $credentials['username'],
+                    $credentials['password'],
+                    $csrfToken
+                ),
+                'query' => ['$format' => 'json'],
+                'json' => $entityData,
+            ]);
+
+            $data = $response->toArray();
+            return $this->unwrapODataResponse($data);
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                "Failed to create {$entityName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Generic method to update an existing entity
+     */
+    private function updateEntity(
+        array $credentials,
+        string $collectionName,
+        string $entityId,
+        array $entityData,
+        string $entityName
+    ): array {
+        $url = $this->buildApiUrl($credentials['base_url'], "/{$collectionName}('{$entityId}')");
+
+        $csrfToken = $this->fetchCsrfToken(
+            $credentials['base_url'],
+            $credentials['username'],
+            $credentials['password']
+        );
+
+        try {
+            $response = $this->httpClient->request('PATCH', $url, [
+                'headers' => $this->getAuthHeaders(
+                    $credentials['username'],
+                    $credentials['password'],
+                    $csrfToken
+                ),
+                'query' => ['$format' => 'json'],
+                'json' => $entityData,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode === 204) {
+                return $this->getEntity($credentials, $collectionName, $entityId, $entityName);
+            }
+
+            $data = $response->toArray();
+            return $this->unwrapODataResponse($data);
+        } catch (ClientExceptionInterface $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+            if ($statusCode === 404) {
+                throw new \RuntimeException("{$entityName} with ID '{$entityId}' not found", 404, $e);
+            }
+            throw new \RuntimeException(
+                "Failed to update {$entityName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                "Failed to update {$entityName}: " . $this->parseODataError($e),
+                0,
+                $e
+            );
+        }
+    }
+
+    // ========================================================================
+    // OPPORTUNITY METHODS
+    // ========================================================================
+
+    /**
+     * Search opportunities using OData filter
+     */
+    public function searchOpportunities(
+        array $credentials,
+        ?string $filter = null,
+        int $top = 50,
+        int $skip = 0,
+        ?string $orderby = null
+    ): array {
+        return $this->searchCollection(
+            $credentials,
+            'OpportunityCollection',
+            'opportunities',
+            $filter,
+            $top,
+            $skip,
+            $orderby
+        );
+    }
+
+    /**
+     * Get single opportunity by ObjectID
+     */
+    public function getOpportunity(array $credentials, string $opportunityId): array
+    {
+        return $this->getEntity(
+            $credentials,
+            'OpportunityCollection',
+            $opportunityId,
+            'Opportunity'
+        );
+    }
+
+    /**
+     * Create new opportunity
+     */
+    public function createOpportunity(array $credentials, array $opportunityData): array
+    {
+        return $this->createEntity(
+            $credentials,
+            'OpportunityCollection',
+            $opportunityData,
+            'Opportunity'
+        );
+    }
+
+    /**
+     * Update existing opportunity
+     */
+    public function updateOpportunity(
+        array $credentials,
+        string $opportunityId,
+        array $opportunityData
+    ): array {
+        return $this->updateEntity(
+            $credentials,
+            'OpportunityCollection',
+            $opportunityId,
+            $opportunityData,
+            'Opportunity'
+        );
+    }
+
+    /**
+     * List opportunities with pagination
+     */
+    public function listOpportunities(array $credentials, int $top = 50, int $skip = 0): array
+    {
+        return $this->searchOpportunities($credentials, null, $top, $skip, null);
+    }
+
+    // ========================================================================
+    // ACCOUNT METHODS
+    // ========================================================================
+
+    /**
+     * Search accounts using OData filter
+     */
+    public function searchAccounts(
+        array $credentials,
+        ?string $filter = null,
+        int $top = 50,
+        int $skip = 0,
+        ?string $orderby = null,
+        bool $expandContacts = false
+    ): array {
+        $expand = $expandContacts ? 'CorporateAccountHasContactPerson' : null;
+        return $this->searchCollection(
+            $credentials,
+            'CorporateAccountCollection',
+            'accounts',
+            $filter,
+            $top,
+            $skip,
+            $orderby,
+            $expand
+        );
+    }
+
+    /**
+     * Get single account by ObjectID
+     */
+    public function getAccount(
+        array $credentials,
+        string $accountId,
+        bool $expandContacts = false
+    ): array {
+        $expand = $expandContacts ? 'CorporateAccountHasContactPerson' : null;
+        return $this->getEntity(
+            $credentials,
+            'CorporateAccountCollection',
+            $accountId,
+            'Account',
+            $expand
+        );
+    }
+
+    /**
+     * Create new account
+     */
+    public function createAccount(array $credentials, array $accountData): array
+    {
+        return $this->createEntity(
+            $credentials,
+            'CorporateAccountCollection',
+            $accountData,
+            'Account'
+        );
+    }
+
+    /**
+     * Update existing account
+     */
+    public function updateAccount(array $credentials, string $accountId, array $accountData): array
+    {
+        return $this->updateEntity(
+            $credentials,
+            'CorporateAccountCollection',
+            $accountId,
+            $accountData,
+            'Account'
+        );
+    }
+
+    /**
+     * List accounts with pagination
+     */
+    public function listAccounts(array $credentials, int $top = 50, int $skip = 0): array
+    {
+        return $this->searchAccounts($credentials, null, $top, $skip, null, false);
+    }
+
+    // ========================================================================
+    // CONTACT METHODS
+    // ========================================================================
+
+    /**
+     * Search contacts using OData filter
+     */
+    public function searchContacts(
+        array $credentials,
+        ?string $filter = null,
+        int $top = 50,
+        int $skip = 0,
+        ?string $orderby = null
+    ): array {
+        return $this->searchCollection(
+            $credentials,
+            'ContactCollection',
+            'contacts',
+            $filter,
+            $top,
+            $skip,
+            $orderby
+        );
+    }
+
+    /**
+     * Get single contact by ObjectID
+     */
+    public function getContact(array $credentials, string $contactId): array
+    {
+        return $this->getEntity(
+            $credentials,
+            'ContactCollection',
+            $contactId,
+            'Contact'
+        );
+    }
+
+    /**
+     * Create new contact
+     */
+    public function createContact(array $credentials, array $contactData): array
+    {
+        return $this->createEntity(
+            $credentials,
+            'ContactCollection',
+            $contactData,
+            'Contact'
+        );
+    }
+
+    /**
+     * Update existing contact
+     */
+    public function updateContact(array $credentials, string $contactId, array $contactData): array
+    {
+        return $this->updateEntity(
+            $credentials,
+            'ContactCollection',
+            $contactId,
+            $contactData,
+            'Contact'
+        );
+    }
+
+    /**
+     * List contacts with pagination
+     */
+    public function listContacts(array $credentials, int $top = 50, int $skip = 0): array
+    {
+        return $this->searchContacts($credentials, null, $top, $skip, null);
+    }
 }
