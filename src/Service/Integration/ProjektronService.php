@@ -650,6 +650,30 @@ class ProjektronService
         ];
 
         $bookingUrl = $url . '/bcs/taskdetail/effortrecording/edit?oid=' . urlencode($taskOid);
+        $encodedPayload = http_build_query($payload);
+
+        // Build curl command for debugging
+        $curlCommand = sprintf(
+            "curl '%s' \\\n" .
+            "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n" .
+            "  -H 'Cookie: %s' \\\n" .
+            "  -H 'User-Agent: Workoflow-Integration/1.0' \\\n" .
+            "  --data-raw '%s'",
+            $bookingUrl,
+            $cookieHeader,
+            $encodedPayload
+        );
+
+        $this->logger->info('Projektron worklog booking - CURL command for debugging', [
+            'curl_command' => $curlCommand,
+            'url' => $bookingUrl,
+            'task_oid' => $taskOid,
+            'date' => sprintf('%04d-%02d-%02d', $year, $month, $day),
+            'timestamp' => $timestamp,
+            'hours' => $hours,
+            'minutes' => $minutes,
+            'payload_fields' => array_keys($payload),
+        ]);
 
         try {
             $response = $this->httpClient->request('POST', $bookingUrl, [
@@ -658,12 +682,23 @@ class ProjektronService
                     'User-Agent' => 'Workoflow-Integration/1.0',
                     'Content-Type' => 'application/x-www-form-urlencoded',
                 ],
-                'body' => http_build_query($payload),
+                'body' => $encodedPayload,
                 'timeout' => 30,
                 'max_redirects' => 5,
             ]);
 
             $html = $response->getContent();
+            $statusCode = $response->getStatusCode();
+
+            // Log response details for debugging
+            $this->logger->info('Projektron worklog booking - Response received', [
+                'status_code' => $statusCode,
+                'response_length' => strlen($html),
+                'has_affirmation' => strpos($html, '<div class="msg affirmation">') !== false,
+                'has_error_msg' => strpos($html, '<div class="msg error">') !== false,
+                'has_warning_msg' => strpos($html, '<div class="msg warning">') !== false,
+                'response_snippet' => substr($html, 0, 2000),
+            ]);
 
             // Check for success indicator
             if (strpos($html, '<div class="msg affirmation">') !== false) {
