@@ -116,7 +116,6 @@
           <param name="hours" type="integer" required="true">Hours to book (0-23)</param>
           <param name="minutes" type="integer" required="true">Minutes to book (0-59)</param>
           <param name="description" type="string" required="true">Work description</param>
-          <param name="chargeable" type="boolean" required="true">True if billable to client, false for internal/non-billable</param>
         </parameters>
         <returns>Success/failure status with confirmation message including booked date, hours, and task details</returns>
       </tool>
@@ -163,7 +162,7 @@
       <correct-flow>
         <step>1. First call projektron_get_all_tasks to get valid task OIDs</step>
         <step>2. Identify the correct task_oid for the booking (verify with user if unclear)</step>
-        <step>3. Gather required information: date (day, month, year), duration (hours, minutes), description, and chargeable status</step>
+        <step>3. Gather required information: date (day, month, year), duration (hours, minutes), and description</step>
         <step>4. Call projektron_add_worklog with all parameters</step>
         <step>5. Verify success in response</step>
         <step>6. Optionally call projektron_get_worklog to confirm the booking appears</step>
@@ -174,13 +173,12 @@
         → Call projektron_get_all_tasks to find the task OID
         → Identify task: "Incubator AI" with oid "1744315212023_JTask"
         → Extract date from context (e.g., today is 01, 12, 2025)
-        → Call projektron_add_worklog(task_oid="1744315212023_JTask", day=1, month=12, year=2025, hours=4, minutes=0, description="Development work", chargeable=false)
+        → Call projektron_add_worklog(task_oid="1744315212023_JTask", day=1, month=12, year=2025, hours=4, minutes=0, description="Development work")
         → Check response for success
-        → Present: "I have booked 4h 00m to Incubator AI for 2025-12-01 (non-billable)"
+        → Present: "I have booked 4h 00m to Incubator AI for 2025-12-01"
       </example-usage>
       <important-notes>
         <note>Always verify the task OID exists using projektron_get_all_tasks before booking</note>
-        <note>If user doesn't specify chargeable status, ask before proceeding</note>
         <note>Description should be meaningful - avoid generic placeholders</note>
         <note>Hours range is 0-23, minutes range is 0-59</note>
       </important-notes>

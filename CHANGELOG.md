@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-12-02
 
+### Fixed
+- **Projektron time booking now works correctly** - Fixed issue where worklog entries appeared to save successfully but were not actually created; removed unsupported form fields that caused silent failures
+
 ### Changed
 - **Projektron time booking requires CSRF token** - Users must now provide their CSRF_Token cookie alongside JSESSIONID for worklog booking; this improves reliability by using the browser's existing token instead of trying to extract it from HTML
 

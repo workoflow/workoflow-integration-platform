@@ -105,12 +105,6 @@ class ProjektronIntegration implements PersonalizedSkillInterface
                         'description' => 'Work description (e.g., "Development", "Meeting", "Code Review")',
                         'required' => true,
                     ],
-                    [
-                        'name' => 'chargeable',
-                        'type' => 'boolean',
-                        'description' => 'Whether time is chargeable to client (true) or internal/non-billable (false)',
-                        'required' => true,
-                    ],
                 ]
             ),
         ];
@@ -249,7 +243,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
      * Add a worklog entry to a Projektron task
      *
      * @param array $credentials Projektron credentials
-     * @param array $parameters Tool parameters (task_oid, day, month, year, hours, minutes, description, chargeable)
+     * @param array $parameters Tool parameters (task_oid, day, month, year, hours, minutes, description)
      * @return array Result with success flag and message
      */
     private function addWorklog(array $credentials, array $parameters): array
@@ -261,7 +255,6 @@ class ProjektronIntegration implements PersonalizedSkillInterface
         $hours = (int) ($parameters['hours'] ?? 0);
         $minutes = (int) ($parameters['minutes'] ?? 0);
         $description = trim($parameters['description'] ?? '');
-        $chargeable = (bool) ($parameters['chargeable'] ?? false);
 
         // Validate task OID
         if (empty($taskOid)) {
@@ -309,8 +302,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             $year,
             $hours,
             $minutes,
-            $description,
-            $chargeable
+            $description
         );
     }
 }

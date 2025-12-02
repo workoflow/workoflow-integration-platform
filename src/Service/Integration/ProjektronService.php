@@ -583,7 +583,6 @@ class ProjektronService
      * @param int $hours Hours to book (0-23)
      * @param int $minutes Minutes to book (0-59)
      * @param string $description Work description
-     * @param bool $chargeable Whether time is chargeable to client
      * @return array Result with success flag and message
      * @throws InvalidArgumentException If request fails
      */
@@ -595,8 +594,7 @@ class ProjektronService
         int $year,
         int $hours,
         int $minutes,
-        string $description,
-        bool $chargeable
+        string $description
     ): array {
         $url = $this->validateAndNormalizeUrl($credentials['domain']);
 
@@ -630,13 +628,7 @@ class ProjektronService
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_hour' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_minute' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_hour' => (string) $hours,
-            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_minute' => str_pad((string) $minutes, 2, '0', STR_PAD_LEFT),
-            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortChargeability,effortChargeability' => $chargeable
-                ? 'effortIsChargable_true+effortIsShown_true'
-                : 'effortIsChargable_false+effortIsShown_false',
-            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortActivity,effortActivity' => $chargeable
-                ? 'anrechenbar'
-                : 'nicht_anrechenbar',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_minute' => (string) $minutes,
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,description,description' => $description,
             'daytimerecording,Content,singleeffort,recordType' => 'neweffort',
             'daytimerecording,Content,singleeffort,recordOid' => '',
@@ -691,7 +683,6 @@ class ProjektronService
                     'hours' => $hours,
                     'minutes' => $minutes,
                     'description' => $description,
-                    'chargeable' => $chargeable,
                 ];
             }
 
