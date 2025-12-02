@@ -617,19 +617,25 @@ class ProjektronService
         $date->setTime(22, 0, 0);
         $timestamp = (string) ($date->getTimestamp() * 1000);
 
-        // Build form payload
+        // Build form payload - matches working browser request
         $payload = [
             'daytimerecording,formsubmitted' => 'true',
             'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,Data_CustomTitle' => 'Einzelbuchen',
             'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,Data_FirstOnPage' => 'daytimerecording',
             'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,task,task' => $taskOid,
+            'daytimerecording,Content,singleeffort,TaskSelector,fixedtask,edit_form_data_submitted' => 'true',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortStart,effortStart_hour' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortStart,effortStart_minute' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_hour' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortEnd,effortEnd_minute' => '',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_hour' => (string) $hours,
-            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_minute' => (string) $minutes,
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortExpense,effortExpense_minute' => str_pad((string) $minutes, 2, '0', STR_PAD_LEFT),
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortChargeability,effortChargeability' => 'effortIsChargable_false+effortIsShown_false',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortActivity,effortActivity' => 'nicht_anrechenbar',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortActivity,effortActivity_widgetType' => 'option',
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,effortWorkingTimeType,effortWorkingTimeType' => 'Standard',
             'daytimerecording,Content,singleeffort,EffortEditor,effort1,description,description' => $description,
+            'daytimerecording,Content,singleeffort,EffortEditor,effort1,edit_form_data_submitted' => 'true',
             'daytimerecording,Content,singleeffort,recordType' => 'neweffort',
             'daytimerecording,Content,singleeffort,recordOid' => '',
             'daytimerecording,Content,singleeffort,recordDate' => $timestamp,
