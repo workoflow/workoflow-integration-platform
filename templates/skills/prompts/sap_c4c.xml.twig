@@ -148,7 +148,7 @@
         <tool>c4c_search_contacts</tool>
         <example-filters>
           <filter>LastName eq 'Smith'</filter>
-          <filter>AccountPartyID eq 'XXX'</filter>
+          <filter>AccountID eq 'XXX'</filter>
           <filter>Email eq 'john@example.com'</filter>
         </example-filters>
       </capability>
@@ -192,8 +192,8 @@
     <relationship>
       <from>Contact</from>
       <to>Account</to>
-      <field>account_party_id</field>
-      <description>Link a contact person to their company</description>
+      <field>account_id</field>
+      <description>Link a contact person to their company (uses AccountID, NOT AccountPartyID)</description>
     </relationship>
     <relationship>
       <from>Lead</from>
@@ -218,7 +218,7 @@
       <examples>
         <example>Opportunity.ProspectPartyID = Account's AccountID (NOT ObjectID)</example>
         <example>Opportunity.PrimaryContactPartyID = Contact's ContactID (NOT ObjectID)</example>
-        <example>Contact.AccountPartyID = Account's AccountID (NOT ObjectID)</example>
+        <example>Contact.AccountID = Account's AccountID (NOT AccountPartyID, NOT ObjectID)</example>
       </examples>
       <warning>NEVER use PartyID/AccountID/ContactID directly with c4c_get_* tools - they will return 404!</warning>
     </id-type>

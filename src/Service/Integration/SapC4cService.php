@@ -418,7 +418,6 @@ class SapC4cService
                     $csrfData['token'],
                     $csrfData['cookies']
                 ),
-                'query' => ['$format' => 'json'],
                 'json' => $leadData,
             ]);
 
@@ -451,7 +450,6 @@ class SapC4cService
                     $csrfData['token'],
                     $csrfData['cookies']
                 ),
-                'query' => ['$format' => 'json'],
                 'json' => $leadData,
             ]);
 
@@ -621,7 +619,6 @@ class SapC4cService
                     $csrfData['token'],
                     $csrfData['cookies']
                 ),
-                'query' => ['$format' => 'json'],
                 'json' => $entityData,
             ]);
 
@@ -662,7 +659,6 @@ class SapC4cService
                     $csrfData['token'],
                     $csrfData['cookies']
                 ),
-                'query' => ['$format' => 'json'],
                 'json' => $entityData,
             ]);
 
