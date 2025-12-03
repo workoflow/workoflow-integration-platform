@@ -1336,7 +1336,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'SAP C4C Base URL',
                 'https://myXXXXXX.crm.ondemand.com',
                 true,
-                'Your SAP Cloud for Customer instance URL (e.g., https://myXXXXXX.crm.ondemand.com)'
+                'Your SAP Cloud for Customer instance URL without trailing slash (e.g., https://myXXXXXX.crm.ondemand.com)'
             ),
             new CredentialField(
                 'username',

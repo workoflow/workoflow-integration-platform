@@ -28,12 +28,6 @@ class SapC4cService
                 UriNormalizer::REMOVE_DEFAULT_PORT | UriNormalizer::REMOVE_DUPLICATE_SLASHES
             );
 
-            // Remove trailing slash
-            $path = $uri->getPath();
-            if ($path !== '/' && str_ends_with($path, '/')) {
-                $uri = $uri->withPath(rtrim($path, '/'));
-            }
-
             // Validate scheme
             $scheme = $uri->getScheme();
             if (!in_array($scheme, ['http', 'https'], true)) {
@@ -56,7 +50,8 @@ class SapC4cService
                 );
             }
 
-            return (string) $uri;
+            // Always remove trailing slash to prevent double-slash URLs when concatenating paths
+            return rtrim((string) $uri, '/');
         } catch (InvalidArgumentException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -92,7 +87,8 @@ class SapC4cService
     private function buildApiUrl(string $baseUrl, string $path): string
     {
         $baseUrl = $this->validateAndNormalizeUrl($baseUrl);
-        $apiBase = $baseUrl . '/sap/c4c/odata/v1/c4codataapi';
+        // Defensive rtrim to ensure no double slashes even if normalization is bypassed
+        $apiBase = rtrim($baseUrl, '/') . '/sap/c4c/odata/v1/c4codataapi';
         return $apiBase . $path;
     }
 
