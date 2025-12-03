@@ -9,6 +9,7 @@ use App\Integration\CredentialField;
 use App\Service\Integration\SapC4cService;
 use Twig\Environment;
 
+// https://github.com/SAP-archive/C4CODATAAPIDEVGUIDE
 class SapC4cIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
@@ -786,6 +787,22 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                     ]
                 ]
             ),
+
+            // ================================================================
+            // METADATA TOOLS
+            // ================================================================
+            new ToolDefinition(
+                'c4c_get_entity_metadata',
+                'IMPORTANT: Call this BEFORE using search/filter tools if you are unsure about property names. Fetches OData metadata for any SAP C4C entity to discover available properties, their types, and which ones can be used in $filter queries. Returns: filterable_properties (array of property names safe to use in filters), creatable_properties, updatable_properties, and all_properties with full details including type and nullability.',
+                [
+                    [
+                        'name' => 'entity_type',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Entity type name: "Opportunity", "Lead", "CorporateAccount", "Contact". Use exact names without "Collection" suffix.'
+                    ]
+                ]
+            ),
         ];
     }
 
@@ -876,6 +893,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 $credentials,
                 $parameters['top'] ?? 50,
                 $parameters['skip'] ?? 0
+            ),
+
+            // Metadata tools
+            'c4c_get_entity_metadata' => $this->sapC4cService->getEntityMetadata(
+                $credentials,
+                $parameters['entity_type']
             ),
 
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")

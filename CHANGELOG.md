@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-03
+
+### Added
+- **SAP C4C metadata discovery tool** - AI agents can now discover available entity properties before searching, preventing filter errors from invalid property names like "SalesPhaseCode" that don't exist in the OData API
+
 ## 2025-12-02
 
 ### Added

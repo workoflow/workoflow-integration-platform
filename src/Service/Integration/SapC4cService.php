@@ -900,4 +900,111 @@ class SapC4cService
     {
         return $this->searchContacts($credentials, null, $top, $skip, null);
     }
+
+    // ========================================================================
+    // METADATA METHODS
+    // ========================================================================
+
+    /**
+     * Get OData metadata for a specific entity type to discover available properties
+     */
+    public function getEntityMetadata(array $credentials, string $entityType): array
+    {
+        $url = $this->buildApiUrl($credentials['base_url'], '/$metadata');
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode(
+                        $credentials['username'] . ':' . $credentials['password']
+                    ),
+                    'Accept' => 'application/xml',
+                ],
+                'query' => ['$filter' => $entityType],
+                'timeout' => 30,
+            ]);
+
+            $xml = $response->getContent();
+            return $this->parseMetadataXml($xml, $entityType);
+        } catch (\Exception $e) {
+            throw new \RuntimeException(
+                "Failed to get metadata for {$entityType}: " . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Parse OData metadata XML and extract property information
+     */
+    private function parseMetadataXml(string $xml, string $entityType): array
+    {
+        $doc = new \DOMDocument();
+        @$doc->loadXML($xml);
+
+        $xpath = new \DOMXPath($doc);
+        $xpath->registerNamespace('edmx', 'http://schemas.microsoft.com/ado/2007/06/edmx');
+        $xpath->registerNamespace('edm', 'http://schemas.microsoft.com/ado/2008/09/edm');
+
+        // Find the EntityType - try with and without Collection suffix
+        $entityTypes = $xpath->query("//edm:EntityType[@Name='{$entityType}']");
+        if ($entityTypes->length === 0) {
+            $baseName = str_replace('Collection', '', $entityType);
+            $entityTypes = $xpath->query("//edm:EntityType[@Name='{$baseName}']");
+        }
+
+        $properties = [];
+        $filterableProperties = [];
+        $creatableProperties = [];
+        $updatableProperties = [];
+
+        foreach ($entityTypes as $entityTypeNode) {
+            $propertyNodes = $xpath->query('.//edm:Property', $entityTypeNode);
+
+            foreach ($propertyNodes as $prop) {
+                /** @var \DOMElement $prop */
+                $name = $prop->getAttribute('Name');
+                $type = $prop->getAttribute('Type');
+                $nullable = $prop->getAttribute('Nullable') !== 'false';
+
+                // SAP-specific annotations use sap: namespace
+                $filterable = $prop->getAttribute('sap:filterable') !== 'false';
+                $creatable = $prop->getAttribute('sap:creatable') !== 'false';
+                $updatable = $prop->getAttribute('sap:updatable') !== 'false';
+
+                $properties[] = [
+                    'name' => $name,
+                    'type' => $type,
+                    'nullable' => $nullable,
+                    'filterable' => $filterable,
+                    'creatable' => $creatable,
+                    'updatable' => $updatable,
+                ];
+
+                if ($filterable) {
+                    $filterableProperties[] = $name;
+                }
+                if ($creatable) {
+                    $creatableProperties[] = $name;
+                }
+                if ($updatable) {
+                    $updatableProperties[] = $name;
+                }
+            }
+        }
+
+        return [
+            'entity_type' => $entityType,
+            'property_count' => count($properties),
+            'filterable_count' => count($filterableProperties),
+            'creatable_count' => count($creatableProperties),
+            'updatable_count' => count($updatableProperties),
+            'filterable_properties' => $filterableProperties,
+            'creatable_properties' => $creatableProperties,
+            'updatable_properties' => $updatableProperties,
+            'all_properties' => $properties,
+            'hint' => 'Use filterable_properties in $filter queries. Properties not in this list cannot be filtered.',
+        ];
+    }
 }

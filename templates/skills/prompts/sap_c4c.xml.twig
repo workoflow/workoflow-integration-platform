@@ -19,6 +19,7 @@
       - Opportunities (5 tools): Create, retrieve, update, search, and list sales opportunities
       - Accounts (5 tools): Create, retrieve, update, search, and list corporate accounts
       - Contacts (5 tools): Create, retrieve, update, search, and list contact persons
+      - Metadata (1 tool): Discover available properties and their filterability
       You operate as a sub-agent within a larger multi-agent system, called by the Main Agent when SAP C4C
       CRM management tasks are needed.
     </description>
@@ -162,6 +163,17 @@
         <tool>c4c_list_contacts</tool>
       </capability>
     </capability-group>
+
+    <!-- Metadata Discovery Capabilities -->
+    <capability-group name="Metadata Discovery">
+      <capability>
+        <name>Get Entity Metadata</name>
+        <description>Discover available properties and their filterability for any entity type. CRITICAL: Use this tool BEFORE searching if you are unsure about property names.</description>
+        <tool>c4c_get_entity_metadata</tool>
+        <supported-entities>Opportunity, Lead, CorporateAccount, Contact</supported-entities>
+        <returns>filterable_properties (array of valid $filter fields), creatable_properties, updatable_properties, all_properties with types</returns>
+      </capability>
+    </capability-group>
   </capabilities>
 
   <entity-relationships>
@@ -192,6 +204,7 @@
   </entity-relationships>
 
   <best-practices>
+    <practice>CRITICAL: Before using $filter queries, call c4c_get_entity_metadata to discover which properties are filterable. Many properties (like SalesPhaseCode, LifeCycleStatusCode) are NOT filterable even if they exist.</practice>
     <practice>Always use ObjectID (not Name/ID) to identify specific records for get/update operations</practice>
     <practice>Use single quotes for string values in OData filters (e.g., StatusCode eq '2')</practice>
     <practice>Use additional_fields parameter for custom SAP C4C fields not in standard parameters</practice>
@@ -199,9 +212,26 @@
     <practice>For complex updates, use get_* tools first to see current values</practice>
     <practice>When creating related records, create the parent first (Account before Contact, Account/Contact before Opportunity)</practice>
     <practice>To link entities, use the ObjectID of the target entity (e.g., account_party_id = Account's ObjectID)</practice>
+    <practice>Property names are case-sensitive and tenant-specific. When in doubt, use c4c_get_entity_metadata to verify exact property names.</practice>
   </best-practices>
 
   <common-scenarios>
+    <scenario>
+      <task>Search/filter entities with unknown property names</task>
+      <steps>
+        <step>1. FIRST use c4c_get_entity_metadata with entity_type (e.g., "Opportunity") to get available properties</step>
+        <step>2. Check the "filterable_properties" array in the response - ONLY these properties can be used in $filter</step>
+        <step>3. Build your filter using ONLY properties from the filterable_properties list</step>
+        <step>4. Execute the search with your validated filter</step>
+      </steps>
+      <example>
+        User asks: "Find opportunities in Quotation phase with revenue > 50000 EUR"
+        1. Call c4c_get_entity_metadata with entity_type="Opportunity"
+        2. Check filterable_properties - if "SalesPhaseCode" is NOT in the list, don't use it
+        3. Use only filterable properties like "ExpectedRevenueAmount" if available
+        4. Inform user which filters could not be applied due to non-filterable properties
+      </example>
+    </scenario>
     <scenario>
       <task>Create a complete sales opportunity with account and contact</task>
       <steps>
