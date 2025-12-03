@@ -223,13 +223,13 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'account_party_id',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'SAP C4C account ObjectID to link this opportunity to'
+                        'description' => 'SAP C4C AccountID (short numeric like "10025480" from the AccountID field in search results, NOT the 32-char ObjectID) to link this opportunity to'
                     ],
                     [
                         'name' => 'main_contact_party_id',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'SAP C4C contact ObjectID for primary contact'
+                        'description' => 'SAP C4C ContactID (short numeric like "10025484" from the ContactID field in search results, NOT the 32-char ObjectID) for primary contact'
                     ],
                     [
                         'name' => 'expected_revenue_amount',
@@ -343,13 +343,13 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'account_party_id',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'New account ObjectID to link'
+                        'description' => 'New AccountID to link (short numeric like "10025480" from AccountID field, NOT 32-char ObjectID)'
                     ],
                     [
                         'name' => 'main_contact_party_id',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'New contact ObjectID'
+                        'description' => 'New ContactID (short numeric like "10025484" from ContactID field, NOT 32-char ObjectID)'
                     ],
                     [
                         'name' => 'expected_revenue_amount',
@@ -1027,11 +1027,11 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         ];
 
         if (isset($parameters['account_party_id'])) {
-            $opportunityData['AccountPartyID'] = $parameters['account_party_id'];
+            $opportunityData['ProspectPartyID'] = $parameters['account_party_id'];
         }
 
         if (isset($parameters['main_contact_party_id'])) {
-            $opportunityData['MainContactPartyID'] = $parameters['main_contact_party_id'];
+            $opportunityData['PrimaryContactPartyID'] = $parameters['main_contact_party_id'];
         }
 
         if (isset($parameters['expected_revenue_amount'])) {
@@ -1073,11 +1073,11 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         }
 
         if (isset($parameters['account_party_id'])) {
-            $opportunityData['AccountPartyID'] = $parameters['account_party_id'];
+            $opportunityData['ProspectPartyID'] = $parameters['account_party_id'];
         }
 
         if (isset($parameters['main_contact_party_id'])) {
-            $opportunityData['MainContactPartyID'] = $parameters['main_contact_party_id'];
+            $opportunityData['PrimaryContactPartyID'] = $parameters['main_contact_party_id'];
         }
 
         if (isset($parameters['expected_revenue_amount'])) {

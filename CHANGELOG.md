@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **SAP C4C opportunity creation 403 error** - Fixed issue where creating opportunities failed with "permission denied" when the Base URL had a trailing slash; URL normalization now properly handles all URL formats
+- **SAP C4C opportunity creation with account/contact links** - Fixed issue where linking opportunities to accounts and contacts failed due to wrong SAP field names (AccountPartyID→ProspectPartyID, MainContactPartyID→PrimaryContactPartyID) and wrong ID types; now correctly uses AccountID/ContactID instead of ObjectID
 - **SAP C4C account/contact lookup from opportunities** - Fixed issue where agent incorrectly used PartyID values to fetch accounts and contacts, resulting in 404 errors; agent now uses name-based search for reliable lookups
 
 ## 2025-12-02

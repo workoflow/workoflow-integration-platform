@@ -98,7 +98,7 @@ class SapC4cService
     private function fetchCsrfToken(string $baseUrl, string $username, string $password): ?string
     {
         try {
-            $url = $this->buildApiUrl($baseUrl, '/');
+            $url = $this->buildApiUrl($baseUrl, '');
             $response = $this->httpClient->request('GET', $url, [
                 'headers' => array_merge(
                     $this->getAuthHeaders($username, $password),
