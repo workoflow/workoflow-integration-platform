@@ -203,9 +203,31 @@
     </relationship>
   </entity-relationships>
 
+  <entity-id-types>
+    <warning>
+      CRITICAL: SAP C4C uses TWO different ID types. Using the wrong ID type causes 404 errors.
+    </warning>
+    <id-type name="ObjectID">
+      <format>32-character hex string (e.g., "00163E0C7C161ED59C9CC26067C972B3")</format>
+      <usage>Required for get/update/delete operations (c4c_get_*, c4c_update_*)</usage>
+      <location>Every entity has an ObjectID field in its response</location>
+    </id-type>
+    <id-type name="PartyID / AccountID / ContactID">
+      <format>Short numeric string (e.g., "10132450", "10002924")</format>
+      <usage>Used in relationship fields and OData filters</usage>
+      <examples>
+        <example>Opportunity.ProspectPartyID = Account's AccountID (NOT ObjectID)</example>
+        <example>Opportunity.PrimaryContactPartyID = Contact's ContactID (NOT ObjectID)</example>
+        <example>Contact.AccountPartyID = Account's AccountID (NOT ObjectID)</example>
+      </examples>
+      <warning>NEVER use PartyID/AccountID/ContactID directly with c4c_get_* tools - they will return 404!</warning>
+    </id-type>
+  </entity-id-types>
+
   <best-practices>
     <practice>CRITICAL: Before using $filter queries, call c4c_get_entity_metadata to discover which properties are filterable. Many properties (like SalesPhaseCode, LifeCycleStatusCode) are NOT filterable even if they exist.</practice>
     <practice>Always use ObjectID (not Name/ID) to identify specific records for get/update operations</practice>
+    <practice priority="critical">NEVER use ProspectPartyID, PrimaryContactPartyID, or AccountPartyID directly with c4c_get_account or c4c_get_contact - these are PartyIDs (short numeric), not ObjectIDs (32-char hex). Instead, use the corresponding Name fields (ProspectPartyName, PrimaryContactPartyName) with search tools: c4c_search_accounts with filter="Name eq 'X'" or c4c_search_contacts with filter="LastName eq 'X'".</practice>
     <practice>Use single quotes for string values in OData filters (e.g., StatusCode eq '2')</practice>
     <practice>Use additional_fields parameter for custom SAP C4C fields not in standard parameters</practice>
     <practice>Pagination: Use has_more and next_skip from response to fetch additional results</practice>
@@ -213,6 +235,7 @@
     <practice>When creating related records, create the parent first (Account before Contact, Account/Contact before Opportunity)</practice>
     <practice>To link entities, use the ObjectID of the target entity (e.g., account_party_id = Account's ObjectID)</practice>
     <practice>Property names are case-sensitive and tenant-specific. When in doubt, use c4c_get_entity_metadata to verify exact property names.</practice>
+    <practice>Use the expand parameter to include related collections in a single request (e.g., expand="OpportunityParty,OpportunityItem"). This avoids multiple API calls for related data.</practice>
   </best-practices>
 
   <common-scenarios>
@@ -246,6 +269,30 @@
         <step>1. Use c4c_search_accounts with filter="Name eq 'CompanyName'" to get the ObjectID</step>
         <step>2. Use c4c_search_opportunities with filter="AccountPartyID eq 'ObjectID'"</step>
       </steps>
+    </scenario>
+    <scenario priority="high">
+      <task>Get Account and Contact details from Opportunity data</task>
+      <warning>Opportunity fields like ProspectPartyID and PrimaryContactPartyID are NOT ObjectIDs - they cannot be used directly with c4c_get_account or c4c_get_contact!</warning>
+      <approach>Use the NAME fields from opportunity (ProspectPartyName, PrimaryContactPartyName) to search for related entities</approach>
+      <steps>
+        <step>1. From opportunity, extract ProspectPartyName (e.g., "ACME Corp") and PrimaryContactPartyName if available</step>
+        <step>2. To get Account: Use c4c_search_accounts with filter="Name eq 'ACME Corp'" - full account data including ObjectID returned</step>
+        <step>3. To get Contact: Use c4c_search_contacts with filter="LastName eq 'Smith'" (combine with FirstName if needed)</step>
+        <step>4. The search results typically contain all needed fields. Use c4c_get_* with ObjectID only if you need expanded data</step>
+      </steps>
+      <alternative-approach>
+        <description>If Name-based filtering is ambiguous (common names), use metadata discovery:</description>
+        <step>1. Call c4c_get_entity_metadata with entity_type="CorporateAccount" to discover filterable properties</step>
+        <step>2. Check if "AccountID" is in filterable_properties</step>
+        <step>3. If yes, use filter="AccountID eq '{ProspectPartyID}'" for precise matching</step>
+      </alternative-approach>
+      <example>
+        User asks: "Show opportunities with account and contact details"
+        1. Call c4c_list_opportunities - returns ProspectPartyName="ACME Corp", PrimaryContactPartyName="John Smith"
+        2. Call c4c_search_accounts with filter="Name eq 'ACME Corp'" - returns account with full details
+        3. Call c4c_search_contacts with filter="LastName eq 'Smith'" - returns contacts (may need additional filtering)
+        4. Present compiled results to user
+      </example>
     </scenario>
     <scenario>
       <task>Get account with all its contacts</task>

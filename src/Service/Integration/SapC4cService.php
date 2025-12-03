@@ -683,7 +683,8 @@ class SapC4cService
         ?string $filter = null,
         int $top = 50,
         int $skip = 0,
-        ?string $orderby = null
+        ?string $orderby = null,
+        ?string $expand = null
     ): array {
         return $this->searchCollection(
             $credentials,
@@ -692,20 +693,25 @@ class SapC4cService
             $filter,
             $top,
             $skip,
-            $orderby
+            $orderby,
+            $expand
         );
     }
 
     /**
      * Get single opportunity by ObjectID
      */
-    public function getOpportunity(array $credentials, string $opportunityId): array
-    {
+    public function getOpportunity(
+        array $credentials,
+        string $opportunityId,
+        ?string $expand = null
+    ): array {
         return $this->getEntity(
             $credentials,
             'OpportunityCollection',
             $opportunityId,
-            'Opportunity'
+            'Opportunity',
+            $expand
         );
     }
 
@@ -742,9 +748,13 @@ class SapC4cService
     /**
      * List opportunities with pagination
      */
-    public function listOpportunities(array $credentials, int $top = 50, int $skip = 0): array
-    {
-        return $this->searchOpportunities($credentials, null, $top, $skip, null);
+    public function listOpportunities(
+        array $credentials,
+        int $top = 50,
+        int $skip = 0,
+        ?string $expand = null
+    ): array {
+        return $this->searchOpportunities($credentials, null, $top, $skip, null, $expand);
     }
 
     // ========================================================================

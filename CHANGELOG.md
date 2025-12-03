@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **SAP C4C metadata discovery tool** - AI agents can now discover available entity properties before searching, preventing filter errors from invalid property names like "SalesPhaseCode" that don't exist in the OData API
+- **SAP C4C related data expansion** - AI agents can now include related collections (parties, items, notes) in opportunity queries with a single request, reducing API calls
+
+### Fixed
+- **SAP C4C account/contact lookup from opportunities** - Fixed issue where agent incorrectly used PartyID values to fetch accounts and contacts, resulting in 404 errors; agent now uses name-based search for reliable lookups
 
 ## 2025-12-02
 

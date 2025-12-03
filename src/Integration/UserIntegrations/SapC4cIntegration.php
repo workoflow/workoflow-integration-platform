@@ -271,19 +271,25 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'c4c_get_opportunity',
-                'Retrieve detailed information about a specific opportunity by its ObjectID. Returns: Object with ObjectID, Name, AccountPartyID, MainContactPartyID, ExpectedRevenueAmount, SalesPhaseCode, StatusCode, ProbabilityPercent, ExpectedClosingDate, and all other opportunity fields',
+                'Retrieve detailed information about a specific opportunity by its ObjectID. Returns: Object with ObjectID, Name, AccountPartyID, MainContactPartyID, ExpectedRevenueAmount, SalesPhaseCode, StatusCode, ProbabilityPercent, ExpectedClosingDate, and all other opportunity fields. Use expand to include related collections.',
                 [
                     [
                         'name' => 'opportunity_id',
                         'type' => 'string',
                         'required' => true,
                         'description' => 'Opportunity ObjectID (e.g., "00163E7A8C271EE9A0B0C04C37FB5B5E")'
+                    ],
+                    [
+                        'name' => 'expand',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Comma-separated navigation properties to expand (e.g., "OpportunityParty,OpportunityItem"). Common: OpportunityParty (all parties), OpportunityProspectPartyContactParty (prospect contacts), OpportunitySalesTeamParty (sales team), OpportunityItem (line items), OpportunityTextCollection (notes)'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'c4c_search_opportunities',
-                'Search opportunities using OData filter syntax. Returns: Object with opportunities array, count, pagination metadata. Example filters: "StatusCode eq \'2\'", "AccountPartyID eq \'XXX\'"',
+                'Search opportunities using OData filter syntax. Returns: Object with opportunities array, count, pagination metadata. Example filters: "StatusCode eq \'2\'", "AccountPartyID eq \'XXX\'". Use expand to include related collections.',
                 [
                     [
                         'name' => 'filter',
@@ -308,6 +314,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'type' => 'string',
                         'required' => false,
                         'description' => 'OData $orderby clause (e.g., "Name asc", "ExpectedClosingDate desc")'
+                    ],
+                    [
+                        'name' => 'expand',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Comma-separated navigation properties to expand (e.g., "OpportunityParty,OpportunityItem"). Common: OpportunityParty, OpportunityProspectPartyContactParty, OpportunitySalesTeamParty, OpportunityItem, OpportunityTextCollection'
                     ]
                 ]
             ),
@@ -373,7 +385,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'c4c_list_opportunities',
-                'Get a paginated list of all opportunities without filters. Returns: Object with opportunities array, count, pagination metadata',
+                'Get a paginated list of all opportunities without filters. Returns: Object with opportunities array, count, pagination metadata. Use expand to include related collections.',
                 [
                     [
                         'name' => 'top',
@@ -386,6 +398,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'type' => 'integer',
                         'required' => false,
                         'description' => 'Number of results to skip (default: 0)'
+                    ],
+                    [
+                        'name' => 'expand',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Comma-separated navigation properties to expand (e.g., "OpportunityParty,OpportunityItem"). Common: OpportunityParty, OpportunityProspectPartyContactParty, OpportunitySalesTeamParty, OpportunityItem, OpportunityTextCollection'
                     ]
                 ]
             ),
@@ -837,20 +855,23 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             'c4c_create_opportunity' => $this->createOpportunity($credentials, $parameters),
             'c4c_get_opportunity' => $this->sapC4cService->getOpportunity(
                 $credentials,
-                $parameters['opportunity_id']
+                $parameters['opportunity_id'],
+                $parameters['expand'] ?? null
             ),
             'c4c_search_opportunities' => $this->sapC4cService->searchOpportunities(
                 $credentials,
                 $parameters['filter'] ?? null,
                 $parameters['top'] ?? 50,
                 $parameters['skip'] ?? 0,
-                $parameters['orderby'] ?? null
+                $parameters['orderby'] ?? null,
+                $parameters['expand'] ?? null
             ),
             'c4c_update_opportunity' => $this->updateOpportunity($credentials, $parameters),
             'c4c_list_opportunities' => $this->sapC4cService->listOpportunities(
                 $credentials,
                 $parameters['top'] ?? 50,
-                $parameters['skip'] ?? 0
+                $parameters['skip'] ?? 0,
+                $parameters['expand'] ?? null
             ),
 
             // Account tools
