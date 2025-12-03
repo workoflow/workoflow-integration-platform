@@ -1043,7 +1043,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         }
 
         if (isset($parameters['sales_phase_code'])) {
-            $opportunityData['SalesPhaseCode'] = $parameters['sales_phase_code'];
+            $opportunityData['SalesCyclePhaseCode'] = $parameters['sales_phase_code'];
         }
 
         if (isset($parameters['probability_percent'])) {
@@ -1051,7 +1051,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         }
 
         if (isset($parameters['expected_closing_date'])) {
-            $opportunityData['ExpectedClosingDate'] = $parameters['expected_closing_date'];
+            $opportunityData['ExpectedProcessingEndDate'] = $parameters['expected_closing_date'];
         }
 
         if (isset($parameters['additional_fields']) && is_array($parameters['additional_fields'])) {
@@ -1085,11 +1085,11 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         }
 
         if (isset($parameters['sales_phase_code'])) {
-            $opportunityData['SalesPhaseCode'] = $parameters['sales_phase_code'];
+            $opportunityData['SalesCyclePhaseCode'] = $parameters['sales_phase_code'];
         }
 
         if (isset($parameters['status_code'])) {
-            $opportunityData['StatusCode'] = $parameters['status_code'];
+            $opportunityData['LifeCycleStatusCode'] = $parameters['status_code'];
         }
 
         if (isset($parameters['probability_percent'])) {
