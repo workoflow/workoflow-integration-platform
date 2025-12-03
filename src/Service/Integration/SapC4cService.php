@@ -107,7 +107,8 @@ class SapC4cService
     private function fetchCsrfToken(string $baseUrl, string $username, string $password): array
     {
         try {
-            $url = $this->buildApiUrl($baseUrl, '');
+            // Use trailing slash to avoid 307 redirect that loses session cookies
+            $url = $this->buildApiUrl($baseUrl, '/');
             $response = $this->httpClient->request('GET', $url, [
                 'headers' => array_merge(
                     $this->getAuthHeaders($username, $password),
