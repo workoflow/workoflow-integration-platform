@@ -248,7 +248,7 @@
         <step>2. c4c_create_opportunity with:
           - name: "Deal Name"
           - account_party_id: "10025480"
-          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03"}
+          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03T00:00:00"}
         </step>
       </correct-approach>
       <wrong-approach>
@@ -271,6 +271,80 @@
     <practice>Property names are case-sensitive and tenant-specific. When in doubt, use c4c_get_entity_metadata to verify exact property names.</practice>
     <practice>Use the expand parameter to include related collections in a single request (e.g., expand="OpportunityParty,OpportunityItem"). This avoids multiple API calls for related data.</practice>
   </best-practices>
+
+  <data-format-requirements priority="critical">
+    <title>MANDATORY: Data Format Requirements for SAP C4C OData API</title>
+    <format-type name="DateTime">
+      <description>All date/datetime fields MUST use ISO 8601 format with time component</description>
+      <correct-format>YYYY-MM-DDTHH:mm:ss</correct-format>
+      <example-correct>2026-03-03T00:00:00</example-correct>
+      <example-wrong>2026-03-03</example-wrong>
+      <fields>ExpectedProcessingEndDate, CreationDateTime, LastChangeDateTime, StartDate, EndDate</fields>
+      <auto-conversion>
+        <rule>If user provides date as "YYYY-MM-DD", automatically convert to "YYYY-MM-DDTHH:mm:ss"</rule>
+        <rule>Default time component is "T00:00:00" unless user specifies otherwise</rule>
+      </auto-conversion>
+    </format-type>
+    <format-type name="DateTimeOffset">
+      <description>For timezone-aware datetime fields in filters</description>
+      <correct-format>datetimeoffset'YYYY-MM-DDTHH:mm:ss.fffZ'</correct-format>
+      <example>datetimeoffset'2026-03-03T00:00:00.000Z'</example>
+    </format-type>
+    <format-type name="Time">
+      <description>For time-only fields</description>
+      <correct-format>PT##H##M##S</correct-format>
+      <example>PT15H00M00S (for 15:00:00)</example>
+    </format-type>
+    <format-type name="Currency">
+      <description>Currency amounts as strings, currency code as 3-letter ISO code</description>
+      <example-amount>"50000"</example-amount>
+      <example-currency>"EUR", "USD", "GBP"</example-currency>
+    </format-type>
+  </data-format-requirements>
+
+  <auto-recovery priority="critical">
+    <title>MANDATORY: Automatic Error Recovery Without User Intervention</title>
+    <principle>
+      When encountering API errors that have obvious fixes based on error messages,
+      AUTOMATICALLY apply the fix and retry - DO NOT ask the user for confirmation.
+    </principle>
+
+    <recoverable-errors>
+      <error pattern="Property.*is invalid" field-type="date">
+        <symptom>Date format error like "ExpectedProcessingEndDate...is invalid"</symptom>
+        <auto-fix>Convert date from "YYYY-MM-DD" to "YYYY-MM-DDTHH:mm:ss" format</auto-fix>
+        <action>Retry the operation immediately with corrected format</action>
+        <user-notification>Brief note after success: "Note: Converted date to ISO 8601 format"</user-notification>
+      </error>
+
+      <error pattern="Property.*offset.*invalid">
+        <symptom>JSON parsing error due to incorrect data format</symptom>
+        <auto-fix>Check the field at the offset position, fix format based on field type</auto-fix>
+        <action>Retry with corrected format</action>
+      </error>
+
+      <error pattern="Value.*mandatory">
+        <symptom>Required field missing</symptom>
+        <auto-fix>If the field has a sensible default (e.g., currency code "EUR"), add it</auto-fix>
+        <action>Retry with default value, or ask user if no sensible default exists</action>
+      </error>
+    </recoverable-errors>
+
+    <non-recoverable-errors>
+      <error>Authentication failures (401, 403)</error>
+      <error>Record not found (404) - unless ObjectID vs PartyID confusion</error>
+      <error>Business rule violations requiring user decision</error>
+      <error>Ambiguous field names requiring metadata lookup</error>
+    </non-recoverable-errors>
+
+    <workflow>
+      <step>1. Attempt the operation with user-provided values</step>
+      <step>2. If error occurs, analyze error message for recoverable patterns</step>
+      <step>3. If recoverable: Apply auto-fix and retry IMMEDIATELY</step>
+      <step>4. If not recoverable: Explain error and ask user for guidance</step>
+      <step>5. After successful recovery, briefly note what was auto-corrected</step>
+    </workflow>
+  </auto-recovery>
 
   <common-scenarios>
     <scenario>
@@ -310,7 +384,7 @@
           - expected_revenue_amount: "50000"
           - currency_code: "EUR"
           - probability_percent: "75"
-          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03"}
+          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03T00:00:00"}
       </example>
     </scenario>
     <scenario>
@@ -383,6 +457,15 @@
     <error-type code="400">
       <description>Validation error</description>
       <action>Check required fields and verify field values against SAP C4C rules</action>
+    </error-type>
+    <error-type code="400" pattern="offset.*invalid">
+      <description>Data format validation error (often date format)</description>
+      <action>AUTOMATICALLY fix the format and retry:
+        - Dates: Convert "YYYY-MM-DD" to "YYYY-MM-DDTHH:mm:ss"
+        - Times: Convert to "PT##H##M##S" format
+        - Numbers: Ensure string format for numeric fields
+        DO NOT ask user - fix and retry immediately.
+      </action>
     </error-type>
   </error-handling>
 

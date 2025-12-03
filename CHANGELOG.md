@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **SAP C4C metadata discovery tool** - AI agents can now discover available entity properties before searching, preventing filter errors from invalid property names like "SalesPhaseCode" that don't exist in the OData API
 - **SAP C4C related data expansion** - AI agents can now include related collections (parties, items, notes) in opportunity queries with a single request, reducing API calls
+- **SAP C4C automatic date format correction** - AI agent now automatically converts simple dates (e.g., "2026-03-03") to SAP's required ISO 8601 format with time component ("2026-03-03T00:00:00") without asking for user confirmation
+
+### Improved
+- **Multi-language response consistency** - Main AI agent now correctly responds in the same language as the user's input (English input → English response, German input → German response)
 
 ### Fixed
 - **SAP C4C opportunity creation 403 error** - Fixed issue where creating opportunities failed with "permission denied" due to session cookies being lost during CSRF token fetch redirect; CSRF token endpoint now avoids redirect for reliable session handling

@@ -253,7 +253,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'additional_fields',
                         'type' => 'object',
                         'required' => false,
-                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names for sales phase (e.g., SalesCyclePhaseCode), closing date (e.g., ExpectedProcessingEndDate), and other tenant-specific fields.'
+                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names. IMPORTANT: Date fields MUST use ISO 8601 format "YYYY-MM-DDTHH:mm:ss" (e.g., "2026-03-03T00:00:00"), NOT "YYYY-MM-DD". Examples: SalesCyclePhaseCode for sales phase, ExpectedProcessingEndDate for closing date.'
                     ]
                 ]
             ),
@@ -355,7 +355,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'additional_fields',
                         'type' => 'object',
                         'required' => false,
-                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names for sales phase (e.g., SalesCyclePhaseCode), status (e.g., LifeCycleStatusCode), and other tenant-specific fields.'
+                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names. IMPORTANT: Date fields MUST use ISO 8601 format "YYYY-MM-DDTHH:mm:ss" (e.g., "2026-03-03T00:00:00"), NOT "YYYY-MM-DD". Examples: SalesCyclePhaseCode for sales phase, LifeCycleStatusCode for status.'
                     ]
                 ]
             ),
