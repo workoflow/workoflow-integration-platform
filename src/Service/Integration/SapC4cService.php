@@ -66,8 +66,12 @@ class SapC4cService
     /**
      * Build authorization headers for SAP C4C API
      */
-    private function getAuthHeaders(string $username, string $password, ?string $csrfToken = null): array
-    {
+    private function getAuthHeaders(
+        string $username,
+        string $password,
+        ?string $csrfToken = null,
+        ?string $cookies = null
+    ): array {
         $headers = [
             'Authorization' => 'Basic ' . base64_encode($username . ':' . $password),
             'Accept' => 'application/json',
@@ -76,6 +80,10 @@ class SapC4cService
 
         if ($csrfToken !== null) {
             $headers['X-CSRF-Token'] = $csrfToken;
+        }
+
+        if ($cookies !== null && $cookies !== '') {
+            $headers['Cookie'] = $cookies;
         }
 
         return $headers;
@@ -94,8 +102,9 @@ class SapC4cService
 
     /**
      * Fetch CSRF token for modifying operations
+     * Returns array with 'token' and 'cookies' keys
      */
-    private function fetchCsrfToken(string $baseUrl, string $username, string $password): ?string
+    private function fetchCsrfToken(string $baseUrl, string $username, string $password): array
     {
         try {
             $url = $this->buildApiUrl($baseUrl, '');
@@ -109,14 +118,25 @@ class SapC4cService
 
             // Extract CSRF token from response headers
             $headers = $response->getHeaders();
-            if (isset($headers['x-csrf-token'][0])) {
-                return $headers['x-csrf-token'][0];
+            $token = $headers['x-csrf-token'][0] ?? null;
+
+            // Extract cookies from response headers (SAP CSRF tokens are session-bound)
+            $cookies = [];
+            if (isset($headers['set-cookie'])) {
+                foreach ($headers['set-cookie'] as $cookie) {
+                    // Extract cookie name=value part (before any attributes like ; Path=)
+                    $cookieParts = explode(';', $cookie);
+                    $cookies[] = trim($cookieParts[0]);
+                }
             }
 
-            return null;
+            return [
+                'token' => $token,
+                'cookies' => implode('; ', $cookies),
+            ];
         } catch (\Exception $e) {
-            // If CSRF token fetch fails, return null (some technical users may not need it)
-            return null;
+            // If CSRF token fetch fails, return empty (some technical users may not need it)
+            return ['token' => null, 'cookies' => ''];
         }
     }
 
@@ -382,8 +402,8 @@ class SapC4cService
     {
         $url = $this->buildApiUrl($credentials['base_url'], '/LeadCollection');
 
-        // Fetch CSRF token
-        $csrfToken = $this->fetchCsrfToken(
+        // Fetch CSRF token with cookies
+        $csrfData = $this->fetchCsrfToken(
             $credentials['base_url'],
             $credentials['username'],
             $credentials['password']
@@ -394,7 +414,8 @@ class SapC4cService
                 'headers' => $this->getAuthHeaders(
                     $credentials['username'],
                     $credentials['password'],
-                    $csrfToken
+                    $csrfData['token'],
+                    $csrfData['cookies']
                 ),
                 'query' => ['$format' => 'json'],
                 'json' => $leadData,
@@ -414,8 +435,8 @@ class SapC4cService
     {
         $url = $this->buildApiUrl($credentials['base_url'], "/LeadCollection('{$leadId}')");
 
-        // Fetch CSRF token
-        $csrfToken = $this->fetchCsrfToken(
+        // Fetch CSRF token with cookies
+        $csrfData = $this->fetchCsrfToken(
             $credentials['base_url'],
             $credentials['username'],
             $credentials['password']
@@ -426,7 +447,8 @@ class SapC4cService
                 'headers' => $this->getAuthHeaders(
                     $credentials['username'],
                     $credentials['password'],
-                    $csrfToken
+                    $csrfData['token'],
+                    $csrfData['cookies']
                 ),
                 'query' => ['$format' => 'json'],
                 'json' => $leadData,
@@ -584,7 +606,7 @@ class SapC4cService
     ): array {
         $url = $this->buildApiUrl($credentials['base_url'], '/' . $collectionName);
 
-        $csrfToken = $this->fetchCsrfToken(
+        $csrfData = $this->fetchCsrfToken(
             $credentials['base_url'],
             $credentials['username'],
             $credentials['password']
@@ -595,7 +617,8 @@ class SapC4cService
                 'headers' => $this->getAuthHeaders(
                     $credentials['username'],
                     $credentials['password'],
-                    $csrfToken
+                    $csrfData['token'],
+                    $csrfData['cookies']
                 ),
                 'query' => ['$format' => 'json'],
                 'json' => $entityData,
@@ -624,7 +647,7 @@ class SapC4cService
     ): array {
         $url = $this->buildApiUrl($credentials['base_url'], "/{$collectionName}('{$entityId}')");
 
-        $csrfToken = $this->fetchCsrfToken(
+        $csrfData = $this->fetchCsrfToken(
             $credentials['base_url'],
             $credentials['username'],
             $credentials['password']
@@ -635,7 +658,8 @@ class SapC4cService
                 'headers' => $this->getAuthHeaders(
                     $credentials['username'],
                     $credentials['password'],
-                    $csrfToken
+                    $csrfData['token'],
+                    $csrfData['cookies']
                 ),
                 'query' => ['$format' => 'json'],
                 'json' => $entityData,
