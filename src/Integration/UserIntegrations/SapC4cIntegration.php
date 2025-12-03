@@ -211,7 +211,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             // ================================================================
             new ToolDefinition(
                 'c4c_create_opportunity',
-                'Create a new sales opportunity in SAP C4C. Returns: Object with ObjectID (auto-generated), Name, AccountPartyID, MainContactPartyID, ExpectedRevenueAmount, SalesPhaseCode, StatusCode, ProbabilityPercent, and all other opportunity fields',
+                'Create a new sales opportunity in SAP C4C. IMPORTANT: For tenant-specific fields (sales phase, closing date, status), first call c4c_get_entity_metadata("Opportunity") to discover correct field names, then pass them via additional_fields. Returns: Object with ObjectID and all opportunity fields.',
                 [
                     [
                         'name' => 'name',
@@ -244,28 +244,16 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'description' => 'Currency code (e.g., "EUR", "USD", "GBP")'
                     ],
                     [
-                        'name' => 'sales_phase_code',
-                        'type' => 'string',
-                        'required' => false,
-                        'description' => 'Sales phase/stage code'
-                    ],
-                    [
                         'name' => 'probability_percent',
                         'type' => 'string',
                         'required' => false,
                         'description' => 'Win probability percentage (0-100)'
                     ],
                     [
-                        'name' => 'expected_closing_date',
-                        'type' => 'string',
-                        'required' => false,
-                        'description' => 'Expected close date (ISO format: YYYY-MM-DD)'
-                    ],
-                    [
                         'name' => 'additional_fields',
                         'type' => 'object',
                         'required' => false,
-                        'description' => 'JSON object with additional SAP C4C opportunity fields'
+                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names for sales phase (e.g., SalesCyclePhaseCode), closing date (e.g., ExpectedProcessingEndDate), and other tenant-specific fields.'
                     ]
                 ]
             ),
@@ -325,7 +313,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'c4c_update_opportunity',
-                'Update an existing opportunity\'s fields. Returns: Updated opportunity object. Note: Only fields with sap:updatable="true" can be modified.',
+                'Update an existing opportunity\'s fields. IMPORTANT: For tenant-specific fields (sales phase, status), first call c4c_get_entity_metadata("Opportunity") to discover correct field names, then pass them via additional_fields. Returns: Updated opportunity object.',
                 [
                     [
                         'name' => 'opportunity_id',
@@ -358,18 +346,6 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'description' => 'New expected revenue amount'
                     ],
                     [
-                        'name' => 'sales_phase_code',
-                        'type' => 'string',
-                        'required' => false,
-                        'description' => 'New sales phase code'
-                    ],
-                    [
-                        'name' => 'status_code',
-                        'type' => 'string',
-                        'required' => false,
-                        'description' => 'New status code'
-                    ],
-                    [
                         'name' => 'probability_percent',
                         'type' => 'string',
                         'required' => false,
@@ -379,7 +355,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'additional_fields',
                         'type' => 'object',
                         'required' => false,
-                        'description' => 'JSON object with additional fields to update'
+                        'description' => 'JSON object with SAP C4C field names from metadata. Use c4c_get_entity_metadata to discover correct field names for sales phase (e.g., SalesCyclePhaseCode), status (e.g., LifeCycleStatusCode), and other tenant-specific fields.'
                     ]
                 ]
             ),
@@ -1042,18 +1018,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             $opportunityData['ExpectedRevenueAmountCurrencyCode'] = $parameters['currency_code'];
         }
 
-        if (isset($parameters['sales_phase_code'])) {
-            $opportunityData['SalesCyclePhaseCode'] = $parameters['sales_phase_code'];
-        }
-
         if (isset($parameters['probability_percent'])) {
             $opportunityData['ProbabilityPercent'] = $parameters['probability_percent'];
         }
 
-        if (isset($parameters['expected_closing_date'])) {
-            $opportunityData['ExpectedProcessingEndDate'] = $parameters['expected_closing_date'];
-        }
-
+        // Tenant-specific fields (sales phase, closing date, status) must be passed via additional_fields
+        // with correct SAP field names discovered from c4c_get_entity_metadata
         if (isset($parameters['additional_fields']) && is_array($parameters['additional_fields'])) {
             $opportunityData = array_merge($opportunityData, $parameters['additional_fields']);
         }
@@ -1084,18 +1054,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             $opportunityData['ExpectedRevenueAmount'] = $parameters['expected_revenue_amount'];
         }
 
-        if (isset($parameters['sales_phase_code'])) {
-            $opportunityData['SalesCyclePhaseCode'] = $parameters['sales_phase_code'];
-        }
-
-        if (isset($parameters['status_code'])) {
-            $opportunityData['LifeCycleStatusCode'] = $parameters['status_code'];
-        }
-
         if (isset($parameters['probability_percent'])) {
             $opportunityData['ProbabilityPercent'] = $parameters['probability_percent'];
         }
 
+        // Tenant-specific fields (sales phase, status) must be passed via additional_fields
+        // with correct SAP field names discovered from c4c_get_entity_metadata
         if (isset($parameters['additional_fields']) && is_array($parameters['additional_fields'])) {
             $opportunityData = array_merge($opportunityData, $parameters['additional_fields']);
         }

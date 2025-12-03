@@ -59,10 +59,10 @@
     <capability-group name="Opportunity Management">
       <capability>
         <name>Create Opportunities</name>
-        <description>Create new sales opportunities with links to accounts and contacts. IMPORTANT: Use AccountID (short numeric like "10025480") and ContactID (short numeric like "10025484") from search results, NOT ObjectID!</description>
+        <description>Create new sales opportunities. CRITICAL: For tenant-specific fields (sales phase, closing date, status), FIRST call c4c_get_entity_metadata("Opportunity") to discover correct field names, then pass them via additional_fields parameter.</description>
         <tool>c4c_create_opportunity</tool>
         <required-fields>name</required-fields>
-        <optional-fields>account_party_id (use AccountID, NOT ObjectID!), main_contact_party_id (use ContactID, NOT ObjectID!), expected_revenue_amount, currency_code, sales_phase_code, probability_percent, expected_closing_date</optional-fields>
+        <optional-fields>account_party_id (use AccountID, NOT ObjectID!), main_contact_party_id (use ContactID, NOT ObjectID!), expected_revenue_amount, currency_code, probability_percent, additional_fields (for tenant-specific fields from metadata)</optional-fields>
       </capability>
       <capability>
         <name>Retrieve Opportunity Details</name>
@@ -81,7 +81,7 @@
       </capability>
       <capability>
         <name>Update Opportunities</name>
-        <description>Update opportunity fields including account/contact links, revenue, and sales phase</description>
+        <description>Update opportunity fields. CRITICAL: For tenant-specific fields (sales phase, status), FIRST call c4c_get_entity_metadata("Opportunity") to discover correct field names, then pass them via additional_fields parameter.</description>
         <tool>c4c_update_opportunity</tool>
       </capability>
       <capability>
@@ -224,12 +224,46 @@
     </id-type>
   </entity-id-types>
 
+  <metadata-first-workflow priority="critical">
+    <title>MANDATORY: Metadata-First Workflow for Create/Update Operations</title>
+    <description>
+      SAP C4C field names vary by tenant. ALWAYS call c4c_get_entity_metadata BEFORE creating or updating
+      opportunities to discover the correct field names for tenant-specific properties.
+    </description>
+    <tenant-specific-fields>
+      <field>Sales Phase - could be SalesCyclePhaseCode, SalesPhaseCode, or custom</field>
+      <field>Closing Date - could be ExpectedProcessingEndDate, ExpectedClosingDate, or custom</field>
+      <field>Status - could be LifeCycleStatusCode, StatusCode, or custom</field>
+    </tenant-specific-fields>
+    <workflow>
+      <step>1. Call c4c_get_entity_metadata with entity_type="Opportunity"</step>
+      <step>2. Check "creatable_properties" (for create) or "updatable_properties" (for update)</step>
+      <step>3. Find the correct field names for sales phase, closing date, status, etc.</step>
+      <step>4. Pass tenant-specific fields via additional_fields with exact SAP field names</step>
+    </workflow>
+    <example>
+      <task>Create opportunity with sales phase "Propose" and closing date "2026-03-03"</task>
+      <correct-approach>
+        <step>1. c4c_get_entity_metadata("Opportunity") returns creatable_properties including "SalesCyclePhaseCode", "ExpectedProcessingEndDate"</step>
+        <step>2. c4c_create_opportunity with:
+          - name: "Deal Name"
+          - account_party_id: "10025480"
+          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03"}
+        </step>
+      </correct-approach>
+      <wrong-approach>
+        Using hardcoded field names like "SalesPhaseCode" or "ExpectedClosingDate" without checking metadata - these may not exist in the tenant!
+      </wrong-approach>
+    </example>
+  </metadata-first-workflow>
+
   <best-practices>
+    <practice priority="critical">METADATA-FIRST: ALWAYS call c4c_get_entity_metadata BEFORE create/update operations to discover correct field names for tenant-specific properties (sales phase, status, closing date). Pass these via additional_fields parameter.</practice>
     <practice>CRITICAL: Before using $filter queries, call c4c_get_entity_metadata to discover which properties are filterable. Many properties (like SalesPhaseCode, LifeCycleStatusCode) are NOT filterable even if they exist.</practice>
     <practice>Always use ObjectID (not Name/ID) to identify specific records for get/update operations</practice>
     <practice priority="critical">NEVER use ProspectPartyID, PrimaryContactPartyID, or AccountPartyID directly with c4c_get_account or c4c_get_contact - these are PartyIDs (short numeric), not ObjectIDs (32-char hex). Instead, use the corresponding Name fields (ProspectPartyName, PrimaryContactPartyName) with search tools: c4c_search_accounts with filter="Name eq 'X'" or c4c_search_contacts with filter="LastName eq 'X'".</practice>
     <practice>Use single quotes for string values in OData filters (e.g., StatusCode eq '2')</practice>
-    <practice>Use additional_fields parameter for custom SAP C4C fields not in standard parameters</practice>
+    <practice>Use additional_fields parameter with exact SAP field names from metadata for tenant-specific fields</practice>
     <practice>Pagination: Use has_more and next_skip from response to fetch additional results</practice>
     <practice>For complex updates, use get_* tools first to see current values</practice>
     <practice>When creating related records, create the parent first (Account before Contact, Account/Contact before Opportunity)</practice>
@@ -256,18 +290,27 @@
       </example>
     </scenario>
     <scenario priority="high">
-      <task>Create a complete sales opportunity with account and contact</task>
-      <warning>CRITICAL: Use AccountID and ContactID (short numeric), NOT ObjectID (32-char hex)!</warning>
+      <task>Create a complete sales opportunity with account, contact, and tenant-specific fields</task>
+      <warning>CRITICAL: Use AccountID and ContactID (short numeric), NOT ObjectID (32-char hex)! Use metadata for tenant-specific field names!</warning>
       <steps>
-        <step>1. Use c4c_search_accounts to find or c4c_create_account to create the account - note the AccountID field (e.g., "10025480")</step>
-        <step>2. Use c4c_search_contacts to find or c4c_create_contact to create the contact - note the ContactID field (e.g., "10025484")</step>
-        <step>3. Use c4c_create_opportunity with account_party_id=AccountID (NOT ObjectID!) and main_contact_party_id=ContactID (NOT ObjectID!)</step>
+        <step>1. Call c4c_get_entity_metadata("Opportunity") to discover correct field names for sales phase, closing date, etc.</step>
+        <step>2. Use c4c_search_accounts to find or c4c_create_account to create the account - note the AccountID field (e.g., "10025480")</step>
+        <step>3. Use c4c_search_contacts to find or c4c_create_contact to create the contact - note the ContactID field (e.g., "10025484")</step>
+        <step>4. Use c4c_create_opportunity with account_party_id=AccountID, main_contact_party_id=ContactID, and tenant-specific fields in additional_fields</step>
       </steps>
       <example>
-        From search: Account has AccountID="10025480", ObjectID="00163E0C7C161ED59CFA2D814B4F433A"
-        From search: Contact has ContactID="10025484", ObjectID="00163E0C7C161EE59D803625BB75E7E5"
-        CORRECT: c4c_create_opportunity with account_party_id="10025480", main_contact_party_id="10025484"
-        WRONG: c4c_create_opportunity with account_party_id="00163E0C7C161ED59CFA2D814B4F433A"
+        From metadata: creatable_properties includes "SalesCyclePhaseCode", "ExpectedProcessingEndDate"
+        From search: Account has AccountID="10025480"
+        From search: Contact has ContactID="10025484"
+
+        c4c_create_opportunity with:
+          - name: "Enterprise Deal"
+          - account_party_id: "10025480"
+          - main_contact_party_id: "10025484"
+          - expected_revenue_amount: "50000"
+          - currency_code: "EUR"
+          - probability_percent: "75"
+          - additional_fields: {"SalesCyclePhaseCode": "3", "ExpectedProcessingEndDate": "2026-03-03"}
       </example>
     </scenario>
     <scenario>
