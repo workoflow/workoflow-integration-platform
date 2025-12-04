@@ -4586,6 +4586,7 @@ body {
     width: 90%;
     max-width: 900px;
     max-height: 90vh;
+    overflow: hidden;
     background: var(--bg-card);
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--border-color);
