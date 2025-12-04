@@ -45,7 +45,7 @@ class AuditLogController extends AbstractController
         $sortDir = strtoupper($request->query->get('sortDir', 'DESC'));
 
         // Whitelist of sortable columns (mapped to entity properties)
-        $allowedSortFields = ['createdAt', 'action', 'ip', 'user', 'executionId'];
+        $allowedSortFields = ['createdAt', 'action', 'ip', 'executionId'];
         if (!in_array($sortBy, $allowedSortFields, true)) {
             $sortBy = 'createdAt';
         }
@@ -65,13 +65,20 @@ class AuditLogController extends AbstractController
         if (!empty($search)) {
             $filters['search'] = $search;
         }
-        if (!empty($dateFrom)) {
+
+        // Default to 15 minutes ago if no date_from specified
+        // (Clear Filters also resets to this default)
+        if (empty($dateFrom)) {
+            $filters['date_from'] = new \DateTime('-15 minutes');
+        } else {
             try {
                 $filters['date_from'] = new \DateTime($dateFrom);
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Invalid date format for "From" date');
+                $filters['date_from'] = new \DateTime('-15 minutes');
             }
         }
+
         if (!empty($dateTo)) {
             try {
                 $filters['date_to'] = new \DateTime($dateTo);

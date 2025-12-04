@@ -9,6 +9,13 @@ All notable changes to this project will be documented in this file.
 - **Audit Log grouped view** - New toggle between flat and grouped view modes, allowing you to see related API calls collapsed under their execution_id
 - **Execution ID filtering** - Filter audit log entries by specific execution_id to trace a single workflow execution
 
+### Changed
+- **Audit Log now shows last 15 minutes by default** - For better performance and focus, the audit log initially displays only the last 15 minutes of entries; use the date filters to view older logs
+- **Audit Log table layout optimized** - Removed User column to make room for Data column on smaller screens
+
+### Fixed
+- **Audit Log expand details now scrollable** - Large JSON data in expanded log details is now scrollable instead of expanding infinitely
+
 ## 2025-12-03
 
 ### Added

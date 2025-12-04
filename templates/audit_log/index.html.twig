@@ -124,7 +124,6 @@
                                         <tr>
                                             <th>{{ 'audit_log.columns.timestamp'|trans }}</th>
                                             <th>{{ 'audit_log.columns.action'|trans }}</th>
-                                            <th>{{ 'audit_log.columns.user'|trans }}</th>
                                             <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
                                         </tr>
                                     </thead>
@@ -133,7 +132,6 @@
                                             <tr>
                                                 <td>{{ log.createdAt|date('H:i:s') }}</td>
                                                 <td><span class="action-badge">{{ log.action }}</span></td>
-                                                <td>{{ log.user ? log.user.name : '-' }}</td>
                                                 <td class="hide-mobile">
                                                     {% if log.data %}
                                                         <button type="button"
@@ -218,23 +216,6 @@
                                     </a>
                                 </th>
 
-                                {# Sortable column: User #}
-                                <th class="sortable {{ filters.sortBy == 'user' ? 'sorted' : '' }}">
-                                    <a href="#"
-                                       data-action="click->audit-log#sort"
-                                       data-column="user"
-                                       data-current-sort="{{ filters.sortBy }}"
-                                       data-current-dir="{{ filters.sortDir }}"
-                                       class="sort-link">
-                                        {{ 'audit_log.columns.user'|trans }}
-                                        {% if filters.sortBy == 'user' %}
-                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
-                                        {% else %}
-                                            <i class="fas fa-sort sort-icon-inactive"></i>
-                                        {% endif %}
-                                    </a>
-                                </th>
-
                                 {# Sortable column: IP #}
                                 <th class="hide-mobile sortable {{ filters.sortBy == 'ip' ? 'sorted' : '' }}">
                                     <a href="#"
@@ -278,9 +259,6 @@
                                 <td class="action" data-label="{{ 'audit_log.columns.action'|trans }}">
                                     <span class="action-badge">{{ log.action }}</span>
                                 </td>
-                                <td class="user" data-label="{{ 'audit_log.columns.user'|trans }}">
-                                    {{ log.user ? log.user.name ~ ' (' ~ log.user.email ~ ')' : '-' }}
-                                </td>
                                 <td class="ip hide-mobile" data-label="{{ 'audit_log.columns.ip'|trans }}">
                                     {{ log.ip ?: '-' }}
                                 </td>
@@ -309,7 +287,7 @@
                                 </td>
                             </tr>
                             <tr class="details-row" id="details-{{ log.id }}" style="display: none;">
-                                <td colspan="8">
+                                <td colspan="7">
                                     <div class="details-content">
                                         {% if log.userAgent %}
                                             <div class="detail-section">
