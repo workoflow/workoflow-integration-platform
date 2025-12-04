@@ -16,9 +16,10 @@
         {# Filter Bar #}
         <div class="filter-bar">
             <form method="get" action="{{ path('app_audit_log') }}" class="filter-form" data-action="submit->audit-log#submitFilter">
-                {# Hidden fields to preserve sorting #}
+                {# Hidden fields to preserve sorting and view mode #}
                 <input type="hidden" name="sortBy" value="{{ filters.sortBy }}">
                 <input type="hidden" name="sortDir" value="{{ filters.sortDir }}">
+                <input type="hidden" name="view_mode" value="{{ filters.view_mode|default('flat') }}">
 
                 <div class="filter-group">
                     <label for="search" class="filter-label">{{ 'audit_log.search.placeholder'|trans }}</label>
@@ -29,6 +30,18 @@
                         class="filter-input"
                         placeholder="{{ 'audit_log.search.placeholder'|trans }}"
                         value="{{ filters.search }}"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="execution_id" class="filter-label">{{ 'audit_log.execution_id'|trans }}</label>
+                    <input
+                        type="text"
+                        id="execution_id"
+                        name="execution_id"
+                        class="filter-input"
+                        placeholder="{{ 'audit_log.execution_id_placeholder'|trans }}"
+                        value="{{ filters.execution_id|default('') }}"
                     >
                 </div>
 
@@ -59,6 +72,18 @@
                     <a href="{{ path('app_audit_log') }}" class="btn btn-secondary">{{ 'audit_log.clear_filters'|trans }}</a>
                 </div>
             </form>
+
+            {# View Mode Toggle #}
+            <div class="view-mode-toggle">
+                <a href="{{ path('app_audit_log', filters|merge({'view_mode': 'flat', 'page': 1})) }}"
+                   class="btn btn-sm {{ (filters.view_mode|default('flat')) == 'flat' ? 'btn-primary' : 'btn-secondary' }}">
+                    <i class="fas fa-list"></i> {{ 'audit_log.view_flat'|trans }}
+                </a>
+                <a href="{{ path('app_audit_log', filters|merge({'view_mode': 'grouped', 'page': 1})) }}"
+                   class="btn btn-sm {{ (filters.view_mode|default('flat')) == 'grouped' ? 'btn-primary' : 'btn-secondary' }}">
+                    <i class="fas fa-layer-group"></i> {{ 'audit_log.view_grouped'|trans }}
+                </a>
+            </div>
         </div>
 
         {# Results Info #}
@@ -68,95 +93,187 @@
             </div>
         {% endif %}
 
-        {# Table #}
-        {% if logs|length == 0 %}
-            <div class="empty-state">
-                <p>{{ 'audit_log.empty'|trans }}</p>
-            </div>
+        {# Table / Grouped View #}
+        {% if (filters.view_mode|default('flat')) == 'grouped' %}
+            {# Grouped View #}
+            {% if grouped_logs|length == 0 %}
+                <div class="empty-state">
+                    <p>{{ 'audit_log.empty'|trans }}</p>
+                </div>
+            {% else %}
+                <div class="execution-groups">
+                    {% for group in grouped_logs %}
+                        <div class="execution-group" data-execution-id="{{ group.execution_id ?? 'no-execution-id' }}">
+                            <div class="execution-group-header" onclick="toggleExecutionGroup('{{ loop.index }}')">
+                                <span class="group-toggle-icon" id="group-icon-{{ loop.index }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </span>
+                                <span class="execution-id-label">
+                                    {% if group.execution_id %}
+                                        <i class="fas fa-fingerprint"></i> {{ group.execution_id }}
+                                    {% else %}
+                                        <i class="fas fa-question-circle"></i> {{ 'audit_log.no_execution_id'|trans }}
+                                    {% endif %}
+                                </span>
+                                <span class="group-count">{{ group.count }} {{ 'audit_log.entries'|trans }}</span>
+                                <span class="group-time">{{ group.first_timestamp|date('d.m.Y H:i') }}</span>
+                            </div>
+                            <div class="execution-group-content" id="group-content-{{ loop.index }}" style="display: none;">
+                                <table class="group-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ 'audit_log.columns.timestamp'|trans }}</th>
+                                            <th>{{ 'audit_log.columns.action'|trans }}</th>
+                                            <th>{{ 'audit_log.columns.user'|trans }}</th>
+                                            <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in group.logs %}
+                                            <tr>
+                                                <td>{{ log.createdAt|date('H:i:s') }}</td>
+                                                <td><span class="action-badge">{{ log.action }}</span></td>
+                                                <td>{{ log.user ? log.user.name : '-' }}</td>
+                                                <td class="hide-mobile">
+                                                    {% if log.data %}
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-secondary"
+                                                                data-action="click->audit-log#openJsonModal"
+                                                                data-json="{{ log.data|json_encode|e('html_attr') }}"
+                                                                data-title="{{ log.action }}">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% else %}
-            <div class="audit-log-table">
-                <table>
-                    <thead>
-                        <tr>
-                            {# Sortable column: Timestamp #}
-                            <th class="sortable {{ filters.sortBy == 'createdAt' ? 'sorted' : '' }}">
-                                <a href="#"
-                                   data-action="click->audit-log#sort"
-                                   data-column="createdAt"
-                                   data-current-sort="{{ filters.sortBy }}"
-                                   data-current-dir="{{ filters.sortDir }}"
-                                   class="sort-link">
-                                    {{ 'audit_log.columns.timestamp'|trans }}
-                                    {% if filters.sortBy == 'createdAt' %}
-                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort sort-icon-inactive"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
+            {# Flat View (default) #}
+            {% if logs|length == 0 %}
+                <div class="empty-state">
+                    <p>{{ 'audit_log.empty'|trans }}</p>
+                </div>
+            {% else %}
+                <div class="audit-log-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                {# Sortable column: Timestamp #}
+                                <th class="sortable {{ filters.sortBy == 'createdAt' ? 'sorted' : '' }}">
+                                    <a href="#"
+                                       data-action="click->audit-log#sort"
+                                       data-column="createdAt"
+                                       data-current-sort="{{ filters.sortBy }}"
+                                       data-current-dir="{{ filters.sortDir }}"
+                                       class="sort-link">
+                                        {{ 'audit_log.columns.timestamp'|trans }}
+                                        {% if filters.sortBy == 'createdAt' %}
+                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                        {% else %}
+                                            <i class="fas fa-sort sort-icon-inactive"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
 
-                            {# Sortable column: Action #}
-                            <th class="sortable {{ filters.sortBy == 'action' ? 'sorted' : '' }}">
-                                <a href="#"
-                                   data-action="click->audit-log#sort"
-                                   data-column="action"
-                                   data-current-sort="{{ filters.sortBy }}"
-                                   data-current-dir="{{ filters.sortDir }}"
-                                   class="sort-link">
-                                    {{ 'audit_log.columns.action'|trans }}
-                                    {% if filters.sortBy == 'action' %}
-                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort sort-icon-inactive"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
+                                {# Sortable column: Execution ID #}
+                                <th class="hide-mobile sortable {{ filters.sortBy == 'executionId' ? 'sorted' : '' }}">
+                                    <a href="#"
+                                       data-action="click->audit-log#sort"
+                                       data-column="executionId"
+                                       data-current-sort="{{ filters.sortBy }}"
+                                       data-current-dir="{{ filters.sortDir }}"
+                                       class="sort-link">
+                                        {{ 'audit_log.columns.execution_id'|trans }}
+                                        {% if filters.sortBy == 'executionId' %}
+                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                        {% else %}
+                                            <i class="fas fa-sort sort-icon-inactive"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
 
-                            {# Sortable column: User #}
-                            <th class="sortable {{ filters.sortBy == 'user' ? 'sorted' : '' }}">
-                                <a href="#"
-                                   data-action="click->audit-log#sort"
-                                   data-column="user"
-                                   data-current-sort="{{ filters.sortBy }}"
-                                   data-current-dir="{{ filters.sortDir }}"
-                                   class="sort-link">
-                                    {{ 'audit_log.columns.user'|trans }}
-                                    {% if filters.sortBy == 'user' %}
-                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort sort-icon-inactive"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
+                                {# Sortable column: Action #}
+                                <th class="sortable {{ filters.sortBy == 'action' ? 'sorted' : '' }}">
+                                    <a href="#"
+                                       data-action="click->audit-log#sort"
+                                       data-column="action"
+                                       data-current-sort="{{ filters.sortBy }}"
+                                       data-current-dir="{{ filters.sortDir }}"
+                                       class="sort-link">
+                                        {{ 'audit_log.columns.action'|trans }}
+                                        {% if filters.sortBy == 'action' %}
+                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                        {% else %}
+                                            <i class="fas fa-sort sort-icon-inactive"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
 
-                            {# Sortable column: IP #}
-                            <th class="hide-mobile sortable {{ filters.sortBy == 'ip' ? 'sorted' : '' }}">
-                                <a href="#"
-                                   data-action="click->audit-log#sort"
-                                   data-column="ip"
-                                   data-current-sort="{{ filters.sortBy }}"
-                                   data-current-dir="{{ filters.sortDir }}"
-                                   class="sort-link">
-                                    {{ 'audit_log.columns.ip'|trans }}
-                                    {% if filters.sortBy == 'ip' %}
-                                        <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
-                                    {% else %}
-                                        <i class="fas fa-sort sort-icon-inactive"></i>
-                                    {% endif %}
-                                </a>
-                            </th>
+                                {# Sortable column: User #}
+                                <th class="sortable {{ filters.sortBy == 'user' ? 'sorted' : '' }}">
+                                    <a href="#"
+                                       data-action="click->audit-log#sort"
+                                       data-column="user"
+                                       data-current-sort="{{ filters.sortBy }}"
+                                       data-current-dir="{{ filters.sortDir }}"
+                                       class="sort-link">
+                                        {{ 'audit_log.columns.user'|trans }}
+                                        {% if filters.sortBy == 'user' %}
+                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                        {% else %}
+                                            <i class="fas fa-sort sort-icon-inactive"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
 
-                            {# Non-sortable columns #}
-                            <th class="hide-mobile">{{ 'audit_log.columns.user_agent'|trans }}</th>
-                            <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                                {# Sortable column: IP #}
+                                <th class="hide-mobile sortable {{ filters.sortBy == 'ip' ? 'sorted' : '' }}">
+                                    <a href="#"
+                                       data-action="click->audit-log#sort"
+                                       data-column="ip"
+                                       data-current-sort="{{ filters.sortBy }}"
+                                       data-current-dir="{{ filters.sortDir }}"
+                                       class="sort-link">
+                                        {{ 'audit_log.columns.ip'|trans }}
+                                        {% if filters.sortBy == 'ip' %}
+                                            <i class="fas fa-chevron-{{ filters.sortDir == 'ASC' ? 'up' : 'down' }} sort-icon"></i>
+                                        {% else %}
+                                            <i class="fas fa-sort sort-icon-inactive"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+
+                                {# Non-sortable columns #}
+                                <th class="hide-mobile">{{ 'audit_log.columns.user_agent'|trans }}</th>
+                                <th class="hide-mobile">{{ 'audit_log.columns.data'|trans }}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
                         {% for log in logs %}
                             <tr class="log-row" data-log-id="{{ log.id }}">
                                 <td class="timestamp" data-label="{{ 'audit_log.columns.timestamp'|trans }}">
                                     {{ log.createdAt|date('d.m.Y H:i:s') }}
+                                </td>
+                                <td class="execution-id hide-mobile" data-label="{{ 'audit_log.columns.execution_id'|trans }}">
+                                    {% if log.executionId %}
+                                        <a href="{{ path('app_audit_log', {execution_id: log.executionId}) }}"
+                                           class="execution-id-badge"
+                                           title="{{ log.executionId }}">
+                                            {{ log.executionId|length > 12 ? log.executionId|slice(0, 12) ~ '...' : log.executionId }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
                                 </td>
                                 <td class="action" data-label="{{ 'audit_log.columns.action'|trans }}">
                                     <span class="action-badge">{{ log.action }}</span>
@@ -192,7 +309,7 @@
                                 </td>
                             </tr>
                             <tr class="details-row" id="details-{{ log.id }}" style="display: none;">
-                                <td colspan="7">
+                                <td colspan="8">
                                     <div class="details-content">
                                         {% if log.userAgent %}
                                             <div class="detail-section">
@@ -281,6 +398,28 @@
                     {% endif %}
                 </div>
             {% endif %}
+            {% endif %}
+        {% endif %}
+
+        {# Pagination for grouped view (placed outside the conditional) #}
+        {% if (filters.view_mode|default('flat')) == 'grouped' and pages > 1 %}
+            <div class="pagination">
+                {% if current_page > 1 %}
+                    <a href="{{ path('app_audit_log', filters|merge({'page': current_page - 1})) }}" class="pagination-link">
+                        ← {{ 'pagination.previous'|trans }}
+                    </a>
+                {% endif %}
+
+                <span class="pagination-info">
+                    {{ 'pagination.page_of'|trans({'%current%': current_page, '%total%': pages}) }}
+                </span>
+
+                {% if current_page < pages %}
+                    <a href="{{ path('app_audit_log', filters|merge({'page': current_page + 1})) }}" class="pagination-link">
+                        {{ 'pagination.next'|trans }} →
+                    </a>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
 </div>
@@ -318,6 +457,19 @@ function switchTab(logId, tabName) {
 
     if (selectedTab) selectedTab.classList.add('active');
     if (selectedPane) selectedPane.classList.add('active');
+}
+
+function toggleExecutionGroup(groupIndex) {
+    const content = document.getElementById('group-content-' + groupIndex);
+    const icon = document.getElementById('group-icon-' + groupIndex);
+
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.innerHTML = '<i class="fas fa-chevron-down"></i>';
+    } else {
+        content.style.display = 'none';
+        icon.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    }
 }
 </script>
 {% endblock %}

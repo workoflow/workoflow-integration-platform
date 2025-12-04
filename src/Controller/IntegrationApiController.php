@@ -56,8 +56,24 @@ class IntegrationApiController extends AbstractController
             $request->query->get('tool_type')
         );
 
+        // Capture execution_id for audit logging
+        $executionId = $request->query->get('execution_id');
+
         // Delegate to service
         $tools = $this->toolProviderService->getToolsForOrganisation($organisation, $criteria);
+
+        // Log API access with execution_id
+        $this->auditLogService->logWithOrganisation(
+            'api.get_tools',
+            $organisation,
+            null,
+            [
+                'workflow_user_id' => $criteria->getWorkflowUserId(),
+                'tool_types' => $criteria->getToolTypes(),
+                'tools_count' => count($tools),
+            ],
+            $executionId
+        );
 
         // Use manual json_encode to preserve stdClass as {} (Symfony serializer converts to [])
         return new JsonResponse(json_encode(['tools' => $tools]), Response::HTTP_OK, [], true);
@@ -82,6 +98,7 @@ class IntegrationApiController extends AbstractController
         $toolId = $data['tool_id'] ?? null;
         $parameters = $data['parameters'] ?? [];
         $workflowUserId = $data['workflow_user_id'] ?? null;
+        $executionId = $data['execution_id'] ?? $request->query->get('execution_id');
 
         if (!$toolId) {
             return $this->json(['error' => 'Tool ID is required'], Response::HTTP_BAD_REQUEST);
@@ -196,7 +213,8 @@ class IntegrationApiController extends AbstractController
                     'integration_type' => $targetIntegration->getType(),
                     'workflow_user_id' => $workflowUserId,
                     'request_payload' => $this->auditLogService->sanitizeData($parameters),
-                ]
+                ],
+                $executionId
             );
 
             // Execute the tool
@@ -220,7 +238,8 @@ class IntegrationApiController extends AbstractController
                     'workflow_user_id' => $workflowUserId,
                     'success' => true,
                     'response_data' => $this->auditLogService->truncateData($result, 5000),
-                ]
+                ],
+                $executionId
             );
 
             return $this->json([
@@ -251,7 +270,8 @@ class IntegrationApiController extends AbstractController
                     'workflow_user_id' => $workflowUserId,
                     'success' => false,
                     'error' => $errorDetails['message'],
-                ]
+                ],
+                $executionId
             );
 
             return $this->json([

@@ -8,6 +8,7 @@ use App\Integration\IntegrationRegistry;
 use App\Integration\PersonalizedSkillInterface;
 use App\Repository\IntegrationConfigRepository;
 use App\Repository\OrganisationRepository;
+use App\Service\AuditLogService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -23,6 +24,7 @@ class SkillsApiController extends AbstractController
         private OrganisationRepository $organisationRepository,
         private IntegrationConfigRepository $integrationConfigRepository,
         private IntegrationRegistry $integrationRegistry,
+        private AuditLogService $auditLogService,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $apiAuthUser,
@@ -42,6 +44,7 @@ class SkillsApiController extends AbstractController
         $organisationUuid = $request->query->get('organisation_uuid');
         $workflowUserId = $request->query->get('workflow_user_id');
         $toolTypeFilter = $request->query->get('tool_type'); // CSV: "jira,confluence" or single: "sharepoint"
+        $executionId = $request->query->get('execution_id');
 
         $skills = [];
 
@@ -49,6 +52,7 @@ class SkillsApiController extends AbstractController
         $toolTypes = $toolTypeFilter ? array_map('trim', explode(',', $toolTypeFilter)) : [];
 
         // If organisation is specified, include user integrations
+        $organisation = null;
         if ($organisationUuid) {
             $organisation = $this->organisationRepository->findOneBy(['uuid' => $organisationUuid]);
             if (!$organisation) {
@@ -61,6 +65,21 @@ class SkillsApiController extends AbstractController
         // Include system integrations if requested
         if (empty($toolTypes) || in_array('system', $toolTypes, true) || $this->hasSystemTypeInFilter($toolTypes)) {
             $skills = array_merge($skills, $this->getSystemIntegrationSkills($toolTypes));
+        }
+
+        // Log API access with execution_id
+        if ($organisation) {
+            $this->auditLogService->logWithOrganisation(
+                'api.get_skills',
+                $organisation,
+                null,
+                [
+                    'workflow_user_id' => $workflowUserId,
+                    'tool_types' => $toolTypes,
+                    'skills_count' => count($skills),
+                ],
+                $executionId
+            );
         }
 
         return $this->json(['skills' => $skills]);

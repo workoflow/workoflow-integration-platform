@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AuditLogRepository::class)]
 #[ORM\HasLifecycleCallbacks]
+#[ORM\Index(name: 'idx_audit_execution_id', columns: ['execution_id'])]
 class AuditLog
 {
     #[ORM\Id]
@@ -35,6 +36,9 @@ class AuditLog
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $createdAt = null;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $executionId = null;
 
     public function getId(): ?int
     {
@@ -122,5 +126,17 @@ class AuditLog
     public function setCreatedAtValue(): void
     {
         $this->createdAt = new \DateTime();
+    }
+
+    public function getExecutionId(): ?string
+    {
+        return $this->executionId;
+    }
+
+    public function setExecutionId(?string $executionId): static
+    {
+        $this->executionId = $executionId;
+
+        return $this;
     }
 }

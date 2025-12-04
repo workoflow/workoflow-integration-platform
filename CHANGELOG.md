@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-04
+
+### Added
+- **Execution ID tracking in Audit Log** - API calls can now be grouped by execution_id parameter, making it easier to trace all actions from a single AI agent workflow execution
+- **Audit Log grouped view** - New toggle between flat and grouped view modes, allowing you to see related API calls collapsed under their execution_id
+- **Execution ID filtering** - Filter audit log entries by specific execution_id to trace a single workflow execution
+
 ## 2025-12-03
 
 ### Added

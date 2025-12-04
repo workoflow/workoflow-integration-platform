@@ -15,13 +15,14 @@ class AuditLogService
     ) {
     }
 
-    public function log(string $action, ?User $user = null, array $data = []): void
+    public function log(string $action, ?User $user = null, array $data = [], ?string $executionId = null): void
     {
         $request = $this->requestStack->getCurrentRequest();
 
         $auditLog = new AuditLog();
         $auditLog->setAction($action);
         $auditLog->setData($data);
+        $auditLog->setExecutionId($executionId);
 
         if ($user) {
             $auditLog->setUser($user);
@@ -38,7 +39,7 @@ class AuditLogService
         $this->auditLogRepository->save($auditLog, true);
     }
 
-    public function logWithOrganisation(string $action, \App\Entity\Organisation $organisation, ?User $user = null, array $data = []): void
+    public function logWithOrganisation(string $action, \App\Entity\Organisation $organisation, ?User $user = null, array $data = [], ?string $executionId = null): void
     {
         $request = $this->requestStack->getCurrentRequest();
 
@@ -46,6 +47,7 @@ class AuditLogService
         $auditLog->setAction($action);
         $auditLog->setData($data);
         $auditLog->setOrganisation($organisation);
+        $auditLog->setExecutionId($executionId);
 
         if ($user) {
             $auditLog->setUser($user);

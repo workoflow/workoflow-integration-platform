@@ -455,6 +455,12 @@ audit_log:
     placeholder: Nach Aktionsname suchen...
   date_from: Von Datum
   date_to: Bis Datum
+  execution_id: Ausführungs-ID
+  execution_id_placeholder: Nach Ausführungs-ID filtern...
+  view_flat: Flache Ansicht
+  view_grouped: Gruppierte Ansicht
+  no_execution_id: Keine Ausführungs-ID
+  entries: Einträge
   clear_filters: Filter löschen
   empty: Keine Audit-Protokoll-Einträge gefunden
   showing_results: Zeige %from% bis %to% von %total% Einträgen
@@ -465,6 +471,7 @@ audit_log:
     ip: IP-Adresse
     user_agent: User Agent
     data: Daten
+    execution_id: Ausführungs-ID
   expand_details: Details erweitern
   collapse_details: Details einklappen
   request_payload: Anfrage-Payload
