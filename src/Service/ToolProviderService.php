@@ -151,8 +151,8 @@ class ToolProviderService
 
         $tools = [];
         foreach ($configs as $config) {
-            // Skip if inactive or no credentials
-            if (!$config->isActive() || !$config->hasCredentials()) {
+            // Skip if inactive, no credentials, or disconnected
+            if (!$config->isActive() || !$config->hasCredentials() || !$config->isConnected()) {
                 continue;
             }
 

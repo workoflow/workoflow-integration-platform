@@ -93,7 +93,12 @@
                             {# Status Badge #}
                             <td>
                                 {% if integration.hasCredentials %}
-                                    {% if integration.active %}
+                                    {% if not integration.isConnected %}
+                                        <span class="badge badge-disconnected" title="{{ integration.disconnectReason|default('')|e('html_attr') }}">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            {{ 'status.disconnected'|trans|default('Disconnected') }}
+                                        </span>
+                                    {% elseif integration.active %}
                                         <span class="badge badge-connected">
                                             <i class="fas fa-check-circle"></i>
                                             {{ 'status.connected'|trans|default('Connected') }}

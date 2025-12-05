@@ -39,6 +39,15 @@ class IntegrationConfig
     #[ORM\Column]
     private bool $active = true;
 
+    #[ORM\Column(length: 20, options: ['default' => 'connected'])]
+    private string $connectionStatus = 'connected';
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $disconnectedAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $disconnectReason = null;
+
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $lastAccessedAt = null;
 
@@ -218,5 +227,50 @@ class IntegrationConfig
     public function hasCredentials(): bool
     {
         return !empty($this->encryptedCredentials);
+    }
+
+    public function getConnectionStatus(): string
+    {
+        return $this->connectionStatus;
+    }
+
+    public function setConnectionStatus(string $connectionStatus): static
+    {
+        $this->connectionStatus = $connectionStatus;
+
+        return $this;
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->connectionStatus === 'connected';
+    }
+
+    public function disconnect(string $reason): static
+    {
+        $this->connectionStatus = 'disconnected';
+        $this->disconnectedAt = new \DateTime();
+        $this->disconnectReason = $reason;
+
+        return $this;
+    }
+
+    public function reconnect(): static
+    {
+        $this->connectionStatus = 'connected';
+        $this->disconnectedAt = null;
+        $this->disconnectReason = null;
+
+        return $this;
+    }
+
+    public function getDisconnectedAt(): ?\DateTimeInterface
+    {
+        return $this->disconnectedAt;
+    }
+
+    public function getDisconnectReason(): ?string
+    {
+        return $this->disconnectReason;
     }
 }

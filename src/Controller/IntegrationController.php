@@ -8,6 +8,7 @@ use App\Form\IntegrationConfigType;
 use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
+use App\Service\ConnectionStatusService;
 use App\Service\EncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,8 +28,9 @@ class IntegrationController extends AbstractController
         private IntegrationRegistry $integrationRegistry,
         private EncryptionService $encryptionService,
         private AuditLogService $auditLogService,
+        private ConnectionStatusService $connectionStatusService,
         private EntityManagerInterface $entityManager,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -123,6 +125,8 @@ class IntegrationController extends AbstractController
                     'tools' => $tools,
                     'hasCredentials' => false,
                     'active' => $config ? $config->isActive() : true,
+                    'isConnected' => true, // System integrations are always connected
+                    'disconnectReason' => null,
                     'lastAccessedAt' => $config?->getLastAccessedAt(),
                     'logoPath' => $this->getLogoPath($integration->getType(), true),
                     'isExperimental' => $integration->isExperimental()
@@ -141,6 +145,8 @@ class IntegrationController extends AbstractController
                         'tools' => [],
                         'hasCredentials' => false,
                         'active' => false,
+                        'isConnected' => false,
+                        'disconnectReason' => null,
                         'lastAccessedAt' => null,
                         'logoPath' => $this->getLogoPath($integration->getType(), false),
                         'isExperimental' => $integration->isExperimental()
@@ -168,6 +174,8 @@ class IntegrationController extends AbstractController
                             'tools' => $tools,
                             'hasCredentials' => $config->hasCredentials(),
                             'active' => $config->isActive(),
+                            'isConnected' => $config->isConnected(),
+                            'disconnectReason' => $config->getDisconnectReason(),
                             'lastAccessedAt' => $config->getLastAccessedAt(),
                             'logoPath' => $this->getLogoPath($integration->getType(), false),
                             'isExperimental' => $integration->isExperimental()
@@ -429,6 +437,11 @@ class IntegrationController extends AbstractController
             );
             $config->setActive(true);
 
+            // Auto-reconnect if previously disconnected (credentials updated)
+            if (!$config->isConnected()) {
+                $this->connectionStatusService->markReconnected($config);
+            }
+
             // Auto-disable less useful tools for SharePoint
             if ($type === 'sharepoint' && !$instanceId) {
                 $toolsToDisable = ['sharepoint_list_files', 'sharepoint_download_file', 'sharepoint_get_list_items'];
@@ -660,6 +673,11 @@ class IntegrationController extends AbstractController
                 $result = $jiraService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -689,6 +707,11 @@ class IntegrationController extends AbstractController
                 $result = $confluenceService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -718,6 +741,11 @@ class IntegrationController extends AbstractController
                 $result = $gitLabService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -737,6 +765,11 @@ class IntegrationController extends AbstractController
 
             // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
+                // Auto-reconnect if previously disconnected
+                if (!$config->isConnected()) {
+                    $this->connectionStatusService->markReconnected($config);
+                }
+
                 return $this->json(['success' => true, 'message' => 'Connection successful']);
             } else {
                 return $this->json(['success' => false, 'message' => 'Invalid credentials']);

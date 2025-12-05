@@ -149,6 +149,7 @@ status:
   active: Aktiv
   inactive: Inaktiv
   connected: Verbunden
+  disconnected: Getrennt
   not_connected: Nicht verbunden
   experimental: Experimentell
 

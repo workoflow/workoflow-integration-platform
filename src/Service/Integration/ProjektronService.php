@@ -609,12 +609,9 @@ class ProjektronService
         // Build cookie header with both JSESSIONID and CSRF_Token
         $cookieHeader = $this->buildCookieHeader($credentials['jsessionid'], $csrfToken);
 
-        // Build date timestamp with Projektron quirks:
-        // - Subtract 1 day (Projektron auto-adds +1 day)
-        // - Set time to 22:00 (required for save to work)
+        // Build date timestamp for the target booking date
         $date = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
-        $date->sub(new \DateInterval('P1D'));
-        $date->setTime(22, 0, 0);
+        $date->setTime(0, 0, 0);
         $timestamp = (string) ($date->getTimestamp() * 1000);
 
         // Build form payload - matches working browser request

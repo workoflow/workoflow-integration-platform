@@ -9,6 +9,7 @@ use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Repository\OrganisationRepository;
 use App\Service\AuditLogService;
+use App\Service\ConnectionStatusService;
 use App\Service\EncryptionService;
 use App\Service\ToolProviderService;
 use Psr\Log\LoggerInterface;
@@ -29,10 +30,11 @@ class IntegrationApiController extends AbstractController
         private IntegrationRegistry $integrationRegistry,
         private ToolProviderService $toolProviderService,
         private AuditLogService $auditLogService,
+        private ConnectionStatusService $connectionStatusService,
         #[Autowire(service: 'monolog.logger.integration_api')]
         private LoggerInterface $logger,
         private string $apiAuthUser,
-        private string $apiAuthPassword
+        private string $apiAuthPassword,
     ) {
     }
 
@@ -248,6 +250,18 @@ class IntegrationApiController extends AbstractController
             ]);
         } catch (\Exception $e) {
             $errorDetails = $this->formatExceptionDetails($e);
+
+            // Check for credential failure and mark integration as disconnected
+            // Only applies to user integrations with valid config
+            if (
+                isset($config) &&
+                $config instanceof IntegrationConfig &&
+                $targetIntegration !== null &&
+                $targetIntegration->requiresCredentials() &&
+                $this->connectionStatusService->isCredentialFailure($e, $targetIntegration->getType())
+            ) {
+                $this->connectionStatusService->markDisconnected($config, $errorDetails['message']);
+            }
 
             $this->logger->error('API Tool execution failed', [
                 'organisation' => $organisation->getName(),

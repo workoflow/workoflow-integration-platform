@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-05
+
+### Added
+- **Projektron worklog debug script** - New helper script (`scripts/projektron_add_worklog_helper.sh`) for testing and debugging Projektron time bookings from the command line
+- **Integration connection status tracking** - Integrations now track their connection status and display when credentials need to be renewed
+
+### Fixed
+- **Projektron time entries now book to correct date** - Fixed a bug where time entries were being booked to the wrong date (one day earlier than intended) due to an incorrect date adjustment in the booking logic
+
 ## 2025-12-04
 
 ### Added
