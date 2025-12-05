@@ -768,4 +768,319 @@ class ProjektronService
             );
         }
     }
+
+    /**
+     * Get absences (vacation, sickness, other leave) for a specific year
+     *
+     * @param array $credentials Projektron credentials (domain, jsessionid)
+     * @param int $day Day of month (1-31) - used as reference date
+     * @param int $month Month (1-12) - used as reference date
+     * @param int $year Year to fetch absences for (e.g., 2025)
+     * @return array Absences data with entries and summary
+     * @throws InvalidArgumentException If request fails or data cannot be parsed
+     */
+    public function getAbsences(array $credentials, int $day, int $month, int $year): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['domain']);
+        $cookieHeader = $this->buildCookieHeader($credentials['jsessionid']);
+
+        // Get user OID for the request
+        $userOid = $this->getUserOid($credentials);
+
+        // Build vacation URL with date parameters
+        $absencesUrl = $this->buildAbsencesUrl($url, $userOid, $day, $month, $year);
+
+        try {
+            $response = $this->httpClient->request('GET', $absencesUrl, [
+                'headers' => [
+                    'Cookie' => $cookieHeader,
+                    'User-Agent' => 'Workoflow-Integration/1.0',
+                ],
+                'timeout' => 30,
+                'max_redirects' => 5,
+            ]);
+
+            $html = $response->getContent();
+
+            // Check if we got redirected to login
+            if (strpos($html, 'vacation') === false && strpos($html, 'login') !== false) {
+                throw new InvalidArgumentException(
+                    'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
+                );
+            }
+
+            return $this->parseAbsencesData($html, $day, $month, $year);
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $statusCode = $e->getResponse()->getStatusCode();
+
+            if ($statusCode === 401 || $statusCode === 403) {
+                throw new InvalidArgumentException(
+                    'Authentication failed. Please verify your JSESSIONID is correct and not expired.'
+                );
+            }
+
+            throw new InvalidArgumentException(
+                'Failed to fetch Projektron absences: HTTP ' . $statusCode . ' - ' . $e->getMessage()
+            );
+        } catch (\Exception $e) {
+            if ($e instanceof InvalidArgumentException) {
+                throw $e;
+            }
+            throw new InvalidArgumentException(
+                'Failed to fetch Projektron absences: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Build the absences/vacation URL with date parameters
+     */
+    private function buildAbsencesUrl(string $baseUrl, string $userOid, int $day, int $month, int $year): string
+    {
+        $timestamp = (int) (microtime(true) * 1000);
+
+        return sprintf(
+            '%s/bcs/mybcs/vacation/display?oid=%s&%s&%s&%s&pagetimestamp=%d',
+            $baseUrl,
+            urlencode($userOid),
+            'group,Choices,vacationlist,Selections,dateRange,day=' . $day,
+            'group,Choices,vacationlist,Selections,dateRange,month=' . $month,
+            'group,Choices,vacationlist,Selections,dateRange,year=' . $year,
+            $timestamp
+        );
+    }
+
+    /**
+     * Parse absences HTML to extract vacation/sickness entries and summary
+     *
+     * @param string $html HTML content from Projektron vacation page
+     * @param int $day Requested day
+     * @param int $month Requested month
+     * @param int $year Requested year
+     * @return array Parsed absences data
+     */
+    private function parseAbsencesData(string $html, int $day, int $month, int $year): array
+    {
+        $absences = [];
+        $summary = [
+            'vacation_days_total' => null,
+            'vacation_days_used' => null,
+            'vacation_days_remaining' => null,
+            'vacation_days_planned' => null,
+            'vacation_days_submitted' => null,
+            'sick_days' => null,
+        ];
+
+        try {
+            // Extract absence entries using regex patterns
+            // Pattern: href="/bcs/event(vacation|sickness)detail?oid=OID&eventStartDate=DD.MM.YYYY"
+            preg_match_all(
+                '/href="\/bcs\/event(vacation|sickness)detail\?oid=(\d+_JAppointment)&amp;eventStartDate=(\d{2}\.\d{2}\.\d{4})/',
+                $html,
+                $matches,
+                PREG_SET_ORDER
+            );
+
+            foreach ($matches as $match) {
+                $type = $match[1]; // 'vacation' or 'sickness'
+                $oid = $match[2];
+                $startDateStr = $match[3];
+
+                // Convert date from DD.MM.YYYY to YYYY-MM-DD
+                $startDate = $this->convertGermanDate($startDateStr);
+
+                // Skip if we already have this absence (by OID)
+                if (isset($absences[$oid])) {
+                    continue;
+                }
+
+                $absences[$oid] = [
+                    'oid' => $oid,
+                    'type' => $type,
+                    'type_label' => $type === 'vacation' ? 'Urlaub' : 'Krankheit',
+                    'start_date' => $startDate,
+                    'end_date' => null, // Will be extracted from table if available
+                    'duration_days' => null,
+                    'status' => null,
+                    'status_label' => null,
+                    'approver' => null,
+                    'created_at' => null,
+                ];
+            }
+
+            // Try to extract additional details using DOM parsing
+            $this->enrichAbsencesFromDom($html, $absences);
+
+            // Extract summary statistics from budget table
+            $this->extractSummaryFromHtml($html, $summary);
+
+            // Count sick days from absences
+            $sickDays = 0;
+            foreach ($absences as $absence) {
+                if ($absence['type'] === 'sickness' && $absence['duration_days'] !== null) {
+                    $sickDays += $absence['duration_days'];
+                }
+            }
+            if ($sickDays > 0) {
+                $summary['sick_days'] = $sickDays;
+            }
+
+            return [
+                'date' => [
+                    'day' => $day,
+                    'month' => $month,
+                    'year' => $year,
+                ],
+                'count' => count($absences),
+                'absences' => array_values($absences),
+                'summary' => $summary,
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error('Failed to parse Projektron absences HTML', [
+                'error' => $e->getMessage()
+            ]);
+
+            if ($e instanceof InvalidArgumentException) {
+                throw $e;
+            }
+
+            throw new InvalidArgumentException(
+                'Failed to parse Projektron absences: ' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * Convert German date format (DD.MM.YYYY) to ISO format (YYYY-MM-DD)
+     */
+    private function convertGermanDate(string $germanDate): string
+    {
+        $parts = explode('.', $germanDate);
+        if (count($parts) !== 3) {
+            return $germanDate;
+        }
+        return sprintf('%s-%s-%s', $parts[2], $parts[1], $parts[0]);
+    }
+
+    /**
+     * Enrich absence data with additional details from DOM parsing
+     */
+    private function enrichAbsencesFromDom(string $html, array &$absences): void
+    {
+        try {
+            $dom = \Dom\HTMLDocument::createFromString($html);
+
+            foreach ($absences as $oid => &$absence) {
+                // Find the row containing this absence by looking for the OID in links
+                $link = $dom->querySelector('a[id="' . $oid . '"]');
+                if (!$link) {
+                    continue;
+                }
+
+                // Navigate up to find the table row
+                $row = $link->parentElement;
+                while ($row && $row->tagName !== 'TR') {
+                    $row = $row->parentElement;
+                }
+
+                if (!$row) {
+                    continue;
+                }
+
+                // Extract cells from the row
+                $cells = $row->querySelectorAll('td');
+                $cellTexts = [];
+                foreach ($cells as $cell) {
+                    $cellTexts[] = trim($cell->textContent);
+                }
+
+                // Try to find end date (typically after start date)
+                foreach ($cellTexts as $text) {
+                    // Look for date pattern DD.MM.YYYY that's different from start date
+                    if (preg_match('/^(\d{2}\.\d{2}\.\d{4})$/', $text, $dateMatch)) {
+                        $isoDate = $this->convertGermanDate($dateMatch[1]);
+                        if ($isoDate !== $absence['start_date'] && $absence['end_date'] === null) {
+                            $absence['end_date'] = $isoDate;
+                        }
+                    }
+
+                    // Look for duration pattern (e.g., "1", "0,5", "2,00")
+                    if (preg_match('/^(\d+(?:,\d+)?)$/', $text, $durationMatch)) {
+                        $duration = str_replace(',', '.', $durationMatch[1]);
+                        if (is_numeric($duration) && $absence['duration_days'] === null) {
+                            $absence['duration_days'] = (float) $duration;
+                        }
+                    }
+
+                    // Look for status
+                    $statusMap = [
+                        'Genehmigt' => ['status' => 'approved', 'label' => 'Genehmigt'],
+                        'Approved' => ['status' => 'approved', 'label' => 'Genehmigt'],
+                        'Beantragt' => ['status' => 'submitted', 'label' => 'Beantragt'],
+                        'Submitted' => ['status' => 'submitted', 'label' => 'Beantragt'],
+                        'Abgelehnt' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
+                        'Rejected' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
+                        'Abgesagt' => ['status' => 'canceled', 'label' => 'Abgesagt'],
+                        'Canceled' => ['status' => 'canceled', 'label' => 'Abgesagt'],
+                    ];
+
+                    foreach ($statusMap as $keyword => $statusInfo) {
+                        if (stripos($text, $keyword) !== false && $absence['status'] === null) {
+                            $absence['status'] = $statusInfo['status'];
+                            $absence['status_label'] = $statusInfo['label'];
+                            break;
+                        }
+                    }
+                }
+
+                // If end_date is still null, set it to start_date (single day absence)
+                if ($absence['end_date'] === null) {
+                    $absence['end_date'] = $absence['start_date'];
+                }
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('Could not enrich absences from DOM', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Extract vacation summary statistics from HTML
+     */
+    private function extractSummaryFromHtml(string $html, array &$summary): void
+    {
+        try {
+            // Look for vacation budget indicators in the page constants JSON
+            // Pattern: vacationIndicatorTotalBudget, appointmentIndicatorRemainingVacationToday, etc.
+
+            // Try to extract from table cells with budget information
+            // These are typically in a separate "budgets" table
+
+            // Look for patterns like "30,00" or "25" in budget-related cells
+            if (preg_match('/vacationIndicatorTotalBudget[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
+                $summary['vacation_days_total'] = (float) str_replace(',', '.', trim($match[1]));
+            }
+
+            if (preg_match('/appointmentIndicatorRemainingVacationToday[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
+                $summary['vacation_days_remaining'] = (float) str_replace(',', '.', trim($match[1]));
+            }
+
+            if (preg_match('/appointmentIndicatorSumVacationDurationPlanned[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
+                $summary['vacation_days_planned'] = (float) str_replace(',', '.', trim($match[1]));
+            }
+
+            if (preg_match('/appointmentIndicatorSumVacationDurationSubmitted[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
+                $summary['vacation_days_submitted'] = (float) str_replace(',', '.', trim($match[1]));
+            }
+
+            if (preg_match('/appointmentIndicatorVacationDurationApprovedAndTaken[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
+                $summary['vacation_days_used'] = (float) str_replace(',', '.', trim($match[1]));
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('Could not extract vacation summary', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }

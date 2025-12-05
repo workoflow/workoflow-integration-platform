@@ -107,6 +107,30 @@ class ProjektronIntegration implements PersonalizedSkillInterface
                     ],
                 ]
             ),
+            new ToolDefinition(
+                'projektron_get_absences',
+                'Get all absences (vacation, sickness, other leave) for a specific year. Returns list of absence entries with details like type (vacation/sickness), start_date, end_date, duration_days, status (approved/submitted/rejected/canceled), and summary statistics including total vacation days, used days, and remaining days.',
+                [
+                    [
+                        'name' => 'day',
+                        'type' => 'integer',
+                        'description' => 'Day of month (1-31) - used as reference date',
+                        'required' => true,
+                    ],
+                    [
+                        'name' => 'month',
+                        'type' => 'integer',
+                        'description' => 'Month (1-12) - used as reference date',
+                        'required' => true,
+                    ],
+                    [
+                        'name' => 'year',
+                        'type' => 'integer',
+                        'description' => 'Year to fetch absences for (e.g., 2025)',
+                        'required' => true,
+                    ],
+                ]
+            ),
         ];
     }
 
@@ -120,6 +144,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             'projektron_get_all_tasks' => $this->getAllTasks($credentials),
             'projektron_get_worklog' => $this->getWorklog($credentials, $parameters),
             'projektron_add_worklog' => $this->addWorklog($credentials, $parameters),
+            'projektron_get_absences' => $this->getAbsences($credentials, $parameters),
             default => throw new \InvalidArgumentException("Unknown tool: {$toolName}")
         };
     }
@@ -304,5 +329,39 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             $minutes,
             $description
         );
+    }
+
+    /**
+     * Get absences (vacation, sickness, other leave) for a specific year
+     *
+     * @param array $credentials Projektron credentials
+     * @param array $parameters Tool parameters (day, month, year)
+     * @return array Absences data with success flag
+     */
+    private function getAbsences(array $credentials, array $parameters): array
+    {
+        $day = (int) ($parameters['day'] ?? 0);
+        $month = (int) ($parameters['month'] ?? 0);
+        $year = (int) ($parameters['year'] ?? 0);
+
+        if ($day < 1 || $day > 31) {
+            throw new \InvalidArgumentException('Invalid day: must be between 1 and 31');
+        }
+        if ($month < 1 || $month > 12) {
+            throw new \InvalidArgumentException('Invalid month: must be between 1 and 12');
+        }
+        if ($year < 2000 || $year > 2100) {
+            throw new \InvalidArgumentException('Invalid year: must be between 2000 and 2100');
+        }
+
+        $absences = $this->projektronService->getAbsences($credentials, $day, $month, $year);
+
+        return [
+            'success' => true,
+            'date' => $absences['date'],
+            'count' => $absences['count'],
+            'absences' => $absences['absences'],
+            'summary' => $absences['summary'],
+        ];
     }
 }

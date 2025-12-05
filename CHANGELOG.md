@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2025-12-05
 
 ### Added
+- **Projektron absence tracking** - AI agents can now view vacation, sickness, and other absences for any year with details including dates, duration, status (approved/pending/rejected), and vacation balance summary
 - **Projektron worklog debug script** - New helper script (`scripts/projektron_add_worklog_helper.sh`) for testing and debugging Projektron time bookings from the command line
 - **Integration connection status tracking** - Integrations now track their connection status and display when credentials need to be renewed
 
