@@ -647,7 +647,9 @@ class ProjektronService
         ];
 
         $bookingUrl = $url . '/bcs/taskdetail/effortrecording/edit?oid=' . urlencode($taskOid);
-        $encodedPayload = http_build_query($payload);
+        // Build query and restore + signs that http_build_query encodes to %2B
+        // Projektron expects literal + in values like "effortIsChargable_false+effortIsShown_false"
+        $encodedPayload = str_replace('%2B', '+', http_build_query($payload));
 
         // Build curl command for debugging
         $curlCommand = sprintf(
