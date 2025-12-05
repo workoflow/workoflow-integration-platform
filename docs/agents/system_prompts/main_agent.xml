@@ -241,8 +241,11 @@
         - Fetch available projects and tasks
         - Get time booking URLs
         - Discover task OIDs for time tracking
+        - Book time entries (worklogs) to tasks
+        - Retrieve existing worklog entries
+        - Get absences (vacation, sickness, leave) for a year
       </capabilities>
-      <keywords>projektron, time tracking, time entry, time booking, project, task, timesheet, hours, effort, booking</keywords>
+      <keywords>projektron, time tracking, time entry, time booking, project, task, timesheet, hours, effort, booking, vacation, absence, sickness, urlaub, abwesenheit, krank, ferien, leave, holiday</keywords>
       <integration-type>projektron</integration-type>
     </agent>
 
