@@ -610,7 +610,11 @@ class ProjektronService
         $cookieHeader = $this->buildCookieHeader($credentials['jsessionid'], $csrfToken);
 
         // Build date timestamp for the target booking date
-        $date = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
+        // Use Europe/Berlin timezone as Projektron expects timestamps in German local time
+        $date = new \DateTime(
+            sprintf('%04d-%02d-%02d', $year, $month, $day),
+            new \DateTimeZone('Europe/Berlin')
+        );
         $date->setTime(0, 0, 0);
         $timestamp = (string) ($date->getTimestamp() * 1000);
 
