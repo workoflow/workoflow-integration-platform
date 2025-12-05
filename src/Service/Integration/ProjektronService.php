@@ -970,62 +970,71 @@ class ProjektronService
         try {
             $dom = \Dom\HTMLDocument::createFromString($html);
 
+            // Status mapping including all German status values found in Projektron
+            $statusMap = [
+                'Genehmigt' => ['status' => 'approved', 'label' => 'Genehmigt'],
+                'Approved' => ['status' => 'approved', 'label' => 'Genehmigt'],
+                'Beantragt' => ['status' => 'submitted', 'label' => 'Beantragt'],
+                'Submitted' => ['status' => 'submitted', 'label' => 'Beantragt'],
+                'Abgelehnt' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
+                'Rejected' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
+                'Abgesagt' => ['status' => 'canceled', 'label' => 'Abgesagt'],
+                'Canceled' => ['status' => 'canceled', 'label' => 'Abgesagt'],
+                'Genommen' => ['status' => 'taken', 'label' => 'Genommen'],
+                'Taken' => ['status' => 'taken', 'label' => 'Genommen'],
+                'Beendet' => ['status' => 'completed', 'label' => 'Beendet'],
+                'Completed' => ['status' => 'completed', 'label' => 'Beendet'],
+                'Ended' => ['status' => 'completed', 'label' => 'Beendet'],
+                'Geplant' => ['status' => 'planned', 'label' => 'Geplant'],
+                'Planned' => ['status' => 'planned', 'label' => 'Geplant'],
+            ];
+
+            $enrichedCount = 0;
             foreach ($absences as $oid => &$absence) {
-                // Find the row containing this absence by looking for the OID in links
-                $link = $dom->querySelector('a[id="' . $oid . '"]');
-                if (!$link) {
-                    continue;
-                }
-
-                // Navigate up to find the table row
-                $row = $link->parentElement;
-                while ($row && $row->tagName !== 'TR') {
-                    $row = $row->parentElement;
-                }
-
+                // Find the row using data-row-id attribute with fallback
+                $row = $this->findRowByDataRowId($dom, $oid);
                 if (!$row) {
+                    $this->logger->debug('Absence row not found', ['oid' => $oid]);
                     continue;
                 }
 
-                // Extract cells from the row
-                $cells = $row->querySelectorAll('td');
-                $cellTexts = [];
-                foreach ($cells as $cell) {
-                    $cellTexts[] = trim($cell->textContent);
+                // Extract start date from eventStartDate column
+                // Format: "Do 20.02.25" (weekday + DD.MM.YY) or "20.02.2025"
+                $startDateCell = $this->findCellByName($row, 'eventStartDate');
+                if ($startDateCell !== null) {
+                    $startDate = $this->extractDateFromCell($this->cleanCellText($startDateCell->textContent));
+                    if ($startDate !== null) {
+                        $absence['start_date'] = $startDate;
+                    }
                 }
 
-                // Try to find end date (typically after start date)
-                foreach ($cellTexts as $text) {
-                    // Look for date pattern DD.MM.YYYY that's different from start date
-                    if (preg_match('/^(\d{2}\.\d{2}\.\d{4})$/', $text, $dateMatch)) {
-                        $isoDate = $this->convertGermanDate($dateMatch[1]);
-                        if ($isoDate !== $absence['start_date'] && $absence['end_date'] === null) {
-                            $absence['end_date'] = $isoDate;
-                        }
+                // Extract end date from eventEndDate column
+                $endDateCell = $this->findCellByName($row, 'eventEndDate');
+                if ($endDateCell !== null) {
+                    $endDate = $this->extractDateFromCell($this->cleanCellText($endDateCell->textContent));
+                    if ($endDate !== null) {
+                        $absence['end_date'] = $endDate;
                     }
+                }
 
-                    // Look for duration pattern (e.g., "1", "0,5", "2,00")
-                    if (preg_match('/^(\d+(?:,\d+)?)$/', $text, $durationMatch)) {
+                // Extract duration from vacationDurationInPeriod column
+                // Format: "1,00t " (number + 't' suffix for "Tage" = days)
+                $durationCell = $this->findCellByName($row, 'vacationDurationInPeriod');
+                if ($durationCell !== null) {
+                    $durationText = $this->cleanCellText($durationCell->textContent);
+                    // Handle format: "1", "1,00", "1,00t", "1,00t " (with nbsp)
+                    if (preg_match('/^(\d+(?:,\d+)?)\s*t?\s*$/u', $durationText, $durationMatch)) {
                         $duration = str_replace(',', '.', $durationMatch[1]);
-                        if (is_numeric($duration) && $absence['duration_days'] === null) {
-                            $absence['duration_days'] = (float) $duration;
-                        }
+                        $absence['duration_days'] = (float) $duration;
                     }
+                }
 
-                    // Look for status
-                    $statusMap = [
-                        'Genehmigt' => ['status' => 'approved', 'label' => 'Genehmigt'],
-                        'Approved' => ['status' => 'approved', 'label' => 'Genehmigt'],
-                        'Beantragt' => ['status' => 'submitted', 'label' => 'Beantragt'],
-                        'Submitted' => ['status' => 'submitted', 'label' => 'Beantragt'],
-                        'Abgelehnt' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
-                        'Rejected' => ['status' => 'rejected', 'label' => 'Abgelehnt'],
-                        'Abgesagt' => ['status' => 'canceled', 'label' => 'Abgesagt'],
-                        'Canceled' => ['status' => 'canceled', 'label' => 'Abgesagt'],
-                    ];
-
+                // Extract status from state column
+                $stateCell = $this->findCellByName($row, 'state');
+                if ($stateCell !== null) {
+                    $stateText = $this->cleanCellText($stateCell->textContent);
                     foreach ($statusMap as $keyword => $statusInfo) {
-                        if (stripos($text, $keyword) !== false && $absence['status'] === null) {
+                        if (stripos($stateText, $keyword) !== false) {
                             $absence['status'] = $statusInfo['status'];
                             $absence['status_label'] = $statusInfo['label'];
                             break;
@@ -1033,16 +1042,135 @@ class ProjektronService
                     }
                 }
 
+                // Extract created date from insDate column
+                // Format: "27.11.24 10:33"
+                $createdCell = $this->findCellByName($row, 'insDate');
+                if ($createdCell !== null) {
+                    $createdText = $this->cleanCellText($createdCell->textContent);
+                    $createdDate = $this->extractDateTimeFromCell($createdText);
+                    if ($createdDate !== null) {
+                        $absence['created_at'] = $createdDate;
+                    }
+                }
+
                 // If end_date is still null, set it to start_date (single day absence)
                 if ($absence['end_date'] === null) {
                     $absence['end_date'] = $absence['start_date'];
                 }
+
+                $enrichedCount++;
             }
+
+            $this->logger->debug('Absences DOM enrichment completed', [
+                'total_absences' => count($absences),
+                'enriched_count' => $enrichedCount,
+            ]);
         } catch (\Exception $e) {
             $this->logger->warning('Could not enrich absences from DOM', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
+    }
+
+    /**
+     * Find a table row by data-row-id attribute with fallback iteration
+     */
+    private function findRowByDataRowId(\Dom\HTMLDocument $dom, string $oid): ?\Dom\Element
+    {
+        // Try direct CSS selector first
+        $row = $dom->querySelector('tr[data-row-id="' . $oid . '"]');
+        if ($row !== null) {
+            return $row;
+        }
+
+        // Fallback: iterate all tr elements and match by attribute
+        $allRows = $dom->querySelectorAll('tr');
+        foreach ($allRows as $tr) {
+            if ($tr->getAttribute('data-row-id') === $oid) {
+                return $tr;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a td cell by name attribute with fallback iteration
+     */
+    private function findCellByName(\Dom\Element $row, string $name): ?\Dom\Element
+    {
+        // Try direct CSS selector first
+        $cell = $row->querySelector('td[name="' . $name . '"]');
+        if ($cell !== null) {
+            return $cell;
+        }
+
+        // Fallback: iterate all td elements and match by name attribute
+        $allCells = $row->querySelectorAll('td');
+        foreach ($allCells as $td) {
+            if ($td->getAttribute('name') === $name) {
+                return $td;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Clean cell text content by decoding entities and normalizing whitespace
+     */
+    private function cleanCellText(string $text): string
+    {
+        // Decode HTML entities
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Normalize whitespace including non-breaking space (\u00A0)
+        $text = preg_replace('/[\s\x{00A0}]+/u', ' ', $text);
+        return trim($text);
+    }
+
+    /**
+     * Extract date from cell text, handling various German formats
+     * Supports: "Do 20.02.25", "20.02.2025", "20.02.25"
+     */
+    private function extractDateFromCell(string $text): ?string
+    {
+        $text = trim($text);
+        // Match DD.MM.YY or DD.MM.YYYY (optionally with weekday prefix)
+        if (preg_match('/(\d{2})\.(\d{2})\.(\d{2,4})/', $text, $match)) {
+            $day = $match[1];
+            $month = $match[2];
+            $year = $match[3];
+            // Handle 2-digit year
+            if (strlen($year) === 2) {
+                $year = '20' . $year;
+            }
+            return sprintf('%s-%s-%s', $year, $month, $day);
+        }
+        return null;
+    }
+
+    /**
+     * Extract datetime from cell text
+     * Supports: "27.11.24 10:33", "27.11.2024 10:33"
+     */
+    private function extractDateTimeFromCell(string $text): ?string
+    {
+        $text = trim($text);
+        // Match DD.MM.YY HH:MM or DD.MM.YYYY HH:MM
+        if (preg_match('/(\d{2})\.(\d{2})\.(\d{2,4})\s+(\d{2}):(\d{2})/', $text, $match)) {
+            $day = $match[1];
+            $month = $match[2];
+            $year = $match[3];
+            $hour = $match[4];
+            $minute = $match[5];
+            // Handle 2-digit year
+            if (strlen($year) === 2) {
+                $year = '20' . $year;
+            }
+            return sprintf('%s-%s-%s %s:%s', $year, $month, $day, $hour, $minute);
+        }
+        return null;
     }
 
     /**
@@ -1051,36 +1179,48 @@ class ProjektronService
     private function extractSummaryFromHtml(string $html, array &$summary): void
     {
         try {
-            // Look for vacation budget indicators in the page constants JSON
-            // Pattern: vacationIndicatorTotalBudget, appointmentIndicatorRemainingVacationToday, etc.
+            $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Try to extract from table cells with budget information
-            // These are typically in a separate "budgets" table
+            // Map of summary fields to their cell name attributes
+            // The budget table contains cells with these name attributes
+            $summaryFields = [
+                'vacation_days_total' => 'vacationIndicatorTotalBudget',
+                'vacation_days_remaining' => 'appointmentIndicatorRemainingVacationToday',
+                'vacation_days_planned' => 'appointmentIndicatorSumVacationDurationPlanned',
+                'vacation_days_submitted' => 'appointmentIndicatorSumVacationDurationSubmitted',
+                'vacation_days_used' => 'appointmentIndicatorVacationDurationApprovedAndTaken',
+            ];
 
-            // Look for patterns like "30,00" or "25" in budget-related cells
-            if (preg_match('/vacationIndicatorTotalBudget[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
-                $summary['vacation_days_total'] = (float) str_replace(',', '.', trim($match[1]));
-            }
-
-            if (preg_match('/appointmentIndicatorRemainingVacationToday[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
-                $summary['vacation_days_remaining'] = (float) str_replace(',', '.', trim($match[1]));
-            }
-
-            if (preg_match('/appointmentIndicatorSumVacationDurationPlanned[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
-                $summary['vacation_days_planned'] = (float) str_replace(',', '.', trim($match[1]));
-            }
-
-            if (preg_match('/appointmentIndicatorSumVacationDurationSubmitted[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
-                $summary['vacation_days_submitted'] = (float) str_replace(',', '.', trim($match[1]));
-            }
-
-            if (preg_match('/appointmentIndicatorVacationDurationApprovedAndTaken[^>]*>([^<]*\d+(?:,\d+)?)[^<]*</', $html, $match)) {
-                $summary['vacation_days_used'] = (float) str_replace(',', '.', trim($match[1]));
+            foreach ($summaryFields as $summaryKey => $cellName) {
+                // Find the content cell (not header) by name attribute
+                // Content cells have class "content" while headers have class "listheader"
+                $cell = $dom->querySelector('td.content[name="' . $cellName . '"]');
+                if ($cell !== null) {
+                    $value = $this->extractNumericValue($cell->textContent);
+                    if ($value !== null) {
+                        $summary[$summaryKey] = $value;
+                    }
+                }
             }
         } catch (\Exception $e) {
             $this->logger->warning('Could not extract vacation summary', [
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Extract numeric value from text, handling German format
+     * Supports: "31,0", "31,00", "0", "31,00t"
+     */
+    private function extractNumericValue(string $text): ?float
+    {
+        $text = trim($text);
+        // Match number with optional decimal (German format with comma)
+        // Also handles optional 't' suffix for "Tage" (days)
+        if (preg_match('/^(\d+(?:,\d+)?)\s*t?\s*$/u', $text, $match)) {
+            return (float) str_replace(',', '.', $match[1]);
+        }
+        return null;
     }
 }

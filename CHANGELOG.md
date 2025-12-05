@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Integration connection status tracking** - Integrations now track their connection status and display when credentials need to be renewed
 
 ### Fixed
+- **Projektron absence details now parse correctly** - Fixed a bug where vacation entries showed null values for duration, end date, and status; multi-day vacations now correctly display their full date range (e.g., Dec 22-31 instead of just Dec 22)
 - **Projektron time entries now book to correct date** - Fixed a bug where time entries were being booked to the wrong date (one day earlier than intended) due to an incorrect date adjustment in the booking logic
 
 ## 2025-12-04
