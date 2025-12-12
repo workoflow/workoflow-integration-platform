@@ -14,6 +14,16 @@
                 </p>
             </div>
 
+            {% if integration.isExperimental() %}
+                <div class="alert alert-experimental">
+                    <i class="fas fa-flask"></i>
+                    <div class="alert-experimental-content">
+                        <strong>{{ 'status.experimental'|trans }}</strong>
+                        <p>{{ 'integration.experimental_notice'|trans|default('This skill is still in development. Features may change and some functionality might not work as expected.') }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
             {% if existingInstances|length > 0 and not isEdit %}
                 <div class="existing-instances">
                     <p class="instances-info">
@@ -112,6 +122,13 @@
                                 {{ form_widget(form[fieldName], {'attr': {'class': 'form-control', 'placeholder': field.getPlaceholder()}}) }}
                             {% endif %}
                             {{ form_errors(form[fieldName]) }}
+
+                            {% if integration.getType() == 'projektron' and fieldName == 'csrf_token' %}
+                                <div class="alert alert-session-warning">
+                                    <i class="fas fa-clock"></i>
+                                    <p>{{ 'integration.projektron_session_notice'|trans|default('These values automatically expire after a day, or if you recreate your Projektron session. Ensure to recently update them before using the skill. Please excuse the inconvenience.') }}</p>
+                                </div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -509,6 +526,59 @@ label.required {
     padding: 1rem;
     border-radius: 4px;
     margin-bottom: 1rem;
+}
+
+/* Experimental banner */
+.alert-experimental {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--warning-background, rgba(251, 191, 36, 0.1));
+    border: 1px solid var(--warning-color, #fbbf24);
+    color: var(--warning-text, #fbbf24);
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+}
+
+.alert-experimental i {
+    font-size: 1.25rem;
+    margin-top: 0.125rem;
+}
+
+.alert-experimental-content strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.alert-experimental-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+/* Projektron session warning */
+.alert-session-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    background: var(--info-background, #1a2332);
+    border: 1px solid var(--info-border, #3b82f6);
+    color: var(--info-text, #93bbfc);
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+}
+
+.alert-session-warning i {
+    font-size: 1rem;
+    margin-top: 0.125rem;
+}
+
+.alert-session-warning p {
+    margin: 0;
+    line-height: 1.4;
 }
 
 .form-text {

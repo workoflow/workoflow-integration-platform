@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-12
+
+### Added
+- **Experimental skill banner** - Skills marked as experimental now display a warning banner on their setup page, informing users that features may change
+- **Projektron session expiration notice** - Projektron skill setup page now shows a note near the JSESSIONID and CSRF token fields explaining that these values expire after a day
+
 ## 2025-12-05
 
 ### Added
