@@ -3332,6 +3332,63 @@ body {
       }
     }
   }
+
+  // Experimental banner (for skills in development)
+  &.alert-experimental {
+    background: rgba(245, 158, 11, 0.08);
+    border-left-color: #f59e0b;
+    color: #f59e0b;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--space-lg);
+
+    i {
+      font-size: 1.25rem;
+      margin-top: 0.125rem;
+    }
+
+    .alert-experimental-content {
+      flex: 1;
+
+      strong {
+        display: block;
+        margin-bottom: var(--space-xs);
+      }
+
+      p {
+        margin: 0;
+        font-size: var(--text-sm);
+        opacity: 0.9;
+      }
+    }
+  }
+
+  // Session warning (for credential expiration notices)
+  &.alert-session-warning {
+    background: rgba(59, 130, 246, 0.08);
+    border-left-color: #3b82f6;
+    color: #3b82f6;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--border-radius);
+    margin-top: var(--space-md);
+    font-size: var(--text-sm);
+
+    i {
+      font-size: 1rem;
+      margin-top: 0.125rem;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.4;
+    }
+  }
 }
 
 .consequences-list {

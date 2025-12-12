@@ -37,6 +37,14 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
     - Test changes by asking Claude/GPT-4 questions about the platform
     - Purpose: Enable AI assistants to understand and explain the platform without human documentation
 
+4. **UI/Styling Guidelines**:
+    - **ALWAYS** reference `CONCEPT/SYMFONY_IMPLEMENTATION_GUIDE.md` for UI tasks
+    - This guide contains design system patterns, component structures, and styling conventions
+    - Add new CSS styles to `assets/styles/app.scss`, NOT inline in templates
+    - Follow existing alert patterns (`.alert-*`) for notification components
+    - Use CSS custom properties (`var(--space-md)`, `var(--text-sm)`, etc.) for consistency
+    - Run `docker-compose exec frankenphp npm run build` after SCSS changes
+
 ### Main Features
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management
