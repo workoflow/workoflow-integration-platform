@@ -111,7 +111,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'filter',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'OData $filter query (e.g., "StatusCode eq \'2\'", "Company eq \'ACME Corp\'"). Use single quotes for string values. Supports: eq (equals), ne (not equals), gt (greater than), lt (less than), and (logical AND), or (logical OR). Leave empty to retrieve all leads.'
+                        'description' => 'OData $filter query. Supports: eq, ne, gt, lt, ge, le, and, or. String functions: startswith(Field, \'value\'), endswith(Field, \'value\'), substringof(\'value\', Field) for partial matching. CRITICAL: substringof has REVERSED parameter order! NEVER use contains() - it is NOT supported in OData V2. Example: substringof(\'Acme\', Company) finds companies containing "Acme".'
                     ],
                     [
                         'name' => 'top',
@@ -277,13 +277,13 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'c4c_search_opportunities',
-                'Search opportunities using OData filter syntax. Returns: Object with opportunities array, count, pagination metadata. Example filters: "StatusCode eq \'2\'", "AccountPartyID eq \'XXX\'". Use expand to include related collections.',
+                'Search opportunities using OData filter syntax. Returns: Object with opportunities array, count, pagination metadata. Example filters: "StatusCode eq \'2\'", "ProspectPartyID eq \'12345\'" (use ProspectPartyID, NOT AccountPartyID!), "substringof(\'Deal\', Name)". Use expand to include related collections.',
                 [
                     [
                         'name' => 'filter',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'OData $filter query. Use single quotes for string values. Supports: eq, ne, gt, lt, and, or. Leave empty to retrieve all opportunities.'
+                        'description' => 'OData $filter query. Supports: eq, ne, gt, lt, and, or. String functions: startswith(Field, \'value\'), substringof(\'value\', Field). CRITICAL: Use ProspectPartyID (NOT AccountPartyID) for account filters! substringof has REVERSED params. NEVER use contains(). Example: "substringof(\'Sales\', Name) and ProspectPartyID eq \'12345\'".'
                     ],
                     [
                         'name' => 'top',
@@ -485,7 +485,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                         'name' => 'filter',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'OData $filter query. Use single quotes for string values. Leave empty to retrieve all accounts.'
+                        'description' => 'OData $filter query. Supports: eq, ne, gt, lt, and, or. String functions: startswith(Name, \'value\'), substringof(\'value\', Name) for partial matching. CRITICAL: substringof has REVERSED parameter order (value first, then field)! NEVER use contains() - it returns "Invalid function" error. Example: substringof(\'Star\', Name) finds all accounts containing "Star" in name.'
                     ],
                     [
                         'name' => 'top',
@@ -675,13 +675,13 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'c4c_search_contacts',
-                'Search contacts using OData filter syntax. Returns: Object with contacts array, count, pagination metadata. Example filters: "LastName eq \'Smith\'", "AccountPartyID eq \'XXX\'"',
+                'Search contacts using OData filter syntax. Returns: Object with contacts array, count, pagination metadata. Example filters: "LastName eq \'Smith\'", "LastName eq \'Smith\' and FirstName eq \'John\'", "substringof(\'son\', LastName)"',
                 [
                     [
                         'name' => 'filter',
                         'type' => 'string',
                         'required' => false,
-                        'description' => 'OData $filter query. Use single quotes for string values. Leave empty to retrieve all contacts.'
+                        'description' => 'OData $filter query. Supports: eq, ne, gt, lt, and, or. String functions: startswith(LastName, \'value\'), substringof(\'value\', LastName). CRITICAL: substringof has REVERSED params! NEVER use contains(). For full name search: "LastName eq \'Smith\' and FirstName eq \'John\'". For partial match: substringof(\'son\', LastName) finds names containing "son".'
                     ],
                     [
                         'name' => 'top',

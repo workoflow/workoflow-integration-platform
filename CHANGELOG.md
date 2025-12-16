@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2025-12-16
+
+### Fixed
+- **SAP C4C search filtering now works correctly** - AI agents now use the correct OData V2 filter syntax for partial name searches (substringof instead of contains) and correct field names for opportunity filters (ProspectPartyID instead of AccountPartyID)
+
 ## 2025-12-12
 
 ### Added

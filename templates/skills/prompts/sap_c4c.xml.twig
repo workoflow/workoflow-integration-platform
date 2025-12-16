@@ -78,6 +78,73 @@
     </verification-before-responding>
   </data-first-mandate>
 
+  <!-- 🚨 CRITICAL: OData V2 Filter Syntax Rules 🚨 -->
+  <odata-filter-rules priority="critical">
+    <title>SAP C4C OData V2 Filter Syntax - MANDATORY</title>
+    <description>
+      SAP C4C uses OData V2 which has specific filter function syntax.
+      Using incorrect functions (like contains()) will cause API errors.
+    </description>
+
+    <supported-functions>
+      <function name="eq">
+        <syntax>PropertyName eq 'value'</syntax>
+        <example>Name eq 'ACME Corp'</example>
+        <description>Exact match comparison</description>
+      </function>
+      <function name="ne">
+        <syntax>PropertyName ne 'value'</syntax>
+        <example>StatusCode ne '1'</example>
+        <description>Not equals comparison</description>
+      </function>
+      <function name="startswith">
+        <syntax>startswith(PropertyName, 'value')</syntax>
+        <example>startswith(Name, 'G-Star')</example>
+        <description>Field starts with value</description>
+      </function>
+      <function name="endswith">
+        <syntax>endswith(PropertyName, 'value')</syntax>
+        <example>endswith(LastName, 'son')</example>
+        <description>Field ends with value</description>
+      </function>
+      <function name="substringof" description="CONTAINS equivalent - USE THIS FOR PARTIAL MATCHING">
+        <syntax>substringof('value', PropertyName)</syntax>
+        <warning>⚠️ Parameter order is REVERSED! The search value comes FIRST, then the property!</warning>
+        <example>substringof('Star', Name)</example>
+        <description>Finds all records where Name contains 'Star' (e.g., 'G-Star RAW', 'StarCorp')</description>
+      </function>
+      <function name="and / or">
+        <syntax>Filter1 and Filter2</syntax>
+        <example>LastName eq 'Smith' and FirstName eq 'John'</example>
+        <description>Combine multiple filter conditions</description>
+      </function>
+    </supported-functions>
+
+    <forbidden-functions>
+      <function name="contains">
+        <error>❌ NOT SUPPORTED in OData V2 - Returns "Invalid function 'contains' found"</error>
+        <wrong>contains(Name, 'Star')</wrong>
+        <correct>substringof('Star', Name)</correct>
+        <explanation>OData V2 uses substringof() instead of contains(). Note the reversed parameter order!</explanation>
+      </function>
+    </forbidden-functions>
+
+    <partial-match-strategy>
+      <title>Strategy for Searching with Partial/Fuzzy Names</title>
+      <step order="1">First try exact match: Name eq 'G-Star RAW'</step>
+      <step order="2">If no results, try startswith: startswith(Name, 'G-Star')</step>
+      <step order="3">If still no results, try substringof: substringof('Star', Name)</step>
+      <step order="4">NEVER use contains() - it will ALWAYS fail with "Invalid function" error</step>
+    </partial-match-strategy>
+
+    <opportunity-field-names>
+      <warning>When filtering Opportunities by Account, use the correct field name:</warning>
+      <correct-field>ProspectPartyID</correct-field>
+      <wrong-field>AccountPartyID (this field does not exist on Opportunity!)</wrong-field>
+      <example>ProspectPartyID eq '12472' - finds opportunities for account with AccountID 12472</example>
+    </opportunity-field-names>
+  </odata-filter-rules>
+
   <capabilities>
     <!-- Lead Capabilities -->
     <capability-group name="Lead Management">
@@ -128,8 +195,9 @@
         <tool>c4c_search_opportunities</tool>
         <example-filters>
           <filter>StatusCode eq '2'</filter>
-          <filter>AccountPartyID eq 'XXX'</filter>
-          <filter>ProbabilityPercent gt '50'</filter>
+          <filter>ProspectPartyID eq '12472' (NOTE: Use ProspectPartyID, NOT AccountPartyID!)</filter>
+          <filter>startswith(Name, 'Enterprise')</filter>
+          <filter>substringof('Sales', Name) (for partial matching - note reversed params!)</filter>
         </example-filters>
       </capability>
       <capability>
@@ -165,9 +233,11 @@
         <tool>c4c_search_accounts</tool>
         <example-filters>
           <filter>Name eq 'ACME Corp'</filter>
+          <filter>startswith(Name, 'ACME')</filter>
+          <filter>substringof('Corp', Name) (for partial matching - note reversed params!)</filter>
           <filter>CountryCode eq 'DE'</filter>
-          <filter>City eq 'Berlin'</filter>
         </example-filters>
+        <filter-warning>NEVER use contains() - use substringof() instead!</filter-warning>
       </capability>
       <capability>
         <name>Update Accounts</name>
@@ -201,9 +271,12 @@
         <tool>c4c_search_contacts</tool>
         <example-filters>
           <filter>LastName eq 'Smith'</filter>
-          <filter>AccountID eq 'XXX'</filter>
-          <filter>Email eq 'john@example.com'</filter>
+          <filter>LastName eq 'Smith' and FirstName eq 'John'</filter>
+          <filter>startswith(LastName, 'Sch')</filter>
+          <filter>substringof('son', LastName) (for partial matching - note reversed params!)</filter>
+          <filter>AccountID eq '12472'</filter>
         </example-filters>
+        <filter-warning>NEVER use contains() - use substringof() instead!</filter-warning>
       </capability>
       <capability>
         <name>Update Contacts</name>
@@ -380,6 +453,17 @@
         <symptom>Required field missing</symptom>
         <auto-fix>If the field has a sensible default (e.g., currency code "EUR"), add it</auto-fix>
         <action>Retry with default value, or ask user if no sensible default exists</action>
+      </error>
+
+      <error pattern="Invalid function.*contains">
+        <symptom>Filter using contains() function failed - OData V2 does not support contains()</symptom>
+        <auto-fix>Replace contains(Field, 'value') with substringof('value', Field) - note reversed parameter order!</auto-fix>
+        <action>Retry immediately with substringof() syntax</action>
+        <example>
+          Failed: contains(Name, 'Star')
+          Fixed: substringof('Star', Name)
+        </example>
+        <user-notification>Brief note: "Used substringof() instead of contains() for OData V2 compatibility"</user-notification>
       </error>
     </recoverable-errors>
 
