@@ -346,20 +346,21 @@ class Prompt
      */
     public static function getCategories(): array
     {
+        // Sorted alphabetically by English translated name
         return [
-            self::CATEGORY_PROJECT_MANAGER => 'prompt.category_project_manager',
-            self::CATEGORY_DEVELOPER => 'prompt.category_developer',
-            self::CATEGORY_QA_ENGINEER => 'prompt.category_qa_engineer',
-            self::CATEGORY_DEVOPS => 'prompt.category_devops',
-            self::CATEGORY_DESIGNER => 'prompt.category_designer',
             self::CATEGORY_BUSINESS_ANALYST => 'prompt.category_business_analyst',
-            self::CATEGORY_SCRUM_MASTER => 'prompt.category_scrum_master',
-            self::CATEGORY_PRODUCT_OWNER => 'prompt.category_product_owner',
-            self::CATEGORY_TECH_LEAD => 'prompt.category_tech_lead',
-            self::CATEGORY_SOLUTION_ARCHITECT => 'prompt.category_solution_architect',
             self::CATEGORY_DATA_ENGINEER => 'prompt.category_data_engineer',
+            self::CATEGORY_DESIGNER => 'prompt.category_designer',
+            self::CATEGORY_DEVELOPER => 'prompt.category_developer',
+            self::CATEGORY_DEVOPS => 'prompt.category_devops',
+            self::CATEGORY_PRODUCT_OWNER => 'prompt.category_product_owner',
+            self::CATEGORY_PROJECT_MANAGER => 'prompt.category_project_manager',
+            self::CATEGORY_QA_ENGINEER => 'prompt.category_qa_engineer',
+            self::CATEGORY_SCRUM_MASTER => 'prompt.category_scrum_master',
             self::CATEGORY_SECURITY_ENGINEER => 'prompt.category_security_engineer',
+            self::CATEGORY_SOLUTION_ARCHITECT => 'prompt.category_solution_architect',
             self::CATEGORY_SUPPORT_ENGINEER => 'prompt.category_support_engineer',
+            self::CATEGORY_TECH_LEAD => 'prompt.category_tech_lead',
         ];
     }
 

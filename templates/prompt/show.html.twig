@@ -94,7 +94,7 @@
                 {% if commentForm %}
                     <form method="post" action="{{ path('app_prompt_comment', {uuid: prompt.uuid}) }}" class="comment-form">
                         {{ form_start(commentForm) }}
-                        {{ form_widget(commentForm.content, {attr: {placeholder: 'prompt.comment.placeholder'|trans}}) }}
+                        {{ form_widget(commentForm.content, {attr: {placeholder: 'prompt.comment_placeholder'|trans}}) }}
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-paper-plane"></i> {{ 'prompt.add_comment'|trans }}
                         </button>
