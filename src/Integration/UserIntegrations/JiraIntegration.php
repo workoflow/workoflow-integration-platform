@@ -86,7 +86,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get all issues in a specific sprint. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, sprint (current sprint), closedSprints array, flagged, epic, description, project, timetracking',
+                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, sprint, closedSprints, flagged, epic, description, project, timetracking',
                 [
                     [
                         'name' => 'sprintId',
@@ -98,7 +98,19 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'name' => 'maxResults',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results (default: 50)'
+                        'description' => 'Maximum number of results (default: 100)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues in the sprint.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h" for recent completions.'
                     ]
                 ]
             ),
@@ -182,7 +194,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_board_issues',
-                'Universal tool to get issues from any board type (works with both Scrum and Kanban). Automatically detects board type and retrieves issues accordingly: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all issues on the board. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description',
+                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description',
                 [
                     [
                         'name' => 'boardId',
@@ -195,12 +207,24 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'integer',
                         'required' => false,
                         'description' => 'Maximum number of results (default: 50)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'jira_get_kanban_issues',
-                'Get all issues from a Kanban board. This is specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description, created, updated',
+                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description, created, updated',
                 [
                     [
                         'name' => 'boardId',
@@ -213,6 +237,18 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'integer',
                         'required' => false,
                         'description' => 'Maximum number of results (default: 50)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
                     ]
                 ]
             ),
@@ -515,7 +551,10 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             'jira_get_sprint_issues' => $this->jiraService->getSprintIssues(
                 $credentials,
-                $parameters['sprintId']
+                $parameters['sprintId'],
+                $parameters['maxResults'] ?? 100,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
             ),
             'jira_add_comment' => $this->jiraService->addComment(
                 $credentials,
@@ -541,12 +580,16 @@ class JiraIntegration implements PersonalizedSkillInterface
             'jira_get_board_issues' => $this->jiraService->getBoardIssues(
                 $credentials,
                 $parameters['boardId'],
-                $parameters['maxResults'] ?? 50
+                $parameters['maxResults'] ?? 50,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
             ),
             'jira_get_kanban_issues' => $this->jiraService->getKanbanIssues(
                 $credentials,
                 $parameters['boardId'],
-                $parameters['maxResults'] ?? 50
+                $parameters['maxResults'] ?? 50,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
             ),
             'jira_get_edit_metadata' => $this->jiraService->getEditMetadata(
                 $credentials,

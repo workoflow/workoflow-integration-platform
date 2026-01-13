@@ -353,17 +353,36 @@ class JiraService
         }
     }
 
-    public function getSprintIssues(array $credentials, int $sprintId): array
-    {
+    public function getSprintIssues(
+        array $credentials,
+        int $sprintId,
+        int $maxResults = 100,
+        ?string $assignee = null,
+        ?string $jql = null
+    ): array {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build query with optional JQL filtering
+        $query = [
+            'maxResults' => $maxResults,
+            'fields' => '*all',
+        ];
+
+        $jqlParts = [];
+        if ($assignee !== null) {
+            $jqlParts[] = "assignee = \"{$assignee}\"";
+        }
+        if ($jql !== null) {
+            $jqlParts[] = "({$jql})";
+        }
+        if (!empty($jqlParts)) {
+            $query['jql'] = implode(' AND ', $jqlParts);
+        }
 
         try {
             $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/sprint/' . $sprintId . '/issue', [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'maxResults' => 100,
-                    'fields' => '*all',
-                ],
+                'query' => $query,
             ]);
 
             return $response->toArray();
@@ -761,10 +780,17 @@ class JiraService
      * @param array $credentials Jira credentials
      * @param int $boardId Board ID
      * @param int $maxResults Maximum number of results
+     * @param string|null $assignee Filter by assignee accountId
+     * @param string|null $jql Additional JQL filter
      * @return array Issues from the board
      */
-    public function getBoardIssues(array $credentials, int $boardId, int $maxResults = 50): array
-    {
+    public function getBoardIssues(
+        array $credentials,
+        int $boardId,
+        int $maxResults = 50,
+        ?string $assignee = null,
+        ?string $jql = null
+    ): array {
         // First, get board details to determine type
         $board = $this->getBoard($credentials, $boardId);
         $boardType = $board['type'] ?? 'unknown';
@@ -795,16 +821,16 @@ class JiraService
                 ];
             }
 
-            // Get issues from active sprint
-            $result = $this->getSprintIssues($credentials, $activeSprint['id']);
+            // Get issues from active sprint with optional filters
+            $result = $this->getSprintIssues($credentials, $activeSprint['id'], $maxResults, $assignee, $jql);
             $result['boardType'] = 'scrum';
             $result['sprintId'] = $activeSprint['id'];
             $result['sprintName'] = $activeSprint['name'];
 
             return $result;
         } elseif ($boardType === 'kanban') {
-            // For Kanban boards, get all board issues
-            $result = $this->getKanbanIssues($credentials, $boardId, $maxResults);
+            // For Kanban boards, get all board issues with optional filters
+            $result = $this->getKanbanIssues($credentials, $boardId, $maxResults, $assignee, $jql);
             $result['boardType'] = 'kanban';
 
             return $result;
@@ -821,21 +847,42 @@ class JiraService
      * @param array $credentials Jira credentials
      * @param int $boardId Kanban board ID
      * @param int $maxResults Maximum number of results
+     * @param string|null $assignee Filter by assignee accountId
+     * @param string|null $jql Additional JQL filter
      * @return array Issues from the Kanban board
      */
-    public function getKanbanIssues(array $credentials, int $boardId, int $maxResults = 50): array
-    {
+    public function getKanbanIssues(
+        array $credentials,
+        int $boardId,
+        int $maxResults = 50,
+        ?string $assignee = null,
+        ?string $jql = null
+    ): array {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build query with optional JQL filtering
+        $query = [
+            'maxResults' => $maxResults,
+            'fields' => '*all',
+        ];
+
+        $jqlParts = [];
+        if ($assignee !== null) {
+            $jqlParts[] = "assignee = \"{$assignee}\"";
+        }
+        if ($jql !== null) {
+            $jqlParts[] = "({$jql})";
+        }
+        if (!empty($jqlParts)) {
+            $query['jql'] = implode(' AND ', $jqlParts);
+        }
 
         try {
             // Use the Jira Agile API to get all issues on the board
             // This endpoint works for both Kanban and Scrum boards
             $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/issue', [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'maxResults' => $maxResults,
-                    'fields' => '*all',
-                ],
+                'query' => $query,
             ]);
 
             return $response->toArray();

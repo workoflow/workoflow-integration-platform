@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Prompt API** - REST API for AI agents to retrieve prompts using personal access tokens
 - **Prompt sorting** - Sort prompts by newest, oldest, most popular, alphabetically, or by category
 - **API helper section** - Copy-able curl commands on the Prompts page for easy API access
+- **Jira user filtering** - AI agents can now filter sprint, board, and Kanban issues by assignee (e.g., "show my assigned issues") and apply custom JQL filters (e.g., "issues completed yesterday")
 
 ### Fixed
 - **Copy button feedback** - All copy buttons now show green success indicator when clicked
