@@ -36,6 +36,12 @@ class UserOrganisation
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $systemPrompt = null;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $personalAccessToken = null;
+
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $tokenCreatedAt = null;
+
     public function __construct()
     {
         $this->joinedAt = new \DateTime();
@@ -110,5 +116,39 @@ class UserOrganisation
     {
         $this->systemPrompt = $systemPrompt;
         return $this;
+    }
+
+    public function getPersonalAccessToken(): ?string
+    {
+        return $this->personalAccessToken;
+    }
+
+    public function setPersonalAccessToken(?string $personalAccessToken): static
+    {
+        $this->personalAccessToken = $personalAccessToken;
+        return $this;
+    }
+
+    public function getTokenCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->tokenCreatedAt;
+    }
+
+    public function setTokenCreatedAt(?\DateTimeInterface $tokenCreatedAt): static
+    {
+        $this->tokenCreatedAt = $tokenCreatedAt;
+        return $this;
+    }
+
+    public function regenerateToken(): string
+    {
+        $this->personalAccessToken = bin2hex(random_bytes(16));
+        $this->tokenCreatedAt = new \DateTime();
+        return $this->personalAccessToken;
+    }
+
+    public function hasToken(): bool
+    {
+        return $this->personalAccessToken !== null;
     }
 }

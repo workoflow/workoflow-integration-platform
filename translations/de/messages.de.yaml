@@ -18,6 +18,7 @@ nav:
   login: Anmelden
   workspace: Arbeitsbereich
   settings: Einstellungen
+  prompt_vault: Prompt Vault
 
 home:
   title: Willkommen bei Workoflow
@@ -378,6 +379,7 @@ action:
   actions: Aktionen
   copy: Kopieren
   copied: Kopiert!
+  back: Zurück
   download: Herunterladen
   manage_tools: Tools verwalten
   back_to_skills: Zurück zu Skills
@@ -430,6 +432,23 @@ profile:
   delete_consequence_2: Ihren Zugang zum Kanal entfernen
   delete_consequence_3: Alle Ihre Daten unwiderruflich löschen
   confirm_delete: Ja, Account löschen
+  api_token: Persönlicher API-Token
+  api_token_description: Generieren Sie einen persönlichen Token, um über die API auf Ihre Prompts zuzugreifen
+  generate_token: Token generieren
+  regenerate_token: Token neu generieren
+  token_generated: Neuer Token wurde generiert!
+  token_warning: Bitte kopieren Sie diesen Token jetzt. Er wird nicht erneut angezeigt.
+  token_status: Token-Status
+  token_active: Aktiv
+  token_created_at: Token erstellt am
+  no_token: Kein API-Token generiert
+  api_usage: API-Verwendung
+  api_usage_description: Verwenden Sie diesen curl-Befehl, um Ihre Prompts über die API abzurufen.
+  api_params: Optionale Parameter
+  api_param_scope: Nach Bereich filtern (personal oder organisation)
+  api_param_category: Nach Kategorie filtern (z.B. developer, devops)
+  api_param_uuid: Einen bestimmten Prompt per UUID abrufen
+  generate_token_first: Generieren Sie zuerst einen Token, um einen einsatzbereiten curl-Befehl zu erhalten.
 
 footer:
   rights: Alle Rechte vorbehalten.
@@ -514,3 +533,94 @@ release_notes:
     infrastructure:
       name: Workoflow Infrastruktur
       description: DSGVO-konforme Self-Hosted-Infrastruktur mit EU-basierten Diensten. Betreibt n8n, Qdrant, MinIO, Redis und PostgreSQL mit ISO 27001/27018-Zertifizierungen.
+
+prompt:
+  vault_title: Prompt Vault
+  create_new: Neuen Prompt erstellen
+  edit: Prompt bearbeiten
+  save: Prompt speichern
+  tab:
+    personal: Persönliche Prompts
+    organisation: Organisations-Prompts
+  title: Titel
+  content: Inhalt
+  description: Beschreibung
+  description_help: Optionale Kurzbeschreibung zur Erklärung des Zwecks dieses Prompts
+  category: Kategorie
+  category_placeholder: Kategorie auswählen
+  scope: Geltungsbereich
+  scope_help: Persönliche Prompts sind nur für Sie sichtbar. Organisations-Prompts werden mit allen Mitgliedern geteilt.
+  scope_personal: Persönlich
+  scope_organisation: Organisation
+  upvote: Upvote
+  upvotes: Upvotes
+  comments: Kommentare
+  add_comment: Kommentar hinzufügen
+  comment_placeholder: Schreiben Sie Ihren Kommentar...
+  no_comments: Noch keine Kommentare
+  copy_content: Inhalt kopieren
+  updated_label: Aktualisiert
+  view_details: Details anzeigen
+  created_by: Erstellt von
+  created_at: Erstellt am
+  updated_at: Aktualisiert am
+  personal_note: Dieser Prompt ist nur für Sie sichtbar
+  org_note: Dieser Prompt ist für alle Mitglieder Ihrer Organisation sichtbar
+  delete_confirm: Sind Sie sicher, dass Sie diesen Prompt löschen möchten?
+  empty:
+    title: Noch keine Prompts
+    description: Erstellen Sie Ihren ersten Prompt, um loszulegen
+    personal_description: Erstellen Sie Ihren ersten persönlichen Prompt
+    org_description: Erstellen Sie den ersten Organisations-Prompt
+  filter:
+    all_categories: Alle Kategorien
+    category: Kategorie
+    sort: Sortieren nach
+  sort:
+    newest: Neueste zuerst
+    oldest: Älteste zuerst
+    popular: Beliebteste
+    alpha: A-Z
+    category: Nach Kategorie
+  created:
+    success: Prompt erfolgreich erstellt!
+  updated:
+    success: Prompt erfolgreich aktualisiert!
+  deleted:
+    success: Prompt erfolgreich gelöscht!
+  restored:
+    success: Prompt erfolgreich wiederhergestellt!
+  comment_added:
+    success: Kommentar hinzugefügt!
+  category_project_manager: Projektmanager
+  category_developer: Entwickler
+  category_qa_engineer: QA-Ingenieur
+  category_devops: DevOps
+  category_designer: Designer
+  category_business_analyst: Business Analyst
+  category_scrum_master: Scrum Master
+  category_product_owner: Product Owner
+  category_tech_lead: Tech Lead
+  category_solution_architect: Solution Architect
+  category_data_engineer: Data Engineer
+  category_security_engineer: Security Engineer
+  category_support_engineer: Support Engineer
+  admin:
+    deleted_prompts: Gelöschte Prompts
+    deleted_by: Gelöscht von
+    deleted_at: Gelöscht am
+    restore: Wiederherstellen
+    no_deleted_prompts: Keine gelöschten Prompts
+    no_deleted_prompts_desc: Es gibt keine gelöschten Prompts zum Wiederherstellen
+    view_deleted: Gelöschte Prompts anzeigen
+  api_helper: API-Zugang
+  api_access: API-Zugang
+  api:
+    get_personal: Persönliche Prompts abrufen
+    get_team: Team-Prompts abrufen
+    get_all: Alle Prompts abrufen (Persönlich + Team)
+    get_by_uuid: Bestimmten Prompt per UUID abrufen
+    filter_category: Nach Kategorie filtern
+    hint_combine: "Tipp: Parameter kombinieren, z.B. ?scope=organisation&category=developer"
+    no_token: Sie müssen zuerst einen API-Token generieren, um Prompts per API abzurufen.
+    generate_token: Token im Profil generieren

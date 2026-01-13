@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-13
+
+### Added
+- **Prompt Vault** - New feature for managing and organizing AI prompts at personal and team level with categories, upvotes, and comments
+- **Prompt import command** - Console command to import default prompts from CSV into organisations
+- **Prompt API** - REST API for AI agents to retrieve prompts using personal access tokens
+- **Prompt sorting** - Sort prompts by newest, oldest, most popular, alphabetically, or by category
+- **API helper section** - Copy-able curl commands on the Prompts page for easy API access
+
+### Fixed
+- **Copy button feedback** - All copy buttons now show green success indicator when clicked
+
 ## 2025-12-16
 
 ### Fixed

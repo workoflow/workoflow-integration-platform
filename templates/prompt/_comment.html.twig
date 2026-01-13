@@ -1,0 +1,13 @@
+<div class="comment-item">
+    <div class="comment-header">
+        <span class="comment-author">
+            <i class="fas fa-user"></i> {{ comment.user.name }}
+        </span>
+        <span class="comment-date">
+            {{ comment.createdAt|date('d.m.Y H:i') }}
+        </span>
+    </div>
+    <div class="comment-content">
+        {{ comment.content|nl2br }}
+    </div>
+</div>

@@ -48,6 +48,78 @@
             </div>
         </div>
 
+        {# API Token Section #}
+        <div class="profile-section api-token-section">
+            <h2 class="section-title">{{ 'profile.api_token'|trans }}</h2>
+            <p class="section-description">{{ 'profile.api_token_description'|trans }}</p>
+
+            {% if newToken %}
+                <div class="alert alert-success">
+                    <strong>{{ 'profile.token_generated'|trans }}</strong>
+                    <p>{{ 'profile.token_warning'|trans }}</p>
+                    <div class="token-display">
+                        <code id="newToken">{{ newToken }}</code>
+                        <button type="button" class="btn btn-copy" onclick="copyToken(this)">
+                            <i class="fas fa-copy"></i> {{ 'action.copy'|trans }}
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="token-status">
+                {% if userOrganisation and userOrganisation.hasToken() %}
+                    <div class="info-item">
+                        <span class="info-label">{{ 'profile.token_status'|trans }}</span>
+                        <span class="info-value">
+                            <span class="badge badge-success">{{ 'profile.token_active'|trans }}</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">{{ 'profile.token_created_at'|trans }}</span>
+                        <span class="info-value">{{ userOrganisation.tokenCreatedAt|date('d.m.Y H:i') }}</span>
+                    </div>
+                {% else %}
+                    <p class="no-token">{{ 'profile.no_token'|trans }}</p>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{{ path('app_profile_token_generate') }}" class="token-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('generate-token') }}">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-key"></i>
+                    {% if userOrganisation and userOrganisation.hasToken() %}
+                        {{ 'profile.regenerate_token'|trans }}
+                    {% else %}
+                        {{ 'profile.generate_token'|trans }}
+                    {% endif %}
+                </button>
+            </form>
+
+            <div class="api-usage-hint">
+                <h4>{{ 'profile.api_usage'|trans }}</h4>
+                <p class="api-usage-description">{{ 'profile.api_usage_description'|trans }}</p>
+                <div class="curl-example">
+                    {% if userOrganisation and userOrganisation.hasToken() %}
+                        <pre><code id="curlCommand">curl -H "X-Prompt-Token: {{ userOrganisation.personalAccessToken }}" {{ app.request.schemeAndHttpHost }}/api/prompts</code></pre>
+                        <button type="button" class="btn btn-copy btn-sm" onclick="copyCurlCommand(this)">
+                            <i class="fas fa-copy"></i> {{ 'action.copy'|trans }}
+                        </button>
+                    {% else %}
+                        <pre><code>curl -H "X-Prompt-Token: YOUR_TOKEN" {{ app.request.schemeAndHttpHost }}/api/prompts</code></pre>
+                        <p class="api-usage-note">{{ 'profile.generate_token_first'|trans }}</p>
+                    {% endif %}
+                </div>
+                <div class="api-params-hint">
+                    <h5>{{ 'profile.api_params'|trans }}</h5>
+                    <ul>
+                        <li><code>?scope=personal</code> - {{ 'profile.api_param_scope'|trans }}</li>
+                        <li><code>?category=developer</code> - {{ 'profile.api_param_category'|trans }}</li>
+                        <li><code>?uuid=...</code> - {{ 'profile.api_param_uuid'|trans }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <div class="danger-zone">
             <h2 class="section-title danger-title">{{ 'profile.danger_zone'|trans }}</h2>
             <p class="danger-warning">{{ 'profile.delete_account_warning'|trans }}</p>
@@ -94,6 +166,32 @@ function showDeleteModal() {
 
 function hideDeleteModal() {
     document.getElementById('deleteModal').classList.remove('show');
+}
+
+function copyToken(btn) {
+    const token = document.getElementById('newToken').textContent;
+    navigator.clipboard.writeText(token).then(function() {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> {{ "action.copied"|trans }}';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
+function copyCurlCommand(btn) {
+    const curlCmd = document.getElementById('curlCommand').textContent;
+    navigator.clipboard.writeText(curlCmd).then(function() {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> {{ "action.copied"|trans }}';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
 }
 
 // Close modal when clicking outside

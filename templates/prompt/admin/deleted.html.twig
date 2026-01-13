@@ -1,0 +1,74 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'prompt.admin.deleted_prompts'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="prompts-page">
+    <div class="prompts-container">
+        {# Back link #}
+        <a href="{{ path('app_prompts') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> {{ 'action.back'|trans }}
+        </a>
+
+        <div class="prompts-header">
+            <h1>{{ 'prompt.admin.deleted_prompts'|trans }}</h1>
+        </div>
+
+        {% if prompts|length > 0 %}
+            <div class="deleted-prompts-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'prompt.title'|trans }}</th>
+                            <th>{{ 'prompt.category'|trans }}</th>
+                            <th>{{ 'prompt.scope'|trans }}</th>
+                            <th>{{ 'prompt.admin.deleted_by'|trans }}</th>
+                            <th>{{ 'prompt.admin.deleted_at'|trans }}</th>
+                            <th>{{ 'action.actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prompt in prompts %}
+                            <tr>
+                                <td>{{ prompt.title }}</td>
+                                <td>
+                                    <span class="prompt-category-badge small">
+                                        {{ ('prompt.category_' ~ prompt.category)|trans }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if prompt.scope == 'organisation' %}
+                                        <span class="prompt-scope-badge organisation small">
+                                            <i class="fas fa-users"></i>
+                                        </span>
+                                    {% else %}
+                                        <span class="prompt-scope-badge personal small">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ prompt.deletedBy ? prompt.deletedBy.name : '-' }}</td>
+                                <td>{{ prompt.deletedAt|date('d.m.Y H:i') }}</td>
+                                <td>
+                                    <form method="post" action="{{ path('app_prompt_restore', {uuid: prompt.uuid}) }}" style="display: inline;">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('restore-prompt-' ~ prompt.uuid) }}">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fas fa-undo"></i> {{ 'prompt.admin.restore'|trans }}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-trash-alt empty-icon"></i>
+                <h3>{{ 'prompt.admin.no_deleted_prompts'|trans }}</h3>
+                <p>{{ 'prompt.admin.no_deleted_prompts_desc'|trans }}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

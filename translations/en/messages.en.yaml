@@ -18,6 +18,7 @@ nav:
   login: Login
   workspace: Workspace
   settings: Settings
+  prompt_vault: Prompt Vault
 
 home:
   title: Welcome to Workoflow
@@ -378,6 +379,7 @@ action:
   actions: Actions
   copy: Copy
   copied: Copied!
+  back: Back
   download: Download
   manage_tools: Manage Tools
   back_to_skills: Back to Skills
@@ -428,6 +430,24 @@ profile:
   delete_consequence_2: Remove your access to the channel
   delete_consequence_3: Permanently delete all your data
   confirm_delete: Yes, delete account
+  api_token: API Token
+  api_token_description: Use this token to access the Prompt API programmatically.
+  generate_token: Generate Token
+  regenerate_token: Regenerate Token
+  token_generated: Your API token has been generated. Copy it now - it won't be shown again!
+  token_warning: Keep this token secret. Anyone with this token can access your prompts.
+  no_token: No API token generated yet.
+  token_status: Token Status
+  token_active: Active
+  token_created_at: Token Created
+  api_usage: API Usage
+  api_usage_description: Use this curl command to fetch your prompts from the API.
+  api_params: Optional Parameters
+  api_param_scope: Filter by scope (personal or organisation)
+  api_param_category: Filter by category (e.g., developer, devops)
+  api_param_uuid: Get a specific prompt by UUID
+  generate_token_first: Generate a token first to get a ready-to-use curl command.
+  no_organisation: No organisation selected.
 
 footer:
   rights: All rights reserved.
@@ -512,3 +532,93 @@ release_notes:
     infrastructure:
       name: Workoflow Infrastructure
       description: GDPR-compliant self-hosted infrastructure with EU-based services. Deploys n8n, Qdrant, MinIO, Redis, and PostgreSQL with ISO 27001/27018 certifications.
+
+prompt:
+  vault_title: Prompt Vault
+  create_new: Create Prompt
+  tab:
+    personal: My Prompts
+    organisation: Team Prompts
+  filter:
+    all_categories: All Categories
+    category: Category
+    sort: Sort by
+  sort:
+    newest: Newest first
+    oldest: Oldest first
+    popular: Most popular
+    alpha: A-Z
+    category: By category
+  title: Title
+  title_placeholder: Enter a descriptive title...
+  content: Prompt Content
+  content_placeholder: Enter your prompt text...
+  description: Description
+  description_placeholder: Brief summary of what this prompt does...
+  description_help: A short description helps others understand the purpose of this prompt.
+  category: Category
+  select_category: Select a category
+  scope: Visibility
+  scope_help: Personal prompts are only visible to you. Team prompts are shared with your organisation.
+  scope_personal: Personal (only visible to me)
+  scope_organisation: Team (visible to organisation)
+  save: Save Prompt
+  edit: Edit Prompt
+  edit_not_allowed: You don't have permission to edit this prompt.
+  delete: Delete Prompt
+  delete_confirm: Are you sure you want to delete this prompt?
+  delete_not_allowed: You don't have permission to delete this prompt.
+  upvote: Upvote
+  upvotes: upvotes
+  comment: Comment
+  comments: Comments
+  add_comment: Add Comment
+  comment_content: Your comment
+  comment_placeholder: Write a comment...
+  comment_added: Comment added successfully!
+  comment_not_allowed: Cannot comment on personal prompts.
+  no_prompts: No prompts found
+  no_prompts_desc: Create your first prompt to get started.
+  no_comments: No comments yet. Be the first to comment!
+  uuid: Prompt UUID
+  copy_content: Copy Prompt
+  updated_label: Updated
+  created:
+    success: Prompt created successfully!
+  updated:
+    success: Prompt updated successfully!
+  deleted:
+    success: Prompt deleted successfully!
+  restored:
+    success: Prompt restored successfully!
+  category_project_manager: Project Manager
+  category_developer: Developer
+  category_qa_engineer: QA Engineer
+  category_devops: DevOps
+  category_designer: Designer
+  category_business_analyst: Business Analyst
+  category_scrum_master: Scrum Master
+  category_product_owner: Product Owner
+  category_tech_lead: Tech Lead
+  category_solution_architect: Solution Architect
+  category_data_engineer: Data Engineer
+  category_security_engineer: Security Engineer
+  category_support_engineer: Support Engineer
+  admin:
+    deleted_prompts: Deleted Prompts
+    restore: Restore
+    deleted_by: Deleted by
+    deleted_at: Deleted at
+    no_deleted_prompts: No deleted prompts
+    no_deleted_prompts_desc: There are no deleted prompts to restore.
+  api_helper: API Access
+  api_access: API Access
+  api:
+    get_personal: Get My Personal Prompts
+    get_team: Get Team Prompts
+    get_all: Get All Prompts (Personal + Team)
+    get_by_uuid: Get Specific Prompt by UUID
+    filter_category: Filter by Category
+    hint_combine: "Tip: Combine parameters, e.g. ?scope=organisation&category=developer"
+    no_token: You need to generate an API token first to access prompts via API.
+    generate_token: Generate Token in Profile
