@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-01-14
 
 ### Added
+- **MCP API endpoints** - New `/api/mcp/tools` and `/api/mcp/execute` endpoints for MCP server integration with token-based authentication
 - **Prompt Vault hero banner** - Added description section explaining what the Prompt Vault is and how personal vs team prompts work
 - **Skills API helper** - Copy-able curl commands on the Skills page for listing tools, executing tools, and filtering by type
 
