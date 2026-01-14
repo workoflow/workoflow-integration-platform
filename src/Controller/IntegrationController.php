@@ -202,6 +202,9 @@ class IntegrationController extends AbstractController
             ];
         }
 
+        // Sort alphabetically by name
+        usort($availableTypes, fn(array $a, array $b) => strcasecmp($a['name'], $b['name']));
+
         return $this->render('integration/index.html.twig', [
             'integrations' => $displayData,
             'organisation' => $organisation,
