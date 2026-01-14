@@ -536,6 +536,8 @@ release_notes:
 
 prompt:
   vault_title: Prompt Vault
+  explanation_p1: Der Prompt Vault ist Ihre zentrale Bibliothek zum Verwalten, Teilen und Organisieren von KI-Prompts. Speichern Sie Ihre besten Prompts hier, um sie in verschiedenen Gesprächen wiederzuverwenden und mit Ihrem Team zu teilen.
+  explanation_p2: Persönliche Prompts sind nur für Sie sichtbar, während Team-Prompts mit allen in Ihrer Organisation geteilt werden. Verwenden Sie Kategorien, um Ihre Prompts zu organisieren und leichter auffindbar zu machen.
   create_new: Neuen Prompt erstellen
   edit: Prompt bearbeiten
   save: Prompt speichern

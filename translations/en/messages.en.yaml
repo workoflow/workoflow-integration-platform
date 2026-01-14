@@ -535,6 +535,8 @@ release_notes:
 
 prompt:
   vault_title: Prompt Vault
+  explanation_p1: The Prompt Vault is your central library for managing, sharing, and organizing AI prompts. Store your best prompts here to reuse them across conversations and share with your team.
+  explanation_p2: Personal prompts are private to you, while Team prompts are shared with everyone in your organisation. Use categories to organize your prompts and make them easier to find.
   create_new: Create Prompt
   tab:
     personal: My Prompts

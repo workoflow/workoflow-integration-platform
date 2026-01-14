@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-14
+
+### Added
+- **Prompt Vault hero banner** - Added description section explaining what the Prompt Vault is and how personal vs team prompts work
+
+---
+
 ## 2026-01-13
 
 ### Added

@@ -5,15 +5,11 @@
 {% block body %}
 <div class="prompts-page">
     <div class="prompts-container">
-        <div class="prompts-header">
+        <div class="prompts-hero">
             <h1>{{ 'prompt.vault_title'|trans }}</h1>
-            <div class="prompts-header-actions">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleApiHelper()">
-                    <i class="fas fa-code"></i> {{ 'prompt.api_helper'|trans }}
-                </button>
-                <a href="{{ path('app_prompt_new') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> {{ 'prompt.create_new'|trans }}
-                </a>
+            <div class="prompts-explanation">
+                <p>{{ 'prompt.explanation_p1'|trans }}</p>
+                <p>{{ 'prompt.explanation_p2'|trans }}</p>
             </div>
         </div>
 
@@ -101,20 +97,30 @@
             </div>
         </div>
 
-        {# Scope Tabs #}
-        <div class="prompts-tabs">
-            <a href="{{ path('app_prompts', {scope: 'personal', category: activeCategory, sort: activeSort}) }}"
-               class="tab-btn {% if activeScope == 'personal' %}active{% endif %}">
-                <i class="fas fa-user"></i>
-                {{ 'prompt.tab.personal'|trans }}
-                <span class="tab-count">{{ counts.personal }}</span>
-            </a>
-            <a href="{{ path('app_prompts', {scope: 'organisation', category: activeCategory, sort: activeSort}) }}"
-               class="tab-btn {% if activeScope == 'organisation' %}active{% endif %}">
-                <i class="fas fa-users"></i>
-                {{ 'prompt.tab.organisation'|trans }}
-                <span class="tab-count">{{ counts.organisation }}</span>
-            </a>
+        {# Scope Tabs with Actions #}
+        <div class="prompts-tabs-row">
+            <div class="prompts-tabs">
+                <a href="{{ path('app_prompts', {scope: 'personal', category: activeCategory, sort: activeSort}) }}"
+                   class="tab-btn {% if activeScope == 'personal' %}active{% endif %}">
+                    <i class="fas fa-user"></i>
+                    {{ 'prompt.tab.personal'|trans }}
+                    <span class="tab-count">{{ counts.personal }}</span>
+                </a>
+                <a href="{{ path('app_prompts', {scope: 'organisation', category: activeCategory, sort: activeSort}) }}"
+                   class="tab-btn {% if activeScope == 'organisation' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    {{ 'prompt.tab.organisation'|trans }}
+                    <span class="tab-count">{{ counts.organisation }}</span>
+                </a>
+            </div>
+            <div class="prompts-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleApiHelper()">
+                    <i class="fas fa-code"></i> {{ 'prompt.api_helper'|trans }}
+                </button>
+                <a href="{{ path('app_prompt_new') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> {{ 'prompt.create_new'|trans }}
+                </a>
+            </div>
         </div>
 
         {# Filters: Category & Sort #}
