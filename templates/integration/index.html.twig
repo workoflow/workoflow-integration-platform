@@ -13,6 +13,70 @@
             </div>
         </div>
 
+        {# API Helper Section - Collapsible #}
+        <div class="api-helper-section" id="skillsApiHelperSection" style="display: none;">
+            <div class="api-helper-content">
+                <div class="api-helper-header">
+                    <h3><i class="fas fa-terminal"></i> {{ 'integration.api_access'|trans }}</h3>
+                    <button type="button" class="btn-close" onclick="toggleSkillsApiHelper()">&times;</button>
+                </div>
+
+                {% if organisation %}
+                    <div class="api-helper-grid">
+                        {# List Available Tools #}
+                        <div class="api-helper-item">
+                            <label><i class="fas fa-list"></i> {{ 'integration.api.list_tools'|trans }}</label>
+                            <div class="curl-command-wrapper">
+                                <pre><code id="curlListTools">curl -u "$API_USER:$API_PASSWORD" \
+  "{{ app.request.schemeAndHttpHost }}/api/integrations/{{ organisation.uuid }}{% if userOrganisation and userOrganisation.workflowUserId %}?workflow_user_id={{ userOrganisation.workflowUserId }}{% endif %}"</code></pre>
+                                <button type="button" class="btn btn-copy btn-sm" onclick="copySkillsCurl(this, 'curlListTools')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {# Execute a Tool #}
+                        <div class="api-helper-item">
+                            <label><i class="fas fa-play"></i> {{ 'integration.api.execute_tool'|trans }}</label>
+                            <div class="curl-command-wrapper">
+                                <pre><code id="curlExecuteTool">curl -X POST -u "$API_USER:$API_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"tool_id": "TOOL_NAME_ID", "parameters": {}, "workflow_user_id": "{{ userOrganisation and userOrganisation.workflowUserId ? userOrganisation.workflowUserId : 'YOUR_WORKFLOW_ID' }}"}' \
+  "{{ app.request.schemeAndHttpHost }}/api/integrations/{{ organisation.uuid }}/execute"</code></pre>
+                                <button type="button" class="btn btn-copy btn-sm" onclick="copySkillsCurl(this, 'curlExecuteTool')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {# Filter by Tool Type #}
+                        <div class="api-helper-item">
+                            <label><i class="fas fa-filter"></i> {{ 'integration.api.filter_by_type'|trans }}</label>
+                            <div class="curl-command-wrapper">
+                                <pre><code id="curlFilterType">curl -u "$API_USER:$API_PASSWORD" \
+  "{{ app.request.schemeAndHttpHost }}/api/integrations/{{ organisation.uuid }}?tool_type=jira,confluence"</code></pre>
+                                <button type="button" class="btn btn-copy btn-sm" onclick="copySkillsCurl(this, 'curlFilterType')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="api-helper-footer">
+                        <p class="api-helper-hint">
+                            <i class="fas fa-info-circle"></i>
+                            {{ 'integration.api.hint_auth'|trans }}
+                        </p>
+                    </div>
+                {% else %}
+                    <div class="api-helper-no-token">
+                        <i class="fas fa-building"></i>
+                        <p>{{ 'integration.api.no_organisation'|trans }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         {% if integrations|length == 0 %}
             <div class="empty-state">
                 <p>{{ 'integration.no_integrations'|trans }}</p>
@@ -60,6 +124,30 @@
 </div>
 
 <script>
+// API Helper toggle and copy functions
+function toggleSkillsApiHelper() {
+    const section = document.getElementById('skillsApiHelperSection');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+function copySkillsCurl(btn, elementId) {
+    const code = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(code).then(function() {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
 // Modal close functions (needed for the modal close button)
 function hideTestModal() {
     const modal = document.getElementById('testConnectionModal');

@@ -216,6 +216,10 @@ integration:
   manage_tools: Tools verwalten
   platform_skills_always_active: Plattform-Skills sind immer verfügbar
   platform: Plattform
+  enabled: Aktiviert
+  tool_name: Tool
+  category: Kategorie
+  description: Beschreibung
   credentials_update_note: Felder leer lassen, um bestehende Anmeldedaten beizubehalten
   instance_name: Instanz-Name
   instance_name_hint: 'Ein freundlicher Name zur Identifizierung dieser Integration (z.B. "Produktiv Jira", "Test SharePoint")'
@@ -369,6 +373,14 @@ integration:
     no_organisation: Keine Organisation gefunden
     skill_name_required: Dienstname ist erforderlich
     request_failed: Anfrage konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.
+  api_helper: API-Zugriff
+  api_access: API-Zugriff
+  api:
+    list_tools: Verfügbare Tools auflisten
+    execute_tool: Tool ausführen
+    filter_by_type: Nach Tool-Typ filtern
+    hint_auth: "Tipp: Ersetzen Sie $API_USER und $API_PASSWORD durch Ihre Basic Auth Zugangsdaten. Die tool_id für die Ausführung wird in der Listen-Antwort zurückgegeben."
+    no_organisation: Sie müssen Teil einer Organisation sein, um auf die API zugreifen zu können.
 
 action:
   edit: Bearbeiten

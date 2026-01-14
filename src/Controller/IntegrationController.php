@@ -205,7 +205,8 @@ class IntegrationController extends AbstractController
         return $this->render('integration/index.html.twig', [
             'integrations' => $displayData,
             'organisation' => $organisation,
-            'availableTypes' => $availableTypes
+            'availableTypes' => $availableTypes,
+            'userOrganisation' => $userOrg
         ]);
     }
 

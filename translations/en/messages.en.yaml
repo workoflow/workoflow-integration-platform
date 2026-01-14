@@ -216,6 +216,10 @@ integration:
   manage_tools: Manage Tools
   platform_skills_always_active: Platform skills are always available
   platform: Platform
+  enabled: Enabled
+  tool_name: Tool
+  category: Category
+  description: Description
   credentials_update_note: Leave fields empty to keep existing credentials
   instance_name: Instance Name
   instance_name_hint: 'A friendly name to identify this integration instance (e.g., "Production Jira", "Dev SharePoint")'
@@ -369,6 +373,14 @@ integration:
     no_organisation: No organisation found
     skill_name_required: Service name is required
     request_failed: Failed to submit request. Please try again.
+  api_helper: API Access
+  api_access: API Access
+  api:
+    list_tools: List Available Tools
+    execute_tool: Execute a Tool
+    filter_by_type: Filter by Tool Type
+    hint_auth: "Tip: Replace $API_USER and $API_PASSWORD with your Basic Auth credentials. The tool_id for execution is returned in the list response."
+    no_organisation: You must be part of an organisation to access the API.
 
 action:
   edit: Edit

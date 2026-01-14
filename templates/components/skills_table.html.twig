@@ -8,6 +8,16 @@
         </div>
 
         <div class="section-actions">
+            {# API Access Button #}
+            <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="toggleSkillsApiHelper()"
+                title="{{ 'integration.api_helper'|trans|default('API Access') }}"
+            >
+                <i class="fas fa-code"></i> {{ 'integration.api_helper'|trans|default('API Access') }}
+            </button>
+
             {# Request New Skill Button #}
             <button
                 class="btn btn-secondary"

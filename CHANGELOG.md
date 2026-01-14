@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **Prompt Vault hero banner** - Added description section explaining what the Prompt Vault is and how personal vs team prompts work
+- **Skills API helper** - Copy-able curl commands on the Skills page for listing tools, executing tools, and filtering by type
+
+### Changed
+- **Platform Skills management redesign** - Replaced card-based layout with compact table view showing all tools at a glance with toggle switches on the right
 
 ---
 
