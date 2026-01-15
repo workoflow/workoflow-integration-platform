@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - **Token requirement for MCP config** - Users without a personal access token see a prompt to generate one in their profile before viewing MCP configuration
 - **MCP tools documentation** - Skills page now lists available MCP tools (workoflow_list_tools, workoflow_execute, workoflow_refresh) with descriptions
 
+### Changed
+- **SAP C4C marked as experimental** - SAP C4C integration now shows experimental badge in the UI to indicate it's still under development
+
 ### Fixed
 - **MCP API authentication** - Added dedicated `mcp_api` firewall for `/api/mcp` routes using `PromptApiTokenAuthenticator` - previously requests fell through to the generic `api` firewall which used JWT authentication, causing valid X-Prompt-Token headers to be rejected with 401
 

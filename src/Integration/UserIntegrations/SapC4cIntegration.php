@@ -1331,6 +1331,6 @@ class SapC4cIntegration implements PersonalizedSkillInterface
     }
     public function isExperimental(): bool
     {
-        return false;
+        return true;
     }
 }
