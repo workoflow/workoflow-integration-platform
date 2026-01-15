@@ -345,14 +345,16 @@ class ProjektronService
         // Get user OID for the request
         $userOid = $this->getUserOid($credentials);
 
-        // Calculate the week dates (Monday to Sunday) for the given date
+        // Calculate the week dates (Monday to Friday) for the given date
         $targetDate = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
         $weekDates = $this->getWeekDates($targetDate);
 
         $allEntries = [];
         $totalMinutes = 0;
+        $seenEffortOids = [];
 
-        // Fetch each day's effort data to get descriptions
+        // Fetch each day's effort data individually
+        // The dayeffortrecording endpoint filters by date when using the correct parameters
         foreach ($weekDates as $dateStr) {
             $dateObj = new \DateTime($dateStr);
             $dayOfMonth = (int) $dateObj->format('d');
@@ -374,7 +376,7 @@ class ProjektronService
                 $html = $response->getContent();
 
                 // Check if we got redirected to login
-                if (strpos($html, 'daytimerecording') === false && strpos($html, 'login') !== false) {
+                if (strpos($html, 'dayeffortrecording') === false && strpos($html, 'login') !== false) {
                     throw new InvalidArgumentException(
                         'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
                     );
@@ -382,6 +384,11 @@ class ProjektronService
 
                 $dayEntries = $this->parseDayEffortData($html, $dateStr);
                 foreach ($dayEntries as $entry) {
+                    // Deduplicate by effort_oid to prevent same booking appearing multiple times
+                    if (isset($seenEffortOids[$entry['effort_oid']])) {
+                        continue;
+                    }
+                    $seenEffortOids[$entry['effort_oid']] = true;
                     $allEntries[] = $entry;
                     $totalMinutes += $entry['total_minutes'];
                 }

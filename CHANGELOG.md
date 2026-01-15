@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **MCP API authentication** - Added dedicated `mcp_api` firewall for `/api/mcp` routes using `PromptApiTokenAuthenticator` - previously requests fell through to the generic `api` firewall which used JWT authentication, causing valid X-Prompt-Token headers to be rejected with 401
+- **Projektron worklog duplicate entries** - Fixed issue where the same booking appeared multiple times with wrong dates when fetching weekly time entries
 
 ## 2026-01-14
 
