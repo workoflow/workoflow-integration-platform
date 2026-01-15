@@ -381,6 +381,18 @@ integration:
     filter_by_type: Nach Tool-Typ filtern
     hint_auth: "Tipp: Ersetzen Sie $API_USER und $API_PASSWORD durch Ihre Basic Auth Zugangsdaten. Die tool_id für die Ausführung wird in der Listen-Antwort zurückgegeben."
     no_organisation: Sie müssen Teil einer Organisation sein, um auf die API zugreifen zu können.
+  mcp_access: MCP Server Konfiguration
+  mcp:
+    description: Verbinde deinen KI-Assistenten (Claude Desktop, Cursor, etc.) mit Workoflow über das MCP-Protokoll. Dein persönlicher Zugriffstoken identifiziert automatisch dich und deine Organisation.
+    claude_desktop: Claude Desktop Konfiguration
+    claude_desktop_hint: "Füge dies zu deiner Claude Desktop Einstellungsdatei hinzu:"
+    available_tools: Verfügbare MCP Tools
+    tool_list_desc: Liste alle verfügbaren Tools deiner Organisation auf
+    tool_execute_desc: Führe beliebige Tools mit Parametern aus
+    tool_refresh_desc: Aktualisiere die Tool-Liste nach dem Hinzufügen von Integrationen
+    hint_token: Dein X-Prompt-Token identifiziert automatisch deinen Benutzer und deine Organisation. Halte ihn sicher und teile ihn nicht.
+    no_token: Du musst einen persönlichen Zugriffstoken generieren, um den MCP Server zu nutzen.
+    generate_token: Token im Profil generieren
 
 action:
   edit: Bearbeiten
