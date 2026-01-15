@@ -288,49 +288,47 @@ class ProjektronService
             // Use PHP 8.4 DOM\HTMLDocument with CSS selectors
             $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Find all table rows with data-row-id containing _JTask (task rows)
-            $allRows = $dom->querySelectorAll('tr');
+            // Find all task links with data-tt attribute containing _JTask
+            $taskLinks = $dom->querySelectorAll('a[data-tt*="_JTask"]');
 
-            foreach ($allRows as $row) {
-                $rowId = $row->getAttribute('data-row-id');
+            foreach ($taskLinks as $link) {
+                $oid = $link->getAttribute('data-tt');
 
-                // Skip rows that don't have a task OID
-                if (empty($rowId) || strpos($rowId, '_JTask') === false) {
+                if (empty($oid)) {
                     continue;
                 }
 
-                $oid = $rowId;
+                // Extract task name from child span.hover element
+                $nameSpan = $link->querySelector('span.hover');
+                $taskName = $nameSpan ? trim($nameSpan->textContent) : '';
 
-                // Extract task name from effortTargetOid cell
-                $taskCell = $this->findCellByName($row, 'effortTargetOid');
-                $taskName = '';
-                if ($taskCell !== null) {
-                    $taskLink = $taskCell->querySelector('a[data-tt*="_JTask"]');
-                    if ($taskLink !== null) {
-                        $nameSpan = $taskLink->querySelector('span.hover');
-                        $taskName = $nameSpan ? trim($nameSpan->textContent) : '';
-                    }
-                }
-
-                // Extract project name from effortTargetOid.grandParentOid cell
-                $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
+                // Try to find parent row to extract project and subproject names
                 $projectName = '';
-                if ($projectCell !== null) {
-                    $projectLink = $projectCell->querySelector('a[data-tt*="_JProject"], a[data-tt*="_JTask"]');
-                    if ($projectLink !== null) {
-                        $nameSpan = $projectLink->querySelector('span.hover');
-                        $projectName = $nameSpan ? trim($nameSpan->textContent) : '';
-                    }
+                $parentName = '';
+
+                // Traverse up to find the parent tr element
+                $row = $link->parentNode;
+                while ($row !== null && $row->nodeName !== 'tr') {
+                    $row = $row->parentNode;
                 }
 
-                // Extract subproject/parent name from effortTargetOid.parentOid cell
-                $parentCell = $this->findCellByName($row, 'effortTargetOid.parentOid');
-                $parentName = '';
-                if ($parentCell !== null) {
-                    $parentLink = $parentCell->querySelector('a[data-tt*="_JProject"], a[data-tt*="_JTask"]');
-                    if ($parentLink !== null) {
-                        $nameSpan = $parentLink->querySelector('span.hover');
-                        $parentName = $nameSpan ? trim($nameSpan->textContent) : '';
+                if ($row instanceof \Dom\Element && $row->nodeName === 'tr') {
+                    // Extract project name from effortTargetOid.grandParentOid cell
+                    $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
+                    if ($projectCell !== null) {
+                        $projectLink = $projectCell->querySelector('a span.hover');
+                        if ($projectLink !== null) {
+                            $projectName = trim($projectLink->textContent);
+                        }
+                    }
+
+                    // Extract subproject/parent name from effortTargetOid.parentOid cell
+                    $parentCell = $this->findCellByName($row, 'effortTargetOid.parentOid');
+                    if ($parentCell !== null) {
+                        $parentLink = $parentCell->querySelector('a span.hover');
+                        if ($parentLink !== null) {
+                            $parentName = trim($parentLink->textContent);
+                        }
                     }
                 }
 
