@@ -447,9 +447,9 @@ class ProjektronService
             '%s/bcs/mybcs/dayeffortrecording/display?oid=%s&%s&%s&%s&pagetimestamp=%d',
             $baseUrl,
             urlencode($userOid),
-            'dayeffortrecording,Selections,effortRecordingDate,day=' . $day,
-            'dayeffortrecording,Selections,effortRecordingDate,month=' . $month,
-            'dayeffortrecording,Selections,effortRecordingDate,year=' . $year,
+            'daytimerecording,Selections,effortRecordingDate,day=' . $day,
+            'daytimerecording,Selections,effortRecordingDate,month=' . $month,
+            'daytimerecording,Selections,effortRecordingDate,year=' . $year,
             $timestamp
         );
     }
@@ -459,6 +459,7 @@ class ProjektronService
      *
      * Parses the dayeffortrecording page to get JEffort entries (actual bookings).
      * Each entry includes task, project, duration, and description.
+     * Uses PHP 8.4 DOM selectors for cleaner extraction.
      *
      * @param string $html HTML content from Projektron dayeffortrecording page
      * @param string $date Date string in Y-m-d format
@@ -469,87 +470,46 @@ class ProjektronService
         $entries = [];
 
         try {
-            // Extract JEffort entries using regex (more reliable than DOM for this structure)
-            // Pattern: textarea with name containing JEffort and description
-            preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JEffort)\.description"[^>]*>([^<]*)<\/textarea>/s',
-                $html,
-                $descMatches,
-                PREG_SET_ORDER
-            );
+            $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Build a map of effort OID to description
-            $descriptions = [];
-            foreach ($descMatches as $match) {
-                $effortOid = $match[1];
-                $description = trim($match[2]);
-                $descriptions[$effortOid] = $description;
-            }
-
-            // Extract duration for each JEffort entry
-            // Pattern: name="...listeditoid_OID.effortExpense_hour" value="X"
-            preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortExpense_hour"[^>]*value="(\d*)"/',
-                $html,
-                $hourMatches,
-                PREG_SET_ORDER
-            );
-
-            preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortExpense_minute"[^>]*value="(\d*)"/',
-                $html,
-                $minuteMatches,
-                PREG_SET_ORDER
-            );
-
-            // Build effort data map
-            $effortData = [];
-            foreach ($hourMatches as $match) {
-                $effortOid = $match[1];
-                $hours = (int) ($match[2] !== '' ? $match[2] : 0);
-                if (!isset($effortData[$effortOid])) {
-                    $effortData[$effortOid] = ['hours' => 0, 'minutes' => 0];
-                }
-                $effortData[$effortOid]['hours'] = $hours;
-            }
-            foreach ($minuteMatches as $match) {
-                $effortOid = $match[1];
-                $minutes = (int) ($match[2] !== '' ? $match[2] : 0);
-                if (isset($effortData[$effortOid])) {
-                    $effortData[$effortOid]['minutes'] = $minutes;
-                }
-            }
-
-            // Extract task OID for each JEffort entry
-            // Pattern: name="...listeditoid_OID.effortTargetOid" value="TASK_OID"
-            preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortTargetOid"[^>]*value="(\d+_JTask)"/',
-                $html,
-                $taskMatches,
-                PREG_SET_ORDER
-            );
-
-            $taskOids = [];
-            foreach ($taskMatches as $match) {
-                $taskOids[$match[1]] = $match[2];
-            }
-
-            // Extract task names from DOM
+            // Extract task and project names using existing DOM methods
             $taskNames = $this->extractTaskNamesFromDayEffort($html);
-
-            // Extract project names from DOM
             $projectNames = $this->extractProjectNamesFromDayEffort($html);
 
-            // Build entries for efforts that have duration > 0
-            foreach ($effortData as $effortOid => $duration) {
-                $totalMinutes = ($duration['hours'] * 60) + $duration['minutes'];
+            // Find all effort entries via textarea elements (each JEffort has one description textarea)
+            $textareas = $dom->querySelectorAll('textarea[name*="_JEffort.description"]');
+
+            foreach ($textareas as $textarea) {
+                $name = $textarea->getAttribute('name');
+                if ($name === null) {
+                    continue;
+                }
+
+                // Extract effort OID from name pattern: "*listeditoid_1234567_JEffort.description"
+                if (!preg_match('/(\d+_JEffort)/', $name, $oidMatch)) {
+                    continue;
+                }
+                $effortOid = $oidMatch[1];
+                $description = trim($textarea->textContent);
+
+                // Use CSS attribute selectors to find related form fields
+                $hourInput = $dom->querySelector('input[name*="' . $effortOid . '.effortExpense_hour"]');
+                $minuteInput = $dom->querySelector('input[name*="' . $effortOid . '.effortExpense_minute"]');
+                $taskInput = $dom->querySelector('input[name*="' . $effortOid . '.effortTargetOid"]');
+
+                // Extract values with null safety
+                $hourValue = $hourInput?->getAttribute('value') ?? '';
+                $minuteValue = $minuteInput?->getAttribute('value') ?? '';
+                $taskOid = $taskInput?->getAttribute('value');
+
+                $hours = $hourValue !== '' ? (int) $hourValue : 0;
+                $minutes = $minuteValue !== '' ? (int) $minuteValue : 0;
+                $totalMinutes = ($hours * 60) + $minutes;
 
                 // Skip entries with zero duration
                 if ($totalMinutes === 0) {
                     continue;
                 }
-
-                $taskOid = $taskOids[$effortOid] ?? null;
 
                 $entries[] = [
                     'effort_oid' => $effortOid,
@@ -557,10 +517,10 @@ class ProjektronService
                     'task_oid' => $taskOid,
                     'task_name' => $taskOid ? ($taskNames[$taskOid] ?? '') : '',
                     'project_name' => $taskOid ? ($projectNames[$taskOid] ?? '') : '',
-                    'hours' => $duration['hours'],
-                    'minutes' => $duration['minutes'],
+                    'hours' => $hours,
+                    'minutes' => $minutes,
                     'total_minutes' => $totalMinutes,
-                    'description' => $descriptions[$effortOid] ?? '',
+                    'description' => $description,
                 ];
             }
 
