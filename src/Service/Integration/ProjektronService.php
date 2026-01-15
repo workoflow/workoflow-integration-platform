@@ -272,9 +272,8 @@ class ProjektronService
     /**
      * Parse task list HTML to extract bookable tasks using PHP 8.4 DOM Selector
      *
-     * Extracts task OIDs from data-row-id attribute on tr elements and task names from span.hover elements.
-     * Also extracts project (grandParentOid) and subproject (parentOid) names to build
-     * a hierarchical task name like "Projekt > Unterprojekt > Task".
+     * Extracts tasks from tr.row elements containing task cells.
+     * Builds hierarchical name: "Project > Task"
      *
      * @param string $html HTML content from Projektron task list
      * @param string $baseUrl Base URL for building booking URLs
@@ -285,45 +284,34 @@ class ProjektronService
         $tasks = [];
 
         try {
-            // Use PHP 8.4 DOM\HTMLDocument with CSS selectors
             $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Find all table rows with class "row" (data rows in Projektron tables)
-            $allRows = $dom->querySelectorAll('tr.row, tr[data-row-id]');
+            // Find all data rows (tr.row class)
+            $rows = $dom->querySelectorAll('tr.row');
 
-            foreach ($allRows as $row) {
-                // Try to get OID from data-row-id attribute first (day recording page)
-                $oid = $row->getAttribute('data-row-id');
-
-                // If not found, try to find it from effortTargetOid cell (main tasklist page)
-                if (empty($oid) || strpos($oid, '_JTask') === false) {
-                    $taskCell = $this->findCellByName($row, 'effortTargetOid');
-                    if ($taskCell !== null) {
-                        $taskLink = $taskCell->querySelector('a[data-tt*="_JTask"]');
-                        if ($taskLink !== null) {
-                            $oid = $taskLink->getAttribute('data-tt');
-                        }
-                    }
-                }
-
-                // Skip rows without a valid task OID
-                if (empty($oid) || strpos($oid, '_JTask') === false) {
+            foreach ($rows as $row) {
+                // Get task cell and extract OID + name
+                $taskCell = $this->findCellByName($row, 'effortTargetOid');
+                if ($taskCell === null) {
                     continue;
                 }
 
-                // Extract task name from effortTargetOid cell
-                $taskCell = $this->findCellByName($row, 'effortTargetOid');
-                $taskName = '';
-                if ($taskCell !== null) {
-                    $taskNameSpan = $taskCell->querySelector('span.hover');
-                    if ($taskNameSpan !== null) {
-                        $taskName = trim($taskNameSpan->textContent);
-                    }
+                $taskLink = $taskCell->querySelector('a[data-tt*="_JTask"]');
+                if ($taskLink === null) {
+                    continue;
                 }
 
-                // Extract project name from effortTargetOid.grandParentOid cell
-                $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
+                $oid = $taskLink->getAttribute('data-tt');
+                if (empty($oid)) {
+                    continue;
+                }
+
+                $taskNameSpan = $taskLink->querySelector('span.hover');
+                $taskName = $taskNameSpan !== null ? trim($taskNameSpan->textContent) : '';
+
+                // Get project name from grandParentOid cell
                 $projectName = '';
+                $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
                 if ($projectCell !== null) {
                     $projectNameSpan = $projectCell->querySelector('span.hover');
                     if ($projectNameSpan !== null) {
@@ -331,74 +319,19 @@ class ProjektronService
                     }
                 }
 
-                // Extract subproject/parent name from effortTargetOid.parentOid cell
-                $parentCell = $this->findCellByName($row, 'effortTargetOid.parentOid');
-                $parentName = '';
-                if ($parentCell !== null) {
-                    $parentNameSpan = $parentCell->querySelector('span.hover');
-                    if ($parentNameSpan !== null) {
-                        $parentName = trim($parentNameSpan->textContent);
-                    }
+                // Build name: "Project > Task" (skip project if same as task)
+                $fullName = $taskName;
+                if (!empty($projectName) && $projectName !== $taskName) {
+                    $fullName = $projectName . ' > ' . $taskName;
                 }
 
-                // Build hierarchical name: "Projekt > Unterprojekt > Task"
-                // Skip duplicates (when project == parent or parent == task)
-                $nameParts = [];
-                if (!empty($projectName)) {
-                    $nameParts[] = $projectName;
-                }
-                if (!empty($parentName) && $parentName !== $projectName) {
-                    $nameParts[] = $parentName;
-                }
-                if (!empty($taskName) && $taskName !== $parentName && $taskName !== $projectName) {
-                    $nameParts[] = $taskName;
-                }
-                $fullName = implode(' > ', $nameParts);
-
-                // Fallback to task name only if nothing else found
-                if (empty($fullName)) {
-                    $fullName = $taskName;
-                }
-
-                // Build booking URL
-                $bookingUrl = $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid;
-
-                // Use OID as key to ensure uniqueness
                 $tasks[$oid] = [
                     'oid' => $oid,
                     'name' => $fullName,
-                    'booking_url' => $bookingUrl,
+                    'booking_url' => $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid,
                 ];
             }
 
-            // If no rows with data-row-id found, fallback to finding task links directly
-            if (empty($tasks)) {
-                $taskLinks = $dom->querySelectorAll('a[data-tt*="_JTask"]');
-
-                foreach ($taskLinks as $link) {
-                    $oid = $link->getAttribute('data-tt');
-
-                    if (empty($oid)) {
-                        continue;
-                    }
-
-                    // Extract task name from child span.hover element
-                    $nameSpan = $link->querySelector('span.hover');
-                    $taskName = $nameSpan ? trim($nameSpan->textContent) : '';
-
-                    // Build booking URL
-                    $bookingUrl = $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid;
-
-                    // Use OID as key to ensure uniqueness
-                    $tasks[$oid] = [
-                        'oid' => $oid,
-                        'name' => $taskName,
-                        'booking_url' => $bookingUrl,
-                    ];
-                }
-            }
-
-            // Return unique results (array_values to remove keys)
             return array_values($tasks);
         } catch (\Exception $e) {
             $this->logger->error('Failed to parse Projektron task list HTML', [
