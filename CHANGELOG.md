@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - **MCP tools documentation** - Skills page now lists available MCP tools (workoflow_list_tools, workoflow_execute, workoflow_refresh) with descriptions
 
 ### Improved
+- **Projektron task names now include project hierarchy** - Tasks returned by `projektron_get_all_tasks` now display the full path including project and subproject names (e.g., "Incubator AI > Meeting" instead of just "Meeting"), making it easier to identify and book time to the correct task
 - **Projektron worklog now includes booking descriptions** - Time entries returned by `projektron_get_worklog` now contain individual booking comments/descriptions, making it easier for AI agents to understand what work was done
 - **AI agent anti-hallucination improvements** - All 7 sub-agents (Projektron, Jira, Confluence, SharePoint, GitLab, Trello, SAP C4C) now have strengthened prompts that enforce tool calls before responding with user data, reducing cases where agents would invent information instead of fetching it from APIs
 

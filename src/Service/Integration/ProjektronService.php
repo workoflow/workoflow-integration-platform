@@ -273,6 +273,8 @@ class ProjektronService
      * Parse task list HTML to extract bookable tasks using PHP 8.4 DOM Selector
      *
      * Extracts task OIDs from data-tt attribute and task names from span.hover elements.
+     * Also extracts project (grandParentOid) and subproject (parentOid) names to build
+     * a hierarchical task name like "Projekt > Unterprojekt > Task".
      *
      * @param string $html HTML content from Projektron task list
      * @param string $baseUrl Base URL for building booking URLs
@@ -286,19 +288,60 @@ class ProjektronService
             // Use PHP 8.4 DOM\HTMLDocument with CSS selectors
             $dom = \Dom\HTMLDocument::createFromString($html);
 
-            // Find all task links with data-tt attribute containing _JTask
-            $taskLinks = $dom->querySelectorAll('a[data-tt*="_JTask"]');
+            // Find all table rows with data-row-id containing _JTask (task rows)
+            $allRows = $dom->querySelectorAll('tr');
 
-            foreach ($taskLinks as $link) {
-                $oid = $link->getAttribute('data-tt');
+            foreach ($allRows as $row) {
+                $rowId = $row->getAttribute('data-row-id');
 
-                if (empty($oid)) {
+                // Skip rows that don't have a task OID
+                if (empty($rowId) || strpos($rowId, '_JTask') === false) {
                     continue;
                 }
 
-                // Extract task name from child span.hover element
-                $nameSpan = $link->querySelector('span.hover');
-                $name = $nameSpan ? trim($nameSpan->textContent) : '';
+                $oid = $rowId;
+
+                // Extract task name from effortTargetOid cell
+                $taskCell = $this->findCellByName($row, 'effortTargetOid');
+                $taskName = '';
+                if ($taskCell !== null) {
+                    $taskLink = $taskCell->querySelector('a[data-tt*="_JTask"]');
+                    if ($taskLink !== null) {
+                        $nameSpan = $taskLink->querySelector('span.hover');
+                        $taskName = $nameSpan ? trim($nameSpan->textContent) : '';
+                    }
+                }
+
+                // Extract project name from effortTargetOid.grandParentOid cell
+                $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
+                $projectName = '';
+                if ($projectCell !== null) {
+                    $projectLink = $projectCell->querySelector('a[data-tt*="_JProject"], a[data-tt*="_JTask"]');
+                    if ($projectLink !== null) {
+                        $nameSpan = $projectLink->querySelector('span.hover');
+                        $projectName = $nameSpan ? trim($nameSpan->textContent) : '';
+                    }
+                }
+
+                // Extract subproject/parent name from effortTargetOid.parentOid cell
+                $parentCell = $this->findCellByName($row, 'effortTargetOid.parentOid');
+                $parentName = '';
+                if ($parentCell !== null) {
+                    $parentLink = $parentCell->querySelector('a[data-tt*="_JProject"], a[data-tt*="_JTask"]');
+                    if ($parentLink !== null) {
+                        $nameSpan = $parentLink->querySelector('span.hover');
+                        $parentName = $nameSpan ? trim($nameSpan->textContent) : '';
+                    }
+                }
+
+                // Build hierarchical name: "Projekt > Unterprojekt > Task"
+                $nameParts = array_filter([$projectName, $parentName, $taskName], fn($part) => !empty($part));
+                $fullName = implode(' > ', $nameParts);
+
+                // Fallback to task name only if no hierarchy found
+                if (empty($fullName)) {
+                    $fullName = $taskName;
+                }
 
                 // Build booking URL
                 $bookingUrl = $baseUrl . '/bcs/taskdetail/effortrecording/edit?oid=' . $oid;
@@ -306,7 +349,7 @@ class ProjektronService
                 // Use OID as key to ensure uniqueness
                 $tasks[$oid] = [
                     'oid' => $oid,
-                    'name' => $name,
+                    'name' => $fullName,
                     'booking_url' => $bookingUrl,
                 ];
             }
