@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - **Token requirement for MCP config** - Users without a personal access token see a prompt to generate one in their profile before viewing MCP configuration
 - **MCP tools documentation** - Skills page now lists available MCP tools (workoflow_list_tools, workoflow_execute, workoflow_refresh) with descriptions
 
+### Improved
+- **Projektron worklog now includes booking descriptions** - Time entries returned by `projektron_get_worklog` now contain individual booking comments/descriptions, making it easier for AI agents to understand what work was done
+
 ### Changed
 - **SAP C4C marked as experimental** - SAP C4C integration now shows experimental badge in the UI to indicate it's still under development
 

@@ -327,11 +327,14 @@ class ProjektronService
     /**
      * Get worklog (time entries) for a specific date
      *
+     * Fetches individual booking entries for each day of the week containing the specified date.
+     * Each entry includes the booking description/comment.
+     *
      * @param array $credentials Projektron credentials (domain, jsessionid)
      * @param int $day Day of month (1-31)
      * @param int $month Month (1-12)
      * @param int $year Year (e.g., 2025)
-     * @return array Worklog data with entries and week information
+     * @return array Worklog data with individual entries including descriptions
      * @throws InvalidArgumentException If request fails or data cannot be parsed
      */
     public function getWorklog(array $credentials, int $day, int $month, int $year): array
@@ -342,203 +345,242 @@ class ProjektronService
         // Get user OID for the request
         $userOid = $this->getUserOid($credentials);
 
-        // Build worklog URL with date parameters
-        $worklogUrl = $this->buildWorklogUrl($url, $userOid, $day, $month, $year);
+        // Calculate the week dates (Monday to Sunday) for the given date
+        $targetDate = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
+        $weekDates = $this->getWeekDates($targetDate);
 
-        try {
-            $response = $this->httpClient->request('GET', $worklogUrl, [
-                'headers' => [
-                    'Cookie' => $cookieHeader,
-                    'User-Agent' => 'Workoflow-Integration/1.0',
-                ],
-                'timeout' => 30,
-                'max_redirects' => 5,
-            ]);
+        $allEntries = [];
+        $totalMinutes = 0;
 
-            $html = $response->getContent();
+        // Fetch each day's effort data to get descriptions
+        foreach ($weekDates as $dateStr) {
+            $dateObj = new \DateTime($dateStr);
+            $dayOfMonth = (int) $dateObj->format('d');
+            $monthOfYear = (int) $dateObj->format('m');
+            $yearNum = (int) $dateObj->format('Y');
 
-            // Check if we got redirected to login
-            if (strpos($html, 'multidaytimerecording') === false && strpos($html, 'login') !== false) {
-                throw new InvalidArgumentException(
-                    'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
-                );
+            try {
+                $dayUrl = $this->buildDayEffortUrl($url, $userOid, $dayOfMonth, $monthOfYear, $yearNum);
+
+                $response = $this->httpClient->request('GET', $dayUrl, [
+                    'headers' => [
+                        'Cookie' => $cookieHeader,
+                        'User-Agent' => 'Workoflow-Integration/1.0',
+                    ],
+                    'timeout' => 30,
+                    'max_redirects' => 5,
+                ]);
+
+                $html = $response->getContent();
+
+                // Check if we got redirected to login
+                if (strpos($html, 'daytimerecording') === false && strpos($html, 'login') !== false) {
+                    throw new InvalidArgumentException(
+                        'Authentication failed. Your session may have expired. Please update your JSESSIONID cookie.'
+                    );
+                }
+
+                $dayEntries = $this->parseDayEffortData($html, $dateStr);
+                foreach ($dayEntries as $entry) {
+                    $allEntries[] = $entry;
+                    $totalMinutes += $entry['total_minutes'];
+                }
+            } catch (\Exception $e) {
+                $this->logger->warning('Failed to fetch worklog for day', [
+                    'date' => $dateStr,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue with other days even if one fails
             }
-
-            return $this->parseWorklogData($html, $url, $day, $month, $year);
-        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
-            $statusCode = $e->getResponse()->getStatusCode();
-
-            if ($statusCode === 401 || $statusCode === 403) {
-                throw new InvalidArgumentException(
-                    'Authentication failed. Please verify your JSESSIONID is correct and not expired.'
-                );
-            }
-
-            throw new InvalidArgumentException(
-                'Failed to fetch Projektron worklog: HTTP ' . $statusCode . ' - ' . $e->getMessage()
-            );
-        } catch (\Exception $e) {
-            if ($e instanceof InvalidArgumentException) {
-                throw $e;
-            }
-            throw new InvalidArgumentException(
-                'Failed to fetch Projektron worklog: ' . $e->getMessage()
-            );
         }
+
+        // Sort entries by date
+        usort($allEntries, fn($a, $b) => strcmp((string) $a['date'], (string) $b['date']));
+
+        return [
+            'date' => [
+                'day' => $day,
+                'month' => $month,
+                'year' => $year,
+            ],
+            'week_dates' => $weekDates,
+            'total_week_hours' => round($totalMinutes / 60, 2),
+            'count' => count($allEntries),
+            'entries' => $allEntries,
+        ];
     }
 
     /**
-     * Build the worklog URL with date parameters
+     * Get the dates for the week (Monday to Friday) containing the given date
+     *
+     * @param \DateTime $date Reference date
+     * @return array<string> Array of date strings in Y-m-d format
      */
-    private function buildWorklogUrl(string $baseUrl, string $userOid, int $day, int $month, int $year): string
+    private function getWeekDates(\DateTime $date): array
+    {
+        $weekDates = [];
+        $dayOfWeek = (int) $date->format('N'); // 1 = Monday, 7 = Sunday
+
+        // Find Monday of this week
+        $monday = clone $date;
+        $monday->modify('-' . ($dayOfWeek - 1) . ' days');
+
+        // Get Monday to Friday (5 working days)
+        for ($i = 0; $i < 5; $i++) {
+            $day = clone $monday;
+            $day->modify('+' . $i . ' days');
+            $weekDates[] = $day->format('Y-m-d');
+        }
+
+        return $weekDates;
+    }
+
+    /**
+     * Build the day effort recording URL
+     */
+    private function buildDayEffortUrl(string $baseUrl, string $userOid, int $day, int $month, int $year): string
     {
         $timestamp = (int) (microtime(true) * 1000);
 
         return sprintf(
-            '%s/bcs/mybcs/multidaytimerecording/display?oid=%s&%s&%s&%s&pagetimestamp=%d',
+            '%s/bcs/mybcs/dayeffortrecording/display?oid=%s&%s&%s&%s&pagetimestamp=%d',
             $baseUrl,
             urlencode($userOid),
-            'multidaytimerecording,Selections,effortRecordingDate,day=' . $day,
-            'multidaytimerecording,Selections,effortRecordingDate,month=' . $month,
-            'multidaytimerecording,Selections,effortRecordingDate,year=' . $year,
+            'dayeffortrecording,Selections,effortRecordingDate,day=' . $day,
+            'dayeffortrecording,Selections,effortRecordingDate,month=' . $month,
+            'dayeffortrecording,Selections,effortRecordingDate,year=' . $year,
             $timestamp
         );
     }
 
     /**
-     * Parse worklog HTML to extract time entries
+     * Parse day effort recording HTML to extract individual time entries with descriptions
      *
-     * @param string $html HTML content from Projektron worklog page
-     * @param string $baseUrl Base URL for reference
-     * @param int $day Requested day
-     * @param int $month Requested month
-     * @param int $year Requested year
-     * @return array Parsed worklog data
+     * Parses the dayeffortrecording page to get JEffort entries (actual bookings).
+     * Each entry includes task, project, duration, and description.
+     *
+     * @param string $html HTML content from Projektron dayeffortrecording page
+     * @param string $date Date string in Y-m-d format
+     * @return array<array> Array of effort entries
      */
-    private function parseWorklogData(string $html, string $baseUrl, int $day, int $month, int $year): array
+    private function parseDayEffortData(string $html, string $date): array
     {
+        $entries = [];
+
         try {
-            // Extract task names from HTML using DOM
-            $taskNames = $this->extractTaskNames($html);
-
-            // Extract daily hours from input fields
-            // Pattern: name="...listeditoid_TASKOID.days_TIMESTAMP...hour" value="X"
-            $entries = [];
-            $weekDates = [];
-
-            // Find all hour input fields with values
-            // Pattern: name="...listeditoid_1744315212023_JTask.days_1763938800000,..._hour" value="8"
+            // Extract JEffort entries using regex (more reliable than DOM for this structure)
+            // Pattern: textarea with name containing JEffort and description
             preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JTask)\.days_(\d+)[^"]*_hour"[^>]*value="(\d*)"/',
+                '/name="[^"]*listeditoid_(\d+_JEffort)\.description"[^>]*>([^<]*)<\/textarea>/s',
+                $html,
+                $descMatches,
+                PREG_SET_ORDER
+            );
+
+            // Build a map of effort OID to description
+            $descriptions = [];
+            foreach ($descMatches as $match) {
+                $effortOid = $match[1];
+                $description = trim($match[2]);
+                $descriptions[$effortOid] = $description;
+            }
+
+            // Extract duration for each JEffort entry
+            // Pattern: name="...listeditoid_OID.effortExpense_hour" value="X"
+            preg_match_all(
+                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortExpense_hour"[^>]*value="(\d*)"/',
                 $html,
                 $hourMatches,
                 PREG_SET_ORDER
             );
 
-            // Find all minute input fields with values
             preg_match_all(
-                '/name="[^"]*listeditoid_(\d+_JTask)\.days_(\d+)[^"]*_minute"[^>]*value="(\d*)"/',
+                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortExpense_minute"[^>]*value="(\d*)"/',
                 $html,
                 $minuteMatches,
                 PREG_SET_ORDER
             );
 
-            // Process hour matches
+            // Build effort data map
+            $effortData = [];
             foreach ($hourMatches as $match) {
-                $taskOid = $match[1];
-                $timestamp = (int) $match[2];
-                $hours = (int) ($match[3] !== '' ? $match[3] : 0);
-                $date = date('Y-m-d', $timestamp / 1000);
-
-                // Track week dates
-                if (!in_array($date, $weekDates)) {
-                    $weekDates[] = $date;
+                $effortOid = $match[1];
+                $hours = (int) ($match[2] !== '' ? $match[2] : 0);
+                if (!isset($effortData[$effortOid])) {
+                    $effortData[$effortOid] = ['hours' => 0, 'minutes' => 0];
                 }
-
-                // Initialize entry if not exists
-                if (!isset($entries[$taskOid])) {
-                    $entries[$taskOid] = [
-                        'task_oid' => $taskOid,
-                        'task_name' => $taskNames[$taskOid] ?? '',
-                        'daily_entries' => [],
-                    ];
-                }
-
-                // Initialize or update daily entry
-                if (!isset($entries[$taskOid]['daily_entries'][$date])) {
-                    $entries[$taskOid]['daily_entries'][$date] = [
-                        'hours' => 0,
-                        'minutes' => 0,
-                    ];
-                }
-                $entries[$taskOid]['daily_entries'][$date]['hours'] = $hours;
+                $effortData[$effortOid]['hours'] = $hours;
             }
-
-            // Process minute matches
             foreach ($minuteMatches as $match) {
-                $taskOid = $match[1];
-                $timestamp = (int) $match[2];
-                $minutes = (int) ($match[3] !== '' ? $match[3] : 0);
-                $date = date('Y-m-d', $timestamp / 1000);
-
-                if (isset($entries[$taskOid]['daily_entries'][$date])) {
-                    $entries[$taskOid]['daily_entries'][$date]['minutes'] = $minutes;
+                $effortOid = $match[1];
+                $minutes = (int) ($match[2] !== '' ? $match[2] : 0);
+                if (isset($effortData[$effortOid])) {
+                    $effortData[$effortOid]['minutes'] = $minutes;
                 }
             }
 
-            // Sort week dates
-            sort($weekDates);
+            // Extract task OID for each JEffort entry
+            // Pattern: name="...listeditoid_OID.effortTargetOid" value="TASK_OID"
+            preg_match_all(
+                '/name="[^"]*listeditoid_(\d+_JEffort)\.effortTargetOid"[^>]*value="(\d+_JTask)"/',
+                $html,
+                $taskMatches,
+                PREG_SET_ORDER
+            );
 
-            // Calculate week total for each entry and overall total
-            $totalWeekMinutes = 0;
-            foreach ($entries as $taskOid => $entry) {
-                $taskWeekMinutes = 0;
-                foreach ($entry['daily_entries'] as $dailyEntry) {
-                    $taskWeekMinutes += ($dailyEntry['hours'] * 60) + $dailyEntry['minutes'];
-                }
-                $entries[$taskOid]['week_total_minutes'] = $taskWeekMinutes;
-                $entries[$taskOid]['week_total_hours'] = round($taskWeekMinutes / 60, 2);
-                $totalWeekMinutes += $taskWeekMinutes;
-
-                // Sort daily entries by date
-                ksort($entries[$taskOid]['daily_entries']);
+            $taskOids = [];
+            foreach ($taskMatches as $match) {
+                $taskOids[$match[1]] = $match[2];
             }
 
-            // Filter out entries with zero total time (empty entries)
-            $entries = array_filter($entries, fn($entry) => $entry['week_total_minutes'] > 0);
+            // Extract task names from DOM
+            $taskNames = $this->extractTaskNamesFromDayEffort($html);
 
-            return [
-                'date' => [
-                    'day' => $day,
-                    'month' => $month,
-                    'year' => $year,
-                ],
-                'week_dates' => $weekDates,
-                'total_week_hours' => round($totalWeekMinutes / 60, 2),
-                'entries' => array_values($entries),
-            ];
+            // Extract project names from DOM
+            $projectNames = $this->extractProjectNamesFromDayEffort($html);
+
+            // Build entries for efforts that have duration > 0
+            foreach ($effortData as $effortOid => $duration) {
+                $totalMinutes = ($duration['hours'] * 60) + $duration['minutes'];
+
+                // Skip entries with zero duration
+                if ($totalMinutes === 0) {
+                    continue;
+                }
+
+                $taskOid = $taskOids[$effortOid] ?? null;
+
+                $entries[] = [
+                    'effort_oid' => $effortOid,
+                    'date' => $date,
+                    'task_oid' => $taskOid,
+                    'task_name' => $taskOid ? ($taskNames[$taskOid] ?? '') : '',
+                    'project_name' => $taskOid ? ($projectNames[$taskOid] ?? '') : '',
+                    'hours' => $duration['hours'],
+                    'minutes' => $duration['minutes'],
+                    'total_minutes' => $totalMinutes,
+                    'description' => $descriptions[$effortOid] ?? '',
+                ];
+            }
+
+            return $entries;
         } catch (\Exception $e) {
-            $this->logger->error('Failed to parse Projektron worklog HTML', [
-                'error' => $e->getMessage()
+            $this->logger->error('Failed to parse Projektron day effort HTML', [
+                'error' => $e->getMessage(),
+                'date' => $date,
             ]);
 
-            if ($e instanceof InvalidArgumentException) {
-                throw $e;
-            }
-
-            throw new InvalidArgumentException(
-                'Failed to parse Projektron worklog: ' . $e->getMessage()
-            );
+            return [];
         }
     }
 
     /**
-     * Extract task names from HTML using DOM
+     * Extract task names from day effort recording HTML
      *
      * @param string $html HTML content
      * @return array<string, string> Map of task OID to task name
      */
-    private function extractTaskNames(string $html): array
+    private function extractTaskNamesFromDayEffort(string $html): array
     {
         $taskNames = [];
 
@@ -570,6 +612,50 @@ class ProjektronService
         }
 
         return $taskNames;
+    }
+
+    /**
+     * Extract project names from day effort recording HTML
+     *
+     * @param string $html HTML content
+     * @return array<string, string> Map of task OID to project name (task's parent project)
+     */
+    private function extractProjectNamesFromDayEffort(string $html): array
+    {
+        $projectNames = [];
+
+        try {
+            $dom = \Dom\HTMLDocument::createFromString($html);
+
+            // Find all rows with task data
+            $rows = $dom->querySelectorAll('tr[data-taskoid]');
+
+            foreach ($rows as $row) {
+                $taskOid = $row->getAttribute('data-taskoid');
+                if (empty($taskOid)) {
+                    continue;
+                }
+
+                // Find project link in this row
+                $projectCell = $this->findCellByName($row, 'effortTargetOid.grandParentOid');
+                if ($projectCell !== null) {
+                    $projectLink = $projectCell->querySelector('a[data-tt*="_JProject"]');
+                    if ($projectLink !== null) {
+                        $nameSpan = $projectLink->querySelector('span.hover');
+                        $name = $nameSpan ? trim($nameSpan->textContent) : '';
+                        if (!empty($name)) {
+                            $projectNames[$taskOid] = $name;
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            $this->logger->warning('Could not extract project names from HTML', [
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $projectNames;
     }
 
     /**

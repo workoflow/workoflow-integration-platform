@@ -37,7 +37,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'projektron_get_worklog',
-                'Get time entries (worklog) for a specific date. Returns booked hours per task for the week containing the specified date. Each entry includes task_oid, task_name, total_minutes, total_hours, and daily_entries breakdown. Use this to see what time has been booked.',
+                'Get individual time entries (worklog) for the week containing the specified date. Returns a flat list of individual booking entries, each with: effort_oid, date, task_oid, task_name, project_oid, project_name, hours, minutes, total_minutes, description (booking comment), and status. Multiple entries on the same day/task are returned separately with their own descriptions.',
                 [
                     [
                         'name' => 'day',
@@ -259,7 +259,7 @@ class ProjektronIntegration implements PersonalizedSkillInterface
             'date' => $worklog['date'],
             'week_dates' => $worklog['week_dates'],
             'total_week_hours' => $worklog['total_week_hours'],
-            'count' => count($worklog['entries']),
+            'count' => $worklog['count'],
             'entries' => $worklog['entries'],
         ];
     }
