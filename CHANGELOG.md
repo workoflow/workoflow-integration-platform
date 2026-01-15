@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-15
+
+### Added
+- **MCP Server Configuration UI** - Skills page "API Access" button now shows Claude Desktop MCP configuration instead of curl examples
+- **Copy-paste ready MCP config** - Users can copy JSON configuration with their personal access token pre-filled for Claude Desktop setup
+- **Token requirement for MCP config** - Users without a personal access token see a prompt to generate one in their profile before viewing MCP configuration
+- **MCP tools documentation** - Skills page now lists available MCP tools (workoflow_list_tools, workoflow_execute, workoflow_refresh) with descriptions
+
+### Fixed
+- **MCP API authentication** - Added dedicated `mcp_api` firewall for `/api/mcp` routes using `PromptApiTokenAuthenticator` - previously requests fell through to the generic `api` firewall which used JWT authentication, causing valid X-Prompt-Token headers to be rejected with 401
+
 ## 2026-01-14
 
 ### Added
