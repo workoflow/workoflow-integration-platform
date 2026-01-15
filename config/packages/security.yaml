@@ -19,6 +19,12 @@ security:
             custom_authenticators:
                 - App\Security\PromptApiTokenAuthenticator
 
+        mcp_api:
+            pattern: ^/api/mcp
+            stateless: true
+            custom_authenticators:
+                - App\Security\PromptApiTokenAuthenticator
+
         api:
             pattern: ^/api
             stateless: true
@@ -39,6 +45,7 @@ security:
             access_denied_handler: App\Security\AccessDeniedHandler
     
     access_control:
+        - { path: ^/api/mcp, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/prompts, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/integration, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
