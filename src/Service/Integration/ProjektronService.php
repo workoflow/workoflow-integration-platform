@@ -345,16 +345,15 @@ class ProjektronService
         // Get user OID for the request
         $userOid = $this->getUserOid($credentials);
 
-        // Calculate the week dates (Monday to Friday) for the given date
+        // Calculate the week dates (Monday to Sunday) for the given date
         $targetDate = new \DateTime(sprintf('%04d-%02d-%02d', $year, $month, $day));
         $weekDates = $this->getWeekDates($targetDate);
 
         $allEntries = [];
         $totalMinutes = 0;
-        $seenEffortOids = [];
 
         // Fetch each day's effort data individually
-        // The dayeffortrecording endpoint filters by date when using the correct parameters
+        // Each day's page shows only that day's bookings
         foreach ($weekDates as $dateStr) {
             $dateObj = new \DateTime($dateStr);
             $dayOfMonth = (int) $dateObj->format('d');
@@ -384,11 +383,6 @@ class ProjektronService
 
                 $dayEntries = $this->parseDayEffortData($html, $dateStr);
                 foreach ($dayEntries as $entry) {
-                    // Deduplicate by effort_oid to prevent same booking appearing multiple times
-                    if (isset($seenEffortOids[$entry['effort_oid']])) {
-                        continue;
-                    }
-                    $seenEffortOids[$entry['effort_oid']] = true;
                     $allEntries[] = $entry;
                     $totalMinutes += $entry['total_minutes'];
                 }
@@ -418,7 +412,7 @@ class ProjektronService
     }
 
     /**
-     * Get the dates for the week (Monday to Friday) containing the given date
+     * Get the dates for the week (Monday to Sunday) containing the given date
      *
      * @param \DateTime $date Reference date
      * @return array<string> Array of date strings in Y-m-d format
@@ -432,8 +426,8 @@ class ProjektronService
         $monday = clone $date;
         $monday->modify('-' . ($dayOfWeek - 1) . ' days');
 
-        // Get Monday to Friday (5 working days)
-        for ($i = 0; $i < 5; $i++) {
+        // Get Monday to Sunday (7 days)
+        for ($i = 0; $i < 7; $i++) {
             $day = clone $monday;
             $day->modify('+' . $i . ' days');
             $weekDates[] = $day->format('Y-m-d');
