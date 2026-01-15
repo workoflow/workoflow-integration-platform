@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 - **Projektron worklog now includes booking descriptions** - Time entries returned by `projektron_get_worklog` now contain individual booking comments/descriptions, making it easier for AI agents to understand what work was done
+- **AI agent anti-hallucination improvements** - All 7 sub-agents (Projektron, Jira, Confluence, SharePoint, GitLab, Trello, SAP C4C) now have strengthened prompts that enforce tool calls before responding with user data, reducing cases where agents would invent information instead of fetching it from APIs
 
 ### Changed
 - **SAP C4C marked as experimental** - SAP C4C integration now shows experimental badge in the UI to indicate it's still under development
