@@ -1400,19 +1400,19 @@ class SapC4cIntegration implements PersonalizedSkillInterface
     public function getSetupInstructions(): ?string
     {
         return <<<'HTML'
-<div class="setup-instructions">
-    <h4>Authentication Options</h4>
-    <div class="auth-option">
-        <strong>Basic Auth (Technical User)</strong>
-        <p>Simple setup, but all actions are attributed to the technical user account.</p>
+<div class="setup-instructions" data-auth-instructions="true">
+    <h4>Setup Instructions</h4>
+    <div class="auth-option" data-auth-mode="basic">
+        <strong>Basic Auth Setup</strong>
+        <p>Simple setup - all actions attributed to the technical user account.</p>
         <ol>
             <li>Create a Communication Arrangement in SAP C4C</li>
-            <li>Use the generated technical user credentials</li>
+            <li>Use the generated technical user credentials below</li>
         </ol>
     </div>
-    <div class="auth-option">
-        <strong>OAuth2 (User Delegation)</strong>
-        <p>Actions are attributed to individual users. Requires additional configuration:</p>
+    <div class="auth-option" data-auth-mode="oauth2">
+        <strong>OAuth2 Setup (User Delegation)</strong>
+        <p>Actions attributed to individual users. Required configuration:</p>
         <ol>
             <li>Configure Azure AD as Identity Provider in SAP C4C Admin</li>
             <li>Register OAuth Client in SAP C4C (Administrator > OAuth 2.0 Client Registration)</li>
@@ -1421,7 +1421,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         </ol>
         <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP C4C with matching email addresses.</p>
     </div>
-    <p><a href="https://help.sap.com/docs/sap-cloud-for-customer/odata-services/sap-cloud-for-customer-odata-api" target="_blank" rel="noopener">SAP C4C OData API Documentation</a></p>
+    <p class="docs-link"><a href="https://help.sap.com/docs/sap-cloud-for-customer/odata-services/sap-cloud-for-customer-odata-api" target="_blank" rel="noopener">SAP C4C OData API Documentation</a></p>
 </div>
 HTML;
     }

@@ -154,6 +154,8 @@
                                         <option value="{{ value }}"{% if form.vars.data[fieldName]|default(field.getPlaceholder()) == value %} selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
+                                {# Mark the Symfony form field as rendered so form_end doesn't render it again #}
+                                {% do form[fieldName].setRendered %}
                             {% elseif isSensitiveField and fieldExists and isEdit %}
                                 {{ form_widget(form[fieldName], {'attr': {'class': 'form-control', 'placeholder': 'integration.keep_existing'|trans|default('Leave empty to keep existing value')}}) }}
                                 <small class="form-text text-muted">
@@ -938,8 +940,14 @@ async function toggleTool(checkbox) {
 document.addEventListener('DOMContentLoaded', function() {
     const authModeSelects = document.querySelectorAll('.auth-mode-select');
     const conditionalFields = document.querySelectorAll('.conditional-field');
+    const authInstructions = document.querySelector('[data-auth-instructions="true"]');
 
     function updateConditionalFields() {
+        // Get current auth mode value
+        const authModeSelect = document.querySelector('[data-field="auth_mode"]');
+        const currentAuthMode = authModeSelect ? authModeSelect.value : 'basic';
+
+        // Update conditional form fields
         conditionalFields.forEach(field => {
             const conditionalOn = field.dataset.conditionalOn;
             const conditionalValue = field.dataset.conditionalValue;
@@ -960,15 +968,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const input = field.querySelector('input, select, textarea');
             if (input) {
                 input.disabled = !shouldShow;
-                // Clear value when hiding to avoid validation issues
-                if (!shouldShow && input.type !== 'hidden') {
-                    // Don't clear if it's an existing value
-                    if (!input.dataset.hasExistingValue) {
-                        // input.value = ''; // Commented out to preserve values when switching
-                    }
-                }
             }
         });
+
+        // Update setup instructions visibility based on auth mode
+        if (authInstructions) {
+            const authOptions = authInstructions.querySelectorAll('.auth-option[data-auth-mode]');
+            authOptions.forEach(option => {
+                const optionMode = option.dataset.authMode;
+                option.style.display = optionMode === currentAuthMode ? 'block' : 'none';
+            });
+        }
     }
 
     // Attach change handlers to all auth mode selects
