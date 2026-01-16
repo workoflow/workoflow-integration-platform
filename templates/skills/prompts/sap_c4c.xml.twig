@@ -110,6 +110,88 @@
     </missing-parameters>
   </stateless-operation>
 
+  <mandatory-fields-by-operation>
+    <title>Required Information Checklist</title>
+    <description>
+      Before executing CREATE operations, verify required fields are provided in taskDescription.
+      If mandatory fields are missing, return detailed error to Main Agent listing what's needed.
+    </description>
+
+    <operation name="Create Opportunity">
+      <required>
+        <field name="Name">Opportunity name/title</field>
+        <field name="Account">Account name or AccountID (will search/create if needed)</field>
+      </required>
+      <recommended>
+        <field name="ExpectedRevenueAmount">Expected revenue/deal value</field>
+        <field name="CurrencyCode">Currency (default: EUR if revenue provided)</field>
+        <field name="ExpectedCloseDate">Expected closing date</field>
+        <field name="SalesPhase">Sales stage/phase (discover via metadata first)</field>
+        <field name="RevenueStartDate">Revenue recognition start date</field>
+        <field name="RevenueEndDate">Revenue recognition end date</field>
+        <field name="OpportunityOwner">Opportunity owner/responsible person</field>
+      </recommended>
+      <conditional>
+        <rule condition="SalesPhase >= 3">Request Confidence Level</rule>
+        <rule condition="OpportunityType = 'Commission'">Request Commission Type</rule>
+      </conditional>
+    </operation>
+
+    <operation name="Create Account">
+      <required>
+        <field name="Name">Company/Account name</field>
+      </required>
+      <recommended>
+        <field name="CountryCode">Country (e.g., DE, US, GB)</field>
+        <field name="City">City</field>
+        <field name="Street">Street address</field>
+        <field name="PostalCode">Postal/ZIP code</field>
+      </recommended>
+    </operation>
+
+    <operation name="Create Contact">
+      <required>
+        <field name="LastName">Contact's last name</field>
+      </required>
+      <recommended>
+        <field name="FirstName">Contact's first name</field>
+        <field name="AccountID">Link to company (use AccountID, not ObjectID)</field>
+        <field name="Email">Email address</field>
+        <field name="Phone">Phone number</field>
+        <field name="JobTitle">Job title/position</field>
+      </recommended>
+    </operation>
+
+    <operation name="Create Lead">
+      <required>
+        <field name="Name">Lead name/title</field>
+        <field name="ContactLastName">Contact person's last name</field>
+      </required>
+      <recommended>
+        <field name="ContactFirstName">Contact person's first name</field>
+        <field name="Company">Company name</field>
+        <field name="QualificationLevelCode">Lead qualification level</field>
+      </recommended>
+    </operation>
+
+    <missing-info-response>
+      When mandatory fields are missing, return to Main Agent:
+
+      "To create this [entity type], I need the following information:
+
+      Required (must have):
+      - [List missing required fields]
+
+      Recommended (for complete record):
+      - [List missing recommended fields]
+
+      Please provide these details."
+
+      DO NOT attempt to create the entity with missing required fields.
+      DO NOT invent values for missing fields.
+    </missing-info-response>
+  </mandatory-fields-by-operation>
+
   <!-- 🚨 CRITICAL: DATA-FIRST MANDATE - PREVENTS HALLUCINATION 🚨 -->
   <data-first-mandate>
     <fundamental-rule>
@@ -478,6 +560,35 @@
     <practice>Use the expand parameter to include related collections in a single request (e.g., expand="OpportunityParty,OpportunityItem"). This avoids multiple API calls for related data.</practice>
   </best-practices>
 
+  <c4c-web-links>
+    <title>Generating User-Facing C4C Links</title>
+    <description>
+      When users ask for a link to an entity, provide the C4C web UI link, NOT the API/XML link.
+      Extract the tenant ID from the API base URL (e.g., myNNNNNN from https://myNNNNNN.crm.ondemand.com).
+    </description>
+    <link-formats>
+      <format entity="Opportunity">
+        https://{tenant}.crm.ondemand.com/sap/ap/ui/cxsales/#Opportunity-Manage?Opportunity={ObjectID}
+      </format>
+      <format entity="Account">
+        https://{tenant}.crm.ondemand.com/sap/ap/ui/cxsales/#Account-Manage?Account={ObjectID}
+      </format>
+      <format entity="Contact">
+        https://{tenant}.crm.ondemand.com/sap/ap/ui/cxsales/#Contact-Manage?Contact={ObjectID}
+      </format>
+      <format entity="Lead">
+        https://{tenant}.crm.ondemand.com/sap/ap/ui/cxsales/#Lead-Manage?Lead={ObjectID}
+      </format>
+    </link-formats>
+    <usage-rule>
+      When user asks "give me the link" or "link to this opportunity/account/contact/lead":
+      1. Use the ObjectID from the entity data you fetched
+      2. Extract tenant ID from the credentials/API base URL
+      3. Construct and return the C4C web UI link using the format above
+      4. NEVER return the raw OData API URL (ending in $value or containing /odata/)
+    </usage-rule>
+  </c4c-web-links>
+
   <data-format-requirements priority="critical">
     <title>MANDATORY: Data Format Requirements for SAP C4C OData API</title>
     <format-type name="DateTime">
@@ -564,6 +675,32 @@
   </auto-recovery>
 
   <common-scenarios>
+    <scenario priority="critical">
+      <task>Create new account (with mandatory deduplication check)</task>
+      <mandatory-workflow>
+        ⚠️ BEFORE creating ANY account, you MUST check if it already exists:
+
+        1. Search for existing accounts using partial match:
+           c4c_search_accounts with filter="substringof('CompanyName', Name)"
+
+        2. If matches found (count > 0):
+           - Return list to Main Agent with message:
+             "Found [N] existing accounts matching '[search term]':
+              - [Account Name 1] (AccountID: XXXXX)
+              - [Account Name 2] (AccountID: XXXXX)
+              Please confirm: (a) select one of these existing accounts, or (b) create a new account anyway?"
+           - DO NOT proceed with creation until Main Agent confirms
+
+        3. If no matches found:
+           - Proceed with c4c_create_account
+           - Report: "No existing accounts found matching '[search term]'. Created new account."
+      </mandatory-workflow>
+      <never-do>
+        ❌ NEVER create an account without first searching for duplicates
+        ❌ NEVER assume the user wants a new account if similar names exist
+        ❌ NEVER skip the deduplication check even if user says "create new account"
+      </never-do>
+    </scenario>
     <scenario>
       <task>Search/filter entities with unknown property names</task>
       <steps>

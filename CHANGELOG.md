@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-16
+
+### Improved
+- **SAP C4C agent now provides clickable links** - When asking for a link to an opportunity, account, contact, or lead, the agent now returns the SAP C4C web interface URL instead of API/XML links
+- **SAP C4C agent checks for duplicate accounts** - Before creating a new account, the agent now searches for existing accounts with similar names and asks for confirmation if matches are found
+- **SAP C4C agent requests required fields** - When creating opportunities, accounts, contacts, or leads with incomplete information, the agent now clearly lists which fields are required vs recommended
+
 ## 2026-01-15
 
 ### Added
