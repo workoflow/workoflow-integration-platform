@@ -111,29 +111,61 @@
   </stateless-operation>
 
   <mandatory-fields-by-operation>
-    <title>Required Information Checklist</title>
+    <title>Dynamic Required Fields Discovery</title>
     <description>
-      Before executing CREATE operations, verify required fields are provided in taskDescription.
-      If mandatory fields are missing, return detailed error to Main Agent listing what's needed.
+      SAP C4C mandatory fields vary by tenant configuration. Use DYNAMIC DISCOVERY via metadata API
+      to determine which fields are truly required, then validate against user-provided data.
     </description>
 
     <operation name="Create Opportunity">
-      <required>
-        <field name="Name">Opportunity name/title</field>
-        <field name="Account">Account name or AccountID (will search/create if needed)</field>
-      </required>
-      <recommended>
-        <field name="ExpectedRevenueAmount">Expected revenue/deal value</field>
-        <field name="CurrencyCode">Currency (default: EUR if revenue provided)</field>
-        <field name="ExpectedCloseDate">Expected closing date</field>
-        <field name="SalesPhase">Sales stage/phase (discover via metadata first)</field>
-        <field name="RevenueStartDate">Revenue recognition start date</field>
-        <field name="RevenueEndDate">Revenue recognition end date</field>
-        <field name="OpportunityOwner">Opportunity owner/responsible person</field>
-      </recommended>
-      <conditional>
-        <rule condition="SalesPhase >= 3">Request Confidence Level</rule>
-        <rule condition="OpportunityType = 'Commission'">Request Commission Type</rule>
+      <workflow priority="critical">
+        <step order="1">
+          ALWAYS call c4c_get_entity_metadata("Opportunity") FIRST to discover mandatory_properties
+        </step>
+        <step order="2">
+          Check the mandatory_properties array in the metadata response - these are fields where
+          Nullable=false AND sap:creatable=true (per SAP OData specification)
+        </step>
+        <step order="3">
+          For each mandatory property not yet provided by user, ask using user-friendly names:
+          - Use the field-name-mapping below to translate API field names
+          - Group related fields together (e.g., all date fields)
+        </step>
+        <step order="4">
+          Attempt creation with all collected mandatory fields
+        </step>
+        <step order="5">
+          If SAP returns error with "mandatory" or "required" in message:
+          - Parse error to extract the exact field name
+          - Ask user for that specific field
+          - Retry creation
+        </step>
+      </workflow>
+
+      <field-name-mapping comment="Translate technical API names to user-friendly terms">
+        <map api="Name" user="Opportunity name/title"/>
+        <map api="ProspectPartyID" user="Account (customer)"/>
+        <map api="GB_KUT" user="Cost Center (CC)"/>
+        <map api="ProcessingTypeCode" user="Opportunity type"/>
+        <map api="SalesCyclePhaseCode" user="Sales phase/stage"/>
+        <map api="ExpectedRevenueAmount" user="Expected revenue/deal value"/>
+        <map api="CurrencyCode" user="Currency (default: EUR)"/>
+        <map api="ExpectedProcessingEndDate" user="Expected close date"/>
+        <map api="ExpectedRevenueStartDate" user="Revenue start date"/>
+        <map api="ExpectedRevenueEndDate" user="Revenue end date"/>
+        <map api="MainEmployeeResponsiblePartyID" user="Opportunity owner"/>
+        <map api="Z_ConfidenceLevel_KUT" user="Confidence Level"/>
+        <map api="Z_CommissionType_KUT" user="Commission Type"/>
+      </field-name-mapping>
+
+      <minimum-baseline comment="Always required regardless of metadata">
+        <field name="Name">Opportunity name/title - ALWAYS required</field>
+        <field name="Account">Account name or AccountID - ALWAYS required for linking</field>
+      </minimum-baseline>
+
+      <conditional comment="Business logic requirements beyond schema">
+        <rule condition="SalesCyclePhaseCode >= 3">Request Confidence Level (Z_ConfidenceLevel_KUT)</rule>
+        <rule condition="ProcessingTypeCode = 'Commission'">Request Commission Type (Z_CommissionType_KUT)</rule>
       </conditional>
     </operation>
 
@@ -640,10 +672,20 @@
         <action>Retry with corrected format</action>
       </error>
 
-      <error pattern="Value.*mandatory">
-        <symptom>Required field missing</symptom>
-        <auto-fix>If the field has a sensible default (e.g., currency code "EUR"), add it</auto-fix>
-        <action>Retry with default value, or ask user if no sensible default exists</action>
+      <error pattern="Value.*mandatory|must have a value|is required|cannot be empty">
+        <symptom>Required/mandatory field missing in create/update operation</symptom>
+        <recovery-workflow>
+          <step>1. Parse error message to extract the exact field name (e.g., "Value for field 'GB_KUT' is mandatory")</step>
+          <step>2. Look up field in field-name-mapping to get user-friendly name</step>
+          <step>3. If field has sensible default (CurrencyCode="EUR", dates=today), apply and retry</step>
+          <step>4. If no sensible default, ask user for the specific field value using friendly name</step>
+          <step>5. Retry creation with the collected value</step>
+        </recovery-workflow>
+        <auto-fix>Apply sensible defaults when possible, otherwise collect missing field from user</auto-fix>
+        <field-defaults comment="Sensible defaults that can be auto-applied">
+          <default field="CurrencyCode" value="EUR"/>
+          <default field="LifeCycleStatusCode" value="1"/>
+        </field-defaults>
       </error>
 
       <error pattern="Invalid function.*contains">

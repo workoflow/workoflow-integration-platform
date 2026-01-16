@@ -985,6 +985,7 @@ class SapC4cService
         $filterableProperties = [];
         $creatableProperties = [];
         $updatableProperties = [];
+        $mandatoryProperties = [];
 
         foreach ($entityTypes as $entityTypeNode) {
             $propertyNodes = $xpath->query('.//edm:Property', $entityTypeNode);
@@ -1000,6 +1001,9 @@ class SapC4cService
                 $creatable = $prop->getAttribute('sap:creatable') !== 'false';
                 $updatable = $prop->getAttribute('sap:updatable') !== 'false';
 
+                // Mandatory = NOT nullable AND creatable (per SAP OData documentation)
+                $isMandatory = !$nullable && $creatable;
+
                 $properties[] = [
                     'name' => $name,
                     'type' => $type,
@@ -1007,6 +1011,7 @@ class SapC4cService
                     'filterable' => $filterable,
                     'creatable' => $creatable,
                     'updatable' => $updatable,
+                    'mandatory' => $isMandatory,
                 ];
 
                 if ($filterable) {
@@ -1018,6 +1023,9 @@ class SapC4cService
                 if ($updatable) {
                     $updatableProperties[] = $name;
                 }
+                if ($isMandatory) {
+                    $mandatoryProperties[] = $name;
+                }
             }
         }
 
@@ -1027,11 +1035,13 @@ class SapC4cService
             'filterable_count' => count($filterableProperties),
             'creatable_count' => count($creatableProperties),
             'updatable_count' => count($updatableProperties),
+            'mandatory_count' => count($mandatoryProperties),
             'filterable_properties' => $filterableProperties,
             'creatable_properties' => $creatableProperties,
             'updatable_properties' => $updatableProperties,
+            'mandatory_properties' => $mandatoryProperties,
             'all_properties' => $properties,
-            'hint' => 'Use filterable_properties in $filter queries. Properties not in this list cannot be filtered.',
+            'hint' => 'Use filterable_properties in $filter queries. mandatory_properties lists fields that MUST have values when creating (Nullable=false AND sap:creatable=true).',
         ];
     }
 }
