@@ -171,4 +171,131 @@ class IntegrationOAuthController extends AbstractController
             return $this->redirectToRoute('app_skills');
         }
     }
+
+    // ========================================
+    // HubSpot OAuth2 Flow
+    // ========================================
+
+    #[Route('/hubspot/start/{configId}', name: 'app_tool_oauth_hubspot_start')]
+    public function hubspotStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
+    {
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Store the config ID in session for callback
+        $request->getSession()->set('hubspot_oauth_config_id', $configId);
+
+        // Redirect to HubSpot OAuth with CRM scopes
+        return $clientRegistry
+            ->getClient('hubspot')
+            ->redirect([
+                'crm.objects.contacts.read',
+                'crm.objects.contacts.write',
+                'crm.objects.companies.read',
+                'crm.objects.companies.write',
+                'crm.objects.deals.read',
+                'crm.objects.deals.write',
+            ], []);
+    }
+
+    #[Route('/callback/hubspot', name: 'app_tool_oauth_hubspot_callback')]
+    public function hubspotCallback(Request $request, ClientRegistry $clientRegistry): Response
+    {
+        $error = $request->query->get('error');
+        $configId = $request->getSession()->get('hubspot_oauth_config_id');
+
+        // Handle OAuth errors or user cancellation
+        if ($error) {
+            if ($configId) {
+                $tempConfig = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+                $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+
+                // If this was initial setup and user cancelled, remove the temporary config
+                if ($tempConfig && $oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                    $request->getSession()->remove('oauth_flow_integration');
+                    $request->getSession()->remove('hubspot_oauth_config_id');
+                    $this->entityManager->remove($tempConfig);
+                    $this->entityManager->flush();
+
+                    if ($error === 'access_denied') {
+                        $this->addFlash('warning', 'HubSpot setup cancelled. HubSpot authorization is required to use this integration.');
+                    } else {
+                        $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                    }
+                } else {
+                    $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                }
+            }
+
+            $request->getSession()->remove('hubspot_oauth_config_id');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Continue with normal flow
+        $configId = $request->getSession()->get('hubspot_oauth_config_id');
+
+        if (!$configId) {
+            $this->addFlash('error', 'OAuth session expired. Please try again.');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        try {
+            // Get the OAuth2 client
+            $client = $clientRegistry->getClient('hubspot');
+
+            // Get the access token
+            $accessToken = $client->getAccessToken();
+
+            // Store the credentials
+            $credentials = [
+                'access_token' => $accessToken->getToken(),
+                'refresh_token' => $accessToken->getRefreshToken(),
+                'expires_at' => $accessToken->getExpires(),
+            ];
+
+            // Encrypt and save credentials
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            $this->entityManager->flush();
+
+            // Clean up session
+            $request->getSession()->remove('hubspot_oauth_config_id');
+
+            // Check if this was part of initial setup flow
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->addFlash('success', 'HubSpot integration created and connected successfully!');
+            } else {
+                $this->addFlash('success', 'HubSpot integration connected successfully!');
+            }
+
+            return $this->redirectToRoute('app_skills');
+        } catch (\Exception $e) {
+            // If this was initial setup and failed, remove the temporary config
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->entityManager->remove($config);
+                $this->entityManager->flush();
+            }
+
+            $this->addFlash('error', 'Failed to connect to HubSpot: ' . $e->getMessage());
+            return $this->redirectToRoute('app_skills');
+        }
+    }
 }

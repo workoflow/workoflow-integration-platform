@@ -72,3 +72,6 @@ services:
 
     App\Integration\UserIntegrations\ProjektronIntegration:
         tags: ['app.integration']
+
+    App\Integration\UserIntegrations\HubSpotIntegration:
+        tags: ['app.integration']

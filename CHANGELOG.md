@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-01-16
 
+### Added
+- **HubSpot CRM integration (experimental)** - New integration for managing contacts, companies, and deals in HubSpot CRM with OAuth2 authentication. AI agents can now search, view, create, and update HubSpot records through 12 specialized tools.
+
 ### Improved
 - **SAP C4C agent now provides clickable links** - When asking for a link to an opportunity, account, contact, or lead, the agent now returns the SAP C4C web interface URL instead of API/XML links
 - **SAP C4C agent checks for duplicate accounts** - Before creating a new account, the agent now searches for existing accounts with similar names and asks for confirmation if matches are found
