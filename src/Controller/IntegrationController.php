@@ -387,7 +387,13 @@ class IntegrationController extends AbstractController
 
                 $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
 
-                return $this->redirectToRoute('app_tool_oauth_microsoft_start', [
+                // Redirect to the appropriate OAuth provider based on integration type
+                $oauthRoute = match ($type) {
+                    'hubspot' => 'app_tool_oauth_hubspot_start',
+                    default => 'app_tool_oauth_microsoft_start',
+                };
+
+                return $this->redirectToRoute($oauthRoute, [
                     'configId' => $tempConfig->getId()
                 ]);
             }
