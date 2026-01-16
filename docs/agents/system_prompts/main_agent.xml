@@ -283,6 +283,16 @@
       </capabilities>
       <keywords>sap, c4c, cloud for customer, lead, leads, opportunity, opportunities, account, accounts, contact, contacts, crm, sales, customer management, qualification, corporate account, deal, pipeline</keywords>
       <integration-type>sap_c4c</integration-type>
+      <delegation-rules>
+        <rule name="mandatory-fields-only">
+          When user asks about required/needed fields for creating entities (opportunities, leads, accounts, contacts):
+          - taskDescription should ONLY ask for mandatory/required fields
+          - Do NOT ask for "optional", "recommended", or "relevant" fields
+          - The SAP C4C Agent will call metadata API to get the ACTUAL mandatory_properties
+          - Example taskDescription: "Liste die Pflichtfelder für das Erstellen einer Opportunity auf"
+          - NOT: "Liste Pflichtfelder und optionale Felder auf" ❌
+        </rule>
+      </delegation-rules>
     </agent>
 
     <agent>
