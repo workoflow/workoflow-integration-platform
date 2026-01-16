@@ -24,6 +24,12 @@
                 </div>
             {% endif %}
 
+            {% if integration.getSetupInstructions() %}
+                <div class="alert alert-info setup-instructions-container">
+                    {{ integration.getSetupInstructions()|raw }}
+                </div>
+            {% endif %}
+
             {% if existingInstances|length > 0 and not isEdit %}
                 <div class="existing-instances">
                     <p class="instances-info">
@@ -122,13 +128,19 @@
                         {% endif %}
                     {% else %}
                         {% set fieldName = field.getName() %}
-                        {% set isSensitiveField = fieldName in ['api_token', 'password', 'client_secret'] %}
+                        {% set isSensitiveField = fieldName in ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'] %}
                         {% set fieldExists = form.vars.data[fieldName ~ '_exists']|default(false) %}
+                        {% set isSelectField = field.getType() == 'select' %}
+                        {% set isConditionalField = field.isConditional() %}
 
-                        <div class="form-group {% if form[fieldName].vars.errors|length > 0 %}has-error{% endif %}">
+                        <div class="form-group {% if form[fieldName].vars.errors|length > 0 %}has-error{% endif %}{% if isConditionalField %} conditional-field{% endif %}"
+                             {% if isConditionalField %}
+                                 data-conditional-on="{{ field.getConditionalOn() }}"
+                                 data-conditional-value="{{ field.getConditionalValue() }}"
+                             {% endif %}>
                             <label for="integration_config_{{ fieldName }}">
                                 {{ field.getLabel() }}
-                                {% if field.isRequired() and (not isEdit or not isSensitiveField) %}
+                                {% if field.isRequired() and (not isEdit or not isSensitiveField) and not isConditionalField %}
                                     <span class="required">*</span>
                                 {% endif %}
                             </label>
@@ -136,7 +148,13 @@
                                 <span class="field-hint">{{ field.getHint()|raw }}</span>
                             {% endif %}
 
-                            {% if isSensitiveField and fieldExists and isEdit %}
+                            {% if isSelectField and field.getOptions() %}
+                                <select name="integration_config[{{ fieldName }}]" id="integration_config_{{ fieldName }}" class="form-control auth-mode-select" data-field="{{ fieldName }}">
+                                    {% for value, label in field.getOptions() %}
+                                        <option value="{{ value }}"{% if form.vars.data[fieldName]|default(field.getPlaceholder()) == value %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% elseif isSensitiveField and fieldExists and isEdit %}
                                 {{ form_widget(form[fieldName], {'attr': {'class': 'form-control', 'placeholder': 'integration.keep_existing'|trans|default('Leave empty to keep existing value')}}) }}
                                 <small class="form-text text-muted">
                                     <i class="fas fa-lock"></i> {{ 'integration.credential_exists'|trans|default('Current value is stored securely. Leave empty to keep it.') }}
@@ -915,5 +933,51 @@ async function toggleTool(checkbox) {
         alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
     }
 }
+
+// Conditional field visibility based on select values (e.g., auth_mode)
+document.addEventListener('DOMContentLoaded', function() {
+    const authModeSelects = document.querySelectorAll('.auth-mode-select');
+    const conditionalFields = document.querySelectorAll('.conditional-field');
+
+    function updateConditionalFields() {
+        conditionalFields.forEach(field => {
+            const conditionalOn = field.dataset.conditionalOn;
+            const conditionalValue = field.dataset.conditionalValue;
+
+            if (!conditionalOn) return;
+
+            // Find the controlling select element
+            const controllingSelect = document.querySelector(`[data-field="${conditionalOn}"], #integration_config_${conditionalOn}`);
+            if (!controllingSelect) return;
+
+            const currentValue = controllingSelect.value;
+            const shouldShow = currentValue === conditionalValue;
+
+            // Show/hide the field
+            field.style.display = shouldShow ? 'block' : 'none';
+
+            // Enable/disable the input to prevent submitting hidden fields
+            const input = field.querySelector('input, select, textarea');
+            if (input) {
+                input.disabled = !shouldShow;
+                // Clear value when hiding to avoid validation issues
+                if (!shouldShow && input.type !== 'hidden') {
+                    // Don't clear if it's an existing value
+                    if (!input.dataset.hasExistingValue) {
+                        // input.value = ''; // Commented out to preserve values when switching
+                    }
+                }
+            }
+        });
+    }
+
+    // Attach change handlers to all auth mode selects
+    authModeSelects.forEach(select => {
+        select.addEventListener('change', updateConditionalFields);
+    });
+
+    // Initial update on page load
+    updateConditionalFields();
+});
 </script>
 {% endblock %}

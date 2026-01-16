@@ -282,4 +282,9 @@ class SapSacIntegration implements PersonalizedSkillInterface
     {
         return true;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

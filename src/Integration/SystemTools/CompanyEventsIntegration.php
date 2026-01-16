@@ -60,4 +60,9 @@ class CompanyEventsIntegration implements PlatformSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

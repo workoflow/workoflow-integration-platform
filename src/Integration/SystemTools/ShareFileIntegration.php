@@ -94,4 +94,9 @@ class ShareFileIntegration implements PlatformSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

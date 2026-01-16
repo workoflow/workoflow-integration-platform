@@ -259,4 +259,9 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

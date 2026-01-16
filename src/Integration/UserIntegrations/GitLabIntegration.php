@@ -1907,4 +1907,9 @@ class GitLabIntegration implements PersonalizedSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

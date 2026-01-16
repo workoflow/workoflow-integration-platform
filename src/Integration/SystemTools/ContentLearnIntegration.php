@@ -91,4 +91,9 @@ class ContentLearnIntegration implements PlatformSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

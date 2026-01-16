@@ -277,4 +277,9 @@ Tips: Use OR to include synonyms and translations (German+English) for bilingual
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

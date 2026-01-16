@@ -1278,9 +1278,27 @@ class SapC4cIntegration implements PersonalizedSkillInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        // Check if all required fields are present and not empty
-        if (empty($credentials['base_url']) || empty($credentials['username']) || empty($credentials['password'])) {
+        // Check if base_url is present
+        if (empty($credentials['base_url'])) {
             return false;
+        }
+
+        $authMode = $credentials['auth_mode'] ?? 'basic';
+
+        if ($authMode === 'basic') {
+            // Basic Auth: require username and password
+            if (empty($credentials['username']) || empty($credentials['password'])) {
+                return false;
+            }
+        } else {
+            // OAuth2: require Azure AD and SAP C4C OAuth credentials
+            if (
+                empty($credentials['azure_tenant_id']) ||
+                empty($credentials['c4c_oauth_client_id']) ||
+                empty($credentials['c4c_oauth_client_secret'])
+            ) {
+                return false;
+            }
         }
 
         // Use SapC4cService to validate credentials
@@ -1294,31 +1312,118 @@ class SapC4cIntegration implements PersonalizedSkillInterface
     public function getCredentialFields(): array
     {
         return [
+            // Base URL (always required)
             new CredentialField(
                 'base_url',
                 'url',
                 'SAP C4C Base URL',
                 'https://myXXXXXX.crm.ondemand.com',
                 true,
-                'Your SAP Cloud for Customer instance URL without trailing slash (e.g., https://myXXXXXX.crm.ondemand.com)'
+                'Your SAP Cloud for Customer instance URL without trailing slash'
             ),
+
+            // Authentication mode selector
+            new CredentialField(
+                'auth_mode',
+                'select',
+                'Authentication Mode',
+                'basic',
+                true,
+                'Choose how to authenticate with SAP C4C',
+                [
+                    'basic' => 'Basic Auth (Technical User)',
+                    'oauth2' => 'OAuth2 (User Delegation)',
+                ]
+            ),
+
+            // Basic Auth fields (shown when auth_mode=basic)
             new CredentialField(
                 'username',
                 'text',
                 'Username',
                 'user@company.com',
-                true,
-                'Your SAP C4C username or email'
+                false, // Not globally required, only for Basic Auth
+                'Technical User ID or SAP C4C username',
+                null,
+                'auth_mode',
+                'basic'
             ),
             new CredentialField(
                 'password',
                 'password',
                 'Password',
                 null,
-                true,
-                'Your SAP C4C password. Credentials will be encrypted and stored securely.'
+                false,
+                'Technical User password. Credentials will be encrypted and stored securely.',
+                null,
+                'auth_mode',
+                'basic'
+            ),
+
+            // OAuth2 fields (shown when auth_mode=oauth2)
+            new CredentialField(
+                'azure_tenant_id',
+                'text',
+                'Azure AD Tenant ID',
+                'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                false,
+                'Your Azure AD tenant ID (GUID format)',
+                null,
+                'auth_mode',
+                'oauth2'
+            ),
+            new CredentialField(
+                'c4c_oauth_client_id',
+                'text',
+                'SAP C4C OAuth Client ID',
+                null,
+                false,
+                'OAuth Client ID from SAP C4C Administrator > OAuth 2.0 Client Registration',
+                null,
+                'auth_mode',
+                'oauth2'
+            ),
+            new CredentialField(
+                'c4c_oauth_client_secret',
+                'password',
+                'SAP C4C OAuth Client Secret',
+                null,
+                false,
+                'OAuth Client Secret from SAP C4C Admin. Encrypted and stored securely.',
+                null,
+                'auth_mode',
+                'oauth2'
             ),
         ];
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return <<<'HTML'
+<div class="setup-instructions">
+    <h4>Authentication Options</h4>
+    <div class="auth-option">
+        <strong>Basic Auth (Technical User)</strong>
+        <p>Simple setup, but all actions are attributed to the technical user account.</p>
+        <ol>
+            <li>Create a Communication Arrangement in SAP C4C</li>
+            <li>Use the generated technical user credentials</li>
+        </ol>
+    </div>
+    <div class="auth-option">
+        <strong>OAuth2 (User Delegation)</strong>
+        <p>Actions are attributed to individual users. Requires additional configuration:</p>
+        <ol>
+            <li>Configure Azure AD as Identity Provider in SAP C4C Admin</li>
+            <li>Register OAuth Client in SAP C4C (Administrator > OAuth 2.0 Client Registration)</li>
+            <li>Ensure each user is provisioned as a Business User in SAP C4C</li>
+            <li>Grant admin consent in Azure AD for delegated permissions</li>
+        </ol>
+        <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP C4C with matching email addresses.</p>
+    </div>
+    <p><a href="https://help.sap.com/docs/sap-cloud-for-customer/odata-services/sap-cloud-for-customer-odata-api" target="_blank" rel="noopener">SAP C4C OData API Documentation</a></p>
+</div>
+HTML;
     }
 
     public function getSystemPrompt(?IntegrationConfig $config = null): string

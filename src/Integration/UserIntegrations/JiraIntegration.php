@@ -710,4 +710,9 @@ class JiraIntegration implements PersonalizedSkillInterface
     {
         return false;
     }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
 }

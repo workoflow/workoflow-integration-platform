@@ -65,6 +65,7 @@ class SapC4cService
 
     /**
      * Build authorization headers for SAP C4C API
+     * Supports both Basic Auth and OAuth2 Bearer token authentication
      */
     private function getAuthHeaders(
         string $username,
@@ -90,6 +91,55 @@ class SapC4cService
     }
 
     /**
+     * Get authorization headers based on credentials type
+     * Supports both Basic Auth (username/password) and OAuth2 Bearer token
+     *
+     * @param array $credentials Credentials array with either username/password or access_token
+     * @param string|null $csrfToken Optional CSRF token for write operations
+     * @param string|null $cookies Optional cookies for session binding
+     */
+    public function getAuthHeadersForRequest(
+        array $credentials,
+        ?string $csrfToken = null,
+        ?string $cookies = null
+    ): array {
+        // OAuth2 Bearer token (user delegation)
+        if (isset($credentials['access_token'])) {
+            $headers = [
+                'Authorization' => 'Bearer ' . $credentials['access_token'],
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ];
+
+            if ($csrfToken !== null) {
+                $headers['X-CSRF-Token'] = $csrfToken;
+            }
+
+            if ($cookies !== null && $cookies !== '') {
+                $headers['Cookie'] = $cookies;
+            }
+
+            return $headers;
+        }
+
+        // Fallback to Basic Auth (technical user / test systems)
+        return $this->getAuthHeaders(
+            $credentials['username'] ?? '',
+            $credentials['password'] ?? '',
+            $csrfToken,
+            $cookies
+        );
+    }
+
+    /**
+     * Check if credentials use OAuth2 authentication mode
+     */
+    public function isOAuth2Mode(array $credentials): bool
+    {
+        return ($credentials['auth_mode'] ?? 'basic') === 'oauth2';
+    }
+
+    /**
      * Build OData API endpoint URL
      */
     private function buildApiUrl(string $baseUrl, string $path): string
@@ -101,17 +151,20 @@ class SapC4cService
     }
 
     /**
-     * Fetch CSRF token for modifying operations
-     * Returns array with 'token' and 'cookies' keys
+     * Fetch CSRF token for modifying operations using credentials array
+     * Supports both Basic Auth and OAuth2 authentication modes
+     *
+     * @param array $credentials Credentials array
+     * @return array Array with 'token' and 'cookies' keys
      */
-    private function fetchCsrfToken(string $baseUrl, string $username, string $password): array
+    private function fetchCsrfTokenFromCredentials(array $credentials): array
     {
         try {
             // Use trailing slash to avoid 307 redirect that loses session cookies
-            $url = $this->buildApiUrl($baseUrl, '/');
+            $url = $this->buildApiUrl($credentials['base_url'], '/');
             $response = $this->httpClient->request('GET', $url, [
                 'headers' => array_merge(
-                    $this->getAuthHeaders($username, $password),
+                    $this->getAuthHeadersForRequest($credentials),
                     ['x-csrf-token' => 'fetch']
                 ),
                 'timeout' => 10,
@@ -135,10 +188,23 @@ class SapC4cService
                 'token' => $token,
                 'cookies' => implode('; ', $cookies),
             ];
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // If CSRF token fetch fails, return empty (some technical users may not need it)
             return ['token' => null, 'cookies' => ''];
         }
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     * @deprecated Use fetchCsrfTokenFromCredentials instead
+     */
+    private function fetchCsrfToken(string $baseUrl, string $username, string $password): array
+    {
+        return $this->fetchCsrfTokenFromCredentials([
+            'base_url' => $baseUrl,
+            'username' => $username,
+            'password' => $password,
+        ]);
     }
 
     /**
@@ -200,20 +266,25 @@ class SapC4cService
 
     /**
      * Test SAP C4C connection with detailed error reporting
+     * Supports both Basic Auth and OAuth2 authentication modes
      */
     public function testConnectionDetailed(array $credentials): array
     {
         $testedEndpoints = [];
+        $authMode = $credentials['auth_mode'] ?? 'basic';
+
+        // For OAuth2 mode, we can only verify the base URL is valid
+        // since we don't have a user token at setup time
+        if ($authMode === 'oauth2') {
+            return $this->testOAuth2Configuration($credentials);
+        }
 
         try {
             $url = $this->buildApiUrl($credentials['base_url'], '/LeadCollection');
 
             try {
                 $response = $this->httpClient->request('GET', $url . '?$top=1&$format=json', [
-                    'headers' => $this->getAuthHeaders(
-                        $credentials['username'],
-                        $credentials['password']
-                    ),
+                    'headers' => $this->getAuthHeadersForRequest($credentials),
                     'timeout' => 10,
                 ]);
 
@@ -316,6 +387,112 @@ class SapC4cService
     }
 
     /**
+     * Test OAuth2 configuration by validating credentials format and URL accessibility
+     * Note: Full OAuth2 flow validation requires a user token, which isn't available at setup time
+     */
+    private function testOAuth2Configuration(array $credentials): array
+    {
+        $testedEndpoints = [];
+
+        // Validate required OAuth2 credentials are present
+        if (empty($credentials['azure_tenant_id'])) {
+            return [
+                'success' => false,
+                'message' => 'Missing Azure AD Tenant ID',
+                'details' => 'Azure AD Tenant ID is required for OAuth2 authentication.',
+                'suggestion' => 'Enter your Azure AD tenant ID (GUID format).',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        }
+
+        if (empty($credentials['c4c_oauth_client_id']) || empty($credentials['c4c_oauth_client_secret'])) {
+            return [
+                'success' => false,
+                'message' => 'Missing SAP C4C OAuth credentials',
+                'details' => 'SAP C4C OAuth Client ID and Secret are required.',
+                'suggestion' => 'Enter OAuth credentials from SAP C4C Administrator > OAuth 2.0 Client Registration.',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        }
+
+        // Validate Azure Tenant ID format (GUID)
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $credentials['azure_tenant_id'])) {
+            return [
+                'success' => false,
+                'message' => 'Invalid Azure AD Tenant ID format',
+                'details' => 'Azure AD Tenant ID must be a GUID (e.g., xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).',
+                'suggestion' => 'Check your Azure AD tenant ID in the Azure Portal.',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        }
+
+        // Validate the base URL is reachable
+        try {
+            $url = $this->validateAndNormalizeUrl($credentials['base_url']);
+
+            // Try to access the OData metadata endpoint (no auth required for existence check)
+            $metadataUrl = $url . '/sap/c4c/odata/v1/c4codataapi/$metadata';
+            $response = $this->httpClient->request('GET', $metadataUrl, [
+                'timeout' => 10,
+                'headers' => [
+                    'Accept' => 'application/xml',
+                ],
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            $testedEndpoints[] = [
+                'endpoint' => '/$metadata',
+                'status' => in_array($statusCode, [200, 401, 403]) ? 'success' : 'failed',
+                'http_code' => $statusCode,
+            ];
+
+            // 401/403 means the endpoint exists but requires auth (expected)
+            if (in_array($statusCode, [200, 401, 403])) {
+                return [
+                    'success' => true,
+                    'message' => 'OAuth2 configuration validated',
+                    'details' => 'SAP C4C instance is accessible. OAuth2 credentials will be validated when users authenticate.',
+                    'suggestion' => 'Ensure Azure AD is configured as Identity Provider in SAP C4C Admin.',
+                    'tested_endpoints' => $testedEndpoints,
+                    'auth_mode' => 'oauth2',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'SAP C4C endpoint not found',
+                'details' => "HTTP {$statusCode}: The OData API endpoint is not accessible.",
+                'suggestion' => 'Verify the base URL points to a valid SAP C4C instance.',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        } catch (InvalidArgumentException $e) {
+            return [
+                'success' => false,
+                'message' => 'Invalid URL',
+                'details' => $e->getMessage(),
+                'suggestion' => 'Enter a valid SAP C4C base URL like https://myXXXXXX.crm.ondemand.com',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        } catch (TransportExceptionInterface $e) {
+            return [
+                'success' => false,
+                'message' => 'Cannot reach SAP C4C server',
+                'details' => 'Network error: ' . $e->getMessage(),
+                'suggestion' => 'Check the base URL and network connectivity.',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Validation error',
+                'details' => $e->getMessage(),
+                'suggestion' => 'Please check your configuration and try again.',
+                'tested_endpoints' => $testedEndpoints,
+            ];
+        }
+    }
+
+    /**
      * Search leads using OData filter
      */
     public function searchLeads(
@@ -343,10 +520,7 @@ class SapC4cService
 
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials),
                 'query' => $query,
             ]);
 
@@ -376,10 +550,7 @@ class SapC4cService
 
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials),
                 'query' => ['$format' => 'json'],
             ]);
 
@@ -404,20 +575,11 @@ class SapC4cService
         $url = $this->buildApiUrl($credentials['base_url'], '/LeadCollection');
 
         // Fetch CSRF token with cookies
-        $csrfData = $this->fetchCsrfToken(
-            $credentials['base_url'],
-            $credentials['username'],
-            $credentials['password']
-        );
+        $csrfData = $this->fetchCsrfTokenFromCredentials($credentials);
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password'],
-                    $csrfData['token'],
-                    $csrfData['cookies']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials, $csrfData['token'], $csrfData['cookies']),
                 'json' => $leadData,
             ]);
 
@@ -436,20 +598,11 @@ class SapC4cService
         $url = $this->buildApiUrl($credentials['base_url'], "/LeadCollection('{$leadId}')");
 
         // Fetch CSRF token with cookies
-        $csrfData = $this->fetchCsrfToken(
-            $credentials['base_url'],
-            $credentials['username'],
-            $credentials['password']
-        );
+        $csrfData = $this->fetchCsrfTokenFromCredentials($credentials);
 
         try {
             $response = $this->httpClient->request('PATCH', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password'],
-                    $csrfData['token'],
-                    $csrfData['cookies']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials, $csrfData['token'], $csrfData['cookies']),
                 'json' => $leadData,
             ]);
 
@@ -520,10 +673,7 @@ class SapC4cService
 
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials),
                 'query' => $query,
             ]);
 
@@ -566,10 +716,7 @@ class SapC4cService
 
         try {
             $response = $this->httpClient->request('GET', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials),
                 'query' => $query,
             ]);
 
@@ -605,20 +752,11 @@ class SapC4cService
     ): array {
         $url = $this->buildApiUrl($credentials['base_url'], '/' . $collectionName);
 
-        $csrfData = $this->fetchCsrfToken(
-            $credentials['base_url'],
-            $credentials['username'],
-            $credentials['password']
-        );
+        $csrfData = $this->fetchCsrfTokenFromCredentials($credentials);
 
         try {
             $response = $this->httpClient->request('POST', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password'],
-                    $csrfData['token'],
-                    $csrfData['cookies']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials, $csrfData['token'], $csrfData['cookies']),
                 'json' => $entityData,
             ]);
 
@@ -645,20 +783,11 @@ class SapC4cService
     ): array {
         $url = $this->buildApiUrl($credentials['base_url'], "/{$collectionName}('{$entityId}')");
 
-        $csrfData = $this->fetchCsrfToken(
-            $credentials['base_url'],
-            $credentials['username'],
-            $credentials['password']
-        );
+        $csrfData = $this->fetchCsrfTokenFromCredentials($credentials);
 
         try {
             $response = $this->httpClient->request('PATCH', $url, [
-                'headers' => $this->getAuthHeaders(
-                    $credentials['username'],
-                    $credentials['password'],
-                    $csrfData['token'],
-                    $csrfData['cookies']
-                ),
+                'headers' => $this->getAuthHeadersForRequest($credentials, $csrfData['token'], $csrfData['cookies']),
                 'json' => $entityData,
             ]);
 

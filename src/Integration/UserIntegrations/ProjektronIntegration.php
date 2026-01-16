@@ -218,6 +218,11 @@ class ProjektronIntegration implements PersonalizedSkillInterface
         return true;
     }
 
+    public function getSetupInstructions(): ?string
+    {
+        return null;
+    }
+
     private function getAllTasks(array $credentials): array
     {
         $tasks = $this->projektronService->getAllTasks($credentials);
