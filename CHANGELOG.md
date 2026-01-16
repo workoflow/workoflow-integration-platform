@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## 2026-01-16
 
 ### Added
+- **SAP Analytics Cloud integration (experimental)** - New integration for querying analytics data from SAP SAC. AI agents can discover models, query sales/revenue data with filters, and access dashboards through 6 specialized tools.
 - **HubSpot CRM integration (experimental)** - New integration for managing contacts, companies, and deals in HubSpot CRM with OAuth2 authentication. AI agents can now search, view, create, and update HubSpot records through 12 specialized tools.
 
 ### Improved

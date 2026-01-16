@@ -75,3 +75,6 @@ services:
 
     App\Integration\UserIntegrations\HubSpotIntegration:
         tags: ['app.integration']
+
+    App\Integration\UserIntegrations\SapSacIntegration:
+        tags: ['app.integration']
