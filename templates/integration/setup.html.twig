@@ -71,22 +71,41 @@
                                 {% if config.encryptedCredentials %}
                                     <div class="oauth-status connected">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
+                                        {% if integration.getType() == 'hubspot' %}
+                                            <span>{{ 'status.connected_hubspot'|trans|default('Connected to HubSpot') }}</span>
+                                        {% else %}
+                                            <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
+                                        {% endif %}
                                     </div>
-                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
-                                       class="btn btn-secondary"
-                                       onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
-                                        <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
-                                    </a>
+                                    {% if integration.getType() == 'hubspot' %}
+                                        <a href="{{ path('app_tool_oauth_hubspot_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-hubspot"></i> {{ 'integration.reconnect_hubspot'|trans|default('Reconnect with HubSpot') }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
+                                        </a>
+                                    {% endif %}
                                 {% else %}
                                     <div class="oauth-status disconnected">
                                         <i class="fas fa-times-circle"></i>
                                         <span>{{ 'status.not_connected'|trans|default('Not connected') }}</span>
                                     </div>
-                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
-                                       class="btn btn-primary">
-                                        <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
-                                    </a>
+                                    {% if integration.getType() == 'hubspot' %}
+                                        <a href="{{ path('app_tool_oauth_hubspot_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-hubspot"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         {% else %}
@@ -94,7 +113,11 @@
                             <div class="alert alert-info">
                                 <h4>{{ field.getLabel() }}</h4>
                                 <p>{{ field.getHint() }}</p>
-                                <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
+                                {% if integration.getType() == 'hubspot' %}
+                                    <p><strong>{{ 'integration.oauth_required_hubspot'|trans|default('HubSpot authorization is required. Click "Connect with HubSpot" below to continue.') }}</strong></p>
+                                {% else %}
+                                    <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
+                                {% endif %}
                             </div>
                         {% endif %}
                     {% else %}
@@ -176,10 +199,16 @@
 
                 <div class="form-actions">
                     {% if hasOAuthField and not config %}
-                        {# For new OAuth integrations, change the button to "Connect with Microsoft" #}
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
-                        </button>
+                        {# For new OAuth integrations, show provider-specific button #}
+                        {% if integration.getType() == 'hubspot' %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fab fa-hubspot"></i> {{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}
+                            </button>
+                        {% else %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
+                            </button>
+                        {% endif %}
                     {% else %}
                         <button type="submit" class="btn btn-primary">
                             {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
