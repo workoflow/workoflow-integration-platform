@@ -146,4 +146,69 @@ class AzureOboTokenService
             );
         }
     }
+
+    /**
+     * Refresh an Azure AD access token using a refresh token.
+     *
+     * @param string $refreshToken    Azure AD refresh token
+     * @param string $azureTenantId   Azure AD tenant ID (GUID) or 'common' for multi-tenant
+     * @param string $azureClientId   Workoflow app's Azure AD client ID
+     * @param string $azureClientSecret Workoflow app's Azure AD client secret
+     * @param string $scope           Target resource scope (optional)
+     *
+     * @return array Token response with success, access_token, refresh_token, expires_in
+     */
+    public function refreshAccessToken(
+        string $refreshToken,
+        string $azureTenantId,
+        string $azureClientId,
+        string $azureClientSecret,
+        string $scope = 'openid profile email offline_access'
+    ): array {
+        $tokenEndpoint = "https://login.microsoftonline.com/{$azureTenantId}/oauth2/v2.0/token";
+
+        $this->logger->info('Azure: Refreshing access token', [
+            'tenant_id' => $azureTenantId,
+        ]);
+
+        try {
+            $response = $this->httpClient->request('POST', $tokenEndpoint, [
+                'body' => [
+                    'grant_type' => 'refresh_token',
+                    'client_id' => $azureClientId,
+                    'client_secret' => $azureClientSecret,
+                    'refresh_token' => $refreshToken,
+                    'scope' => $scope,
+                ],
+                'timeout' => 30,
+            ]);
+
+            $data = $response->toArray();
+
+            if (!isset($data['access_token'])) {
+                return [
+                    'success' => false,
+                    'error' => 'No access_token in refresh response',
+                ];
+            }
+
+            $this->logger->info('Azure: Successfully refreshed access token');
+
+            return [
+                'success' => true,
+                'access_token' => $data['access_token'],
+                'refresh_token' => $data['refresh_token'] ?? $refreshToken,
+                'expires_in' => $data['expires_in'] ?? 3600,
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error('Azure: Token refresh failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
 }

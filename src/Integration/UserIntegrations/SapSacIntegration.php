@@ -7,13 +7,17 @@ use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\SapSacService;
+use App\Service\Integration\AzureOboTokenService;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 /**
  * SAP Analytics Cloud (SAC) Integration
  *
  * Enables AI agents to query analytics data from SAP SAC models.
- * Uses two-legged OAuth 2.0 (Client Credentials Grant) for authentication.
+ * Supports two authentication modes:
+ * - Client Credentials: Two-legged OAuth 2.0 (service-to-service)
+ * - User Delegation: Azure AD SAML2 bearer flow (actions attributed to users)
  *
  * Features:
  * - Model discovery (list models, get metadata)
@@ -24,8 +28,122 @@ class SapSacIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private SapSacService $sapSacService,
-        private Environment $twig
+        private Environment $twig,
+        private ?AzureOboTokenService $azureOboTokenService = null,
+        private ?LoggerInterface $logger = null
     ) {
+    }
+
+    /**
+     * Get credentials with OAuth2 token exchange if in user_delegation mode.
+     *
+     * For user delegation, performs the token exchange:
+     * Azure refresh_token → Azure access_token → SAML2 assertion → SAC access_token
+     *
+     * @param array $credentials Original credentials from config
+     * @return array Credentials with valid access token for API calls
+     */
+    private function getUserDelegationCredentials(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'client_credentials';
+
+        // For client credentials mode, use standard token flow
+        if ($authMode === 'client_credentials') {
+            return $this->sapSacService->ensureValidToken($credentials);
+        }
+
+        // For user delegation mode, perform Azure AD → SAML2 → SAC token exchange
+        if ($authMode === 'user_delegation') {
+            if (!$this->azureOboTokenService) {
+                throw new \RuntimeException(
+                    'Azure OAuth service not configured for user delegation mode.'
+                );
+            }
+
+            // Check for required Azure refresh token
+            if (empty($credentials['azure_refresh_token'])) {
+                throw new \RuntimeException(
+                    'Azure AD authorization required. Please click "Connect with Azure AD" to authorize.'
+                );
+            }
+
+            try {
+                $this->logger?->info('Starting OAuth2 token exchange for SAP SAC');
+
+                // Get Azure AD app credentials from environment
+                $azureClientId = $_ENV['AZURE_CLIENT_ID'] ?? '';
+                $azureClientSecret = $_ENV['AZURE_CLIENT_SECRET'] ?? '';
+
+                if (empty($azureClientId) || empty($azureClientSecret)) {
+                    throw new \RuntimeException(
+                        'Azure AD app credentials not configured. Please set AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.'
+                    );
+                }
+
+                // Step 1: Refresh Azure access token
+                $azureTenantId = $credentials['azure_tenant_id'] ?? 'common';
+                $azureAppIdUri = $credentials['azure_app_id_uri'] ?? '';
+
+                $azureResult = $this->azureOboTokenService->refreshAccessToken(
+                    $credentials['azure_refresh_token'],
+                    $azureTenantId,
+                    $azureClientId,
+                    $azureClientSecret,
+                    $azureAppIdUri ? $azureAppIdUri . '/.default' : 'openid profile email offline_access'
+                );
+
+                if (!$azureResult['success']) {
+                    throw new \RuntimeException(
+                        'Failed to refresh Azure AD token: ' . ($azureResult['error'] ?? 'Unknown error') .
+                        '. Please reconnect via Azure AD.'
+                    );
+                }
+
+                $azureAccessToken = $azureResult['access_token'];
+                $this->logger?->debug('Azure access token refreshed successfully');
+
+                // Step 2: Exchange Azure token for SAML2 assertion via OBO
+                // Build SAC tenant host from tenant URL
+                $sacTenantHost = parse_url($credentials['tenant_url'], PHP_URL_HOST) ?? '';
+
+                $samlAssertion = $this->azureOboTokenService->exchangeJwtForSaml2(
+                    $azureAccessToken,
+                    $azureTenantId,
+                    $azureClientId,
+                    $azureClientSecret,
+                    $sacTenantHost
+                );
+
+                $this->logger?->debug('SAML2 assertion obtained from Azure AD');
+
+                // Step 3: Exchange SAML2 assertion for SAP SAC token
+                $sacResult = $this->sapSacService->exchangeSaml2ForSacToken(
+                    $samlAssertion,
+                    $credentials['tenant_url'],
+                    $azureAppIdUri
+                );
+
+                if (!$sacResult['success']) {
+                    throw new \RuntimeException(
+                        'Failed to get SAP SAC token: ' . ($sacResult['error'] ?? 'Unknown error')
+                    );
+                }
+
+                $this->logger?->info('SAP SAC OAuth2 token exchange completed successfully');
+
+                // Return credentials with Bearer token for API calls
+                return array_merge($credentials, [
+                    'access_token' => $sacResult['access_token'],
+                    'expires_at' => time() + ($sacResult['expires_in'] ?? 3600),
+                ]);
+            } catch (\Exception $e) {
+                $this->logger?->error('OAuth2 token exchange failed: ' . $e->getMessage());
+                throw $e;
+            }
+        }
+
+        // Fallback - use client credentials
+        return $this->sapSacService->ensureValidToken($credentials);
     }
 
     public function getType(): string
@@ -174,6 +292,9 @@ class SapSacIntegration implements PersonalizedSkillInterface
             throw new \InvalidArgumentException('SAP SAC integration requires credentials');
         }
 
+        // Get credentials with valid access token (handles both client credentials and user delegation)
+        $credentials = $this->getUserDelegationCredentials($credentials);
+
         return match ($toolName) {
             // Model discovery tools
             'sac_list_models' => $this->sapSacService->listModels($credentials),
@@ -221,27 +342,49 @@ class SapSacIntegration implements PersonalizedSkillInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        // Check if all required fields are present and not empty
-        if (
-            empty($credentials['tenant_url'])
-            || empty($credentials['client_id'])
-            || empty($credentials['client_secret'])
-        ) {
+        $authMode = $credentials['auth_mode'] ?? 'client_credentials';
+
+        // Check tenant URL is required for all modes
+        if (empty($credentials['tenant_url'])) {
             return false;
         }
 
-        // Use SapSacService to validate credentials by testing connection
-        try {
-            $result = $this->sapSacService->testConnectionDetailed($credentials);
-            return $result['success'] ?? false;
-        } catch (\Exception) {
-            return false;
+        // For client credentials mode, validate client ID and secret
+        if ($authMode === 'client_credentials') {
+            if (empty($credentials['client_id']) || empty($credentials['client_secret'])) {
+                return false;
+            }
+
+            // Use SapSacService to validate credentials by testing connection
+            try {
+                $result = $this->sapSacService->testConnectionDetailed($credentials);
+                return $result['success'] ?? false;
+            } catch (\Exception) {
+                return false;
+            }
         }
+
+        // For user delegation mode, check Azure tokens exist
+        if ($authMode === 'user_delegation') {
+            // Basic field validation - actual token validation happens at execution time
+            if (empty($credentials['azure_tenant_id']) || empty($credentials['azure_app_id_uri'])) {
+                return false;
+            }
+            // If Azure tokens exist, consider it valid (connected)
+            if (!empty($credentials['azure_refresh_token'])) {
+                return true;
+            }
+            // No tokens yet - still valid config, just needs OAuth flow
+            return true;
+        }
+
+        return false;
     }
 
     public function getCredentialFields(): array
     {
         return [
+            // Base URL (always required)
             new CredentialField(
                 'tenant_url',
                 'url',
@@ -250,21 +393,79 @@ class SapSacIntegration implements PersonalizedSkillInterface
                 true,
                 'Your SAP Analytics Cloud tenant URL (e.g., https://mycompany.eu10.hcs.cloud.sap)'
             ),
+
+            // Authentication mode selector
+            new CredentialField(
+                'auth_mode',
+                'select',
+                'Authentication Mode',
+                'client_credentials',
+                true,
+                'Choose how to authenticate with SAP SAC',
+                [
+                    'client_credentials' => 'Client Credentials (Service Account)',
+                    'user_delegation' => 'User Delegation (via Azure AD)',
+                ]
+            ),
+
+            // Client Credentials fields (shown when auth_mode=client_credentials)
             new CredentialField(
                 'client_id',
                 'text',
                 'OAuth Client ID',
                 null,
-                true,
-                'Client ID from SAC Admin > System Administration > App Integration'
+                false, // Not globally required, only for client_credentials
+                'Client ID from SAC Admin > System Administration > App Integration',
+                null,
+                'auth_mode',
+                'client_credentials'
             ),
             new CredentialField(
                 'client_secret',
                 'password',
                 'OAuth Client Secret',
                 null,
-                true,
-                'Client Secret from SAC App Integration. Stored encrypted.'
+                false,
+                'Client Secret from SAC App Integration. Stored encrypted.',
+                null,
+                'auth_mode',
+                'client_credentials'
+            ),
+
+            // User Delegation fields (shown when auth_mode=user_delegation)
+            new CredentialField(
+                'azure_tenant_id',
+                'text',
+                'Azure AD Tenant ID',
+                'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                false,
+                'Customer\'s Azure AD tenant ID (GUID format) where users authenticate',
+                null,
+                'auth_mode',
+                'user_delegation'
+            ),
+            new CredentialField(
+                'azure_app_id_uri',
+                'text',
+                'Azure AD App ID URI for SAP SAC',
+                'api://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                false,
+                'App ID URI of SAP SAC in Azure AD (from Azure Portal > Enterprise Apps > SAC > Properties)',
+                null,
+                'auth_mode',
+                'user_delegation'
+            ),
+            // OAuth button field (shown when auth_mode=user_delegation, after config saved)
+            new CredentialField(
+                'oauth_sap_sac',
+                'oauth',
+                'Connect with Azure AD',
+                null,
+                false,
+                'Authorize via Azure AD to enable user delegation. Actions will be attributed to individual users.',
+                null,
+                'auth_mode',
+                'user_delegation'
             ),
         ];
     }
@@ -285,6 +486,42 @@ class SapSacIntegration implements PersonalizedSkillInterface
 
     public function getSetupInstructions(): ?string
     {
-        return null;
+        return <<<'HTML'
+<div class="setup-instructions" data-auth-instructions="true">
+    <h4>Setup Instructions</h4>
+    <div class="auth-option" data-auth-mode="client_credentials">
+        <strong>Client Credentials Setup (Service Account)</strong>
+        <p>Service-to-service authentication. All actions attributed to the technical service account.</p>
+        <ol>
+            <li>In SAP SAC, go to Admin > System Administration > App Integration</li>
+            <li>Create a new OAuth client with required scopes (Data Export API)</li>
+            <li>Copy the Client ID and Secret to the fields below</li>
+        </ol>
+        <p class="note"><strong>Best for:</strong> Automated reporting, batch analytics, or when user attribution is not required.</p>
+    </div>
+    <div class="auth-option" data-auth-mode="user_delegation">
+        <strong>User Delegation Setup (via Azure AD)</strong>
+        <p>Actions attributed to individual users via Azure AD SSO. Required configuration:</p>
+        <ol>
+            <li><strong>Azure AD Setup:</strong>
+                <ul>
+                    <li>Configure SAP SAC as Enterprise Application in Azure AD</li>
+                    <li>Note the App ID URI (starts with api://...)</li>
+                    <li>Grant admin consent for Workoflow app in your Azure AD tenant</li>
+                </ul>
+            </li>
+            <li><strong>SAP SAC Setup:</strong>
+                <ul>
+                    <li>Configure Azure AD as SAML Identity Provider in SAC Admin</li>
+                    <li>Ensure SAML Bearer Assertion flow is enabled (if supported)</li>
+                </ul>
+            </li>
+            <li><strong>User Provisioning:</strong> Each user must exist in both Azure AD and SAP SAC with matching email addresses</li>
+        </ol>
+        <p class="note"><strong>Note:</strong> User delegation requires SAP SAC to support SAML2 Bearer Assertion OAuth flow. Please verify with your SAP administrator.</p>
+    </div>
+    <p class="docs-link"><a href="https://help.sap.com/docs/SAP_ANALYTICS_CLOUD/14cac91febef464dbb1efce20e3f1613/a8e2f4f5a47f401588fbcff8b75e27cd.html" target="_blank" rel="noopener">SAP SAC API Documentation</a></p>
+</div>
+HTML;
     }
 }

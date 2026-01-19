@@ -298,4 +298,307 @@ class IntegrationOAuthController extends AbstractController
             return $this->redirectToRoute('app_skills');
         }
     }
+
+    // ========================================
+    // SAP C4C OAuth2 Flow (User Delegation via Azure AD)
+    // ========================================
+
+    #[Route('/sap-c4c/start/{configId}', name: 'app_tool_oauth_sap_c4c_start')]
+    public function sapC4cStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
+    {
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Verify this is an OAuth2 mode config
+        $existingCredentials = [];
+        if ($config->getEncryptedCredentials()) {
+            $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+            $existingCredentials = json_decode($decrypted, true) ?: [];
+        }
+
+        if (($existingCredentials['auth_mode'] ?? 'basic') !== 'oauth2') {
+            $this->addFlash('error', 'This integration is not configured for OAuth2 authentication');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Store the config ID in session for callback
+        $request->getSession()->set('sap_c4c_oauth_config_id', $configId);
+
+        // Get the Azure AD App ID URI from stored credentials (needed for scope)
+        $appIdUri = $existingCredentials['azure_app_id_uri'] ?? '';
+
+        // Redirect to Azure AD OAuth with appropriate scopes
+        // We need offline_access for refresh token, and the SAP C4C app scope
+        $scopes = [
+            'openid',
+            'profile',
+            'email',
+            'offline_access',
+        ];
+
+        // Add the SAP C4C App ID URI scope if provided
+        if (!empty($appIdUri)) {
+            $scopes[] = $appIdUri . '/.default';
+        }
+
+        return $clientRegistry
+            ->getClient('azure')
+            ->redirect($scopes, []);
+    }
+
+    #[Route('/callback/sap-c4c', name: 'app_tool_oauth_sap_c4c_callback')]
+    public function sapC4cCallback(Request $request, ClientRegistry $clientRegistry): Response
+    {
+        $error = $request->query->get('error');
+        $configId = $request->getSession()->get('sap_c4c_oauth_config_id');
+
+        // Handle OAuth errors or user cancellation
+        if ($error) {
+            if ($configId) {
+                $tempConfig = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+                $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+
+                if ($tempConfig && $oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                    $request->getSession()->remove('oauth_flow_integration');
+                    $request->getSession()->remove('sap_c4c_oauth_config_id');
+                    $this->entityManager->remove($tempConfig);
+                    $this->entityManager->flush();
+
+                    if ($error === 'access_denied') {
+                        $this->addFlash('warning', 'SAP C4C setup cancelled. Azure AD authorization is required for OAuth2 user delegation.');
+                    } else {
+                        $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                    }
+                } else {
+                    $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                }
+            }
+
+            $request->getSession()->remove('sap_c4c_oauth_config_id');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        if (!$configId) {
+            $this->addFlash('error', 'OAuth session expired. Please try again.');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        try {
+            // Get the OAuth2 client
+            $client = $clientRegistry->getClient('azure');
+
+            // Get the access token (includes refresh token due to offline_access scope)
+            $accessToken = $client->getAccessToken();
+
+            // Get existing credentials to preserve OAuth2 config fields
+            $existingCredentials = [];
+            if ($config->getEncryptedCredentials()) {
+                $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+                $existingCredentials = json_decode($decrypted, true) ?: [];
+            }
+
+            // Merge Azure OAuth tokens with existing credentials
+            $credentials = array_merge($existingCredentials, [
+                'azure_access_token' => $accessToken->getToken(),
+                'azure_refresh_token' => $accessToken->getRefreshToken(),
+                'azure_expires_at' => $accessToken->getExpires(),
+                'azure_token_acquired_at' => time(),
+            ]);
+
+            // Encrypt and save credentials
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            $this->entityManager->flush();
+
+            // Clean up session
+            $request->getSession()->remove('sap_c4c_oauth_config_id');
+
+            // Check if this was part of initial setup flow
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->addFlash('success', 'SAP C4C integration created and connected via Azure AD successfully!');
+            } else {
+                $this->addFlash('success', 'SAP C4C integration connected via Azure AD successfully!');
+            }
+
+            return $this->redirectToRoute('app_skills');
+        } catch (\Exception $e) {
+            // If this was initial setup and failed, remove the temporary config
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->entityManager->remove($config);
+                $this->entityManager->flush();
+            }
+
+            $this->addFlash('error', 'Failed to connect to Azure AD: ' . $e->getMessage());
+            return $this->redirectToRoute('app_skills');
+        }
+    }
+
+    // ========================================
+    // SAP SAC OAuth2 Flow (User Delegation via Azure AD)
+    // ========================================
+
+    #[Route('/sap-sac/start/{configId}', name: 'app_tool_oauth_sap_sac_start')]
+    public function sapSacStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
+    {
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Verify this is an OAuth2 user delegation mode config
+        $existingCredentials = [];
+        if ($config->getEncryptedCredentials()) {
+            $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+            $existingCredentials = json_decode($decrypted, true) ?: [];
+        }
+
+        if (($existingCredentials['auth_mode'] ?? 'client_credentials') !== 'user_delegation') {
+            $this->addFlash('error', 'This integration is not configured for user delegation authentication');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Store the config ID in session for callback
+        $request->getSession()->set('sap_sac_oauth_config_id', $configId);
+
+        // Get the Azure AD App ID URI from stored credentials (needed for scope)
+        $appIdUri = $existingCredentials['azure_app_id_uri'] ?? '';
+
+        // Redirect to Azure AD OAuth with appropriate scopes
+        $scopes = [
+            'openid',
+            'profile',
+            'email',
+            'offline_access',
+        ];
+
+        // Add the SAP SAC App ID URI scope if provided
+        if (!empty($appIdUri)) {
+            $scopes[] = $appIdUri . '/.default';
+        }
+
+        return $clientRegistry
+            ->getClient('azure')
+            ->redirect($scopes, []);
+    }
+
+    #[Route('/callback/sap-sac', name: 'app_tool_oauth_sap_sac_callback')]
+    public function sapSacCallback(Request $request, ClientRegistry $clientRegistry): Response
+    {
+        $error = $request->query->get('error');
+        $configId = $request->getSession()->get('sap_sac_oauth_config_id');
+
+        // Handle OAuth errors or user cancellation
+        if ($error) {
+            if ($configId) {
+                $tempConfig = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+                $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+
+                if ($tempConfig && $oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                    $request->getSession()->remove('oauth_flow_integration');
+                    $request->getSession()->remove('sap_sac_oauth_config_id');
+                    $this->entityManager->remove($tempConfig);
+                    $this->entityManager->flush();
+
+                    if ($error === 'access_denied') {
+                        $this->addFlash('warning', 'SAP SAC setup cancelled. Azure AD authorization is required for user delegation.');
+                    } else {
+                        $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                    }
+                } else {
+                    $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                }
+            }
+
+            $request->getSession()->remove('sap_sac_oauth_config_id');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        if (!$configId) {
+            $this->addFlash('error', 'OAuth session expired. Please try again.');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        try {
+            // Get the OAuth2 client
+            $client = $clientRegistry->getClient('azure');
+
+            // Get the access token (includes refresh token due to offline_access scope)
+            $accessToken = $client->getAccessToken();
+
+            // Get existing credentials to preserve OAuth2 config fields
+            $existingCredentials = [];
+            if ($config->getEncryptedCredentials()) {
+                $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+                $existingCredentials = json_decode($decrypted, true) ?: [];
+            }
+
+            // Merge Azure OAuth tokens with existing credentials
+            $credentials = array_merge($existingCredentials, [
+                'azure_access_token' => $accessToken->getToken(),
+                'azure_refresh_token' => $accessToken->getRefreshToken(),
+                'azure_expires_at' => $accessToken->getExpires(),
+                'azure_token_acquired_at' => time(),
+            ]);
+
+            // Encrypt and save credentials
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            $this->entityManager->flush();
+
+            // Clean up session
+            $request->getSession()->remove('sap_sac_oauth_config_id');
+
+            // Check if this was part of initial setup flow
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->addFlash('success', 'SAP SAC integration created and connected via Azure AD successfully!');
+            } else {
+                $this->addFlash('success', 'SAP SAC integration connected via Azure AD successfully!');
+            }
+
+            return $this->redirectToRoute('app_skills');
+        } catch (\Exception $e) {
+            // If this was initial setup and failed, remove the temporary config
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->entityManager->remove($config);
+                $this->entityManager->flush();
+            }
+
+            $this->addFlash('error', 'Failed to connect to Azure AD: ' . $e->getMessage());
+            return $this->redirectToRoute('app_skills');
+        }
+    }
 }

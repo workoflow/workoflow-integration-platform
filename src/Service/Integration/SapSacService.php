@@ -22,6 +22,123 @@ class SapSacService
     }
 
     /**
+     * Exchange SAML2 assertion for SAP SAC OAuth2 access token (User Delegation).
+     *
+     * Uses the OAuth 2.0 SAML 2.0 Bearer Assertion flow (RFC 7522).
+     * This enables user delegation: API calls are attributed to the user.
+     *
+     * @param string $saml2Assertion Base64-encoded SAML2 assertion from Azure AD
+     * @param string $sacTenantUrl SAC tenant URL (e.g., https://company.eu10.hcs.cloud.sap)
+     * @param string $azureAppIdUri Azure AD App ID URI for SAC (for scope)
+     * @return array Token result with success, access_token, or error
+     */
+    public function exchangeSaml2ForSacToken(
+        string $saml2Assertion,
+        string $sacTenantUrl,
+        string $azureAppIdUri
+    ): array {
+        // Build the token URL from the SAC tenant URL
+        $tokenUrl = $this->buildTokenUrl($sacTenantUrl);
+
+        $this->logger->info('SAP SAC OAuth: Starting SAML2 to SAC token exchange', [
+            'sac_tenant_url' => $sacTenantUrl,
+            'token_url' => $tokenUrl,
+        ]);
+
+        try {
+            $response = $this->httpClient->request('POST', $tokenUrl, [
+                'headers' => [
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                ],
+                'body' => [
+                    'grant_type' => 'urn:ietf:params:oauth:grant-type:saml2-bearer',
+                    'assertion' => $saml2Assertion,
+                    'scope' => $azureAppIdUri ? $azureAppIdUri . '/.default' : '',
+                ],
+                'timeout' => 30,
+            ]);
+
+            $data = $response->toArray();
+
+            if (!isset($data['access_token'])) {
+                $this->logger->error('SAP SAC OAuth: No access_token in response', [
+                    'response' => $data,
+                ]);
+                return [
+                    'success' => false,
+                    'error' => 'No access_token in SAC OAuth response',
+                ];
+            }
+
+            $this->logger->info('SAP SAC OAuth: Successfully obtained SAC access token');
+
+            return [
+                'success' => true,
+                'access_token' => $data['access_token'],
+                'token_type' => $data['token_type'] ?? 'Bearer',
+                'expires_in' => $data['expires_in'] ?? 3600,
+            ];
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessage = $errorData['error_description']
+                ?? $errorData['error']
+                ?? "OAuth failed with HTTP {$statusCode}";
+
+            $this->logger->error('SAP SAC OAuth: Token exchange failed', [
+                'status' => $statusCode,
+                'error' => $errorMessage,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $errorMessage,
+                'http_status' => $statusCode,
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error('SAP SAC OAuth: Exception during token exchange', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Token exchange failed: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Ensure we have a valid access token for user delegation mode.
+     *
+     * For user delegation, this method checks if there's a cached SAC token
+     * and returns it, otherwise indicates token exchange is needed.
+     *
+     * @param array $credentials Credentials including cached SAC token info
+     * @return array Updated credentials with valid token or indicator to exchange
+     */
+    public function ensureValidUserDelegationToken(array $credentials): array
+    {
+        // Check if we have a cached SAC access token that's still valid
+        $sacExpiresAt = $credentials['sac_expires_at'] ?? 0;
+
+        if (
+            !empty($credentials['sac_access_token'])
+            && time() < ($sacExpiresAt - self::TOKEN_REFRESH_BUFFER)
+        ) {
+            // Token is still valid
+            return $credentials;
+        }
+
+        // Token expired or doesn't exist - indicate exchange is needed
+        return array_merge($credentials, [
+            'needs_token_exchange' => true,
+        ]);
+    }
+
+    /**
      * Test SAP SAC connection with detailed error reporting
      *
      * @param array $credentials SAC credentials (tenant_url, client_id, client_secret)

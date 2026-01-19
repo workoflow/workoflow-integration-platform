@@ -67,18 +67,40 @@
                 {% for field in credentialFields %}
                     {% if field.getType() == 'oauth' %}
                         {% set hasOAuthField = true %}
+                        {% set isConditionalOAuth = field.isConditional() %}
+                        {% set showOAuthField = not isConditionalOAuth %}
+                        {% if isConditionalOAuth %}
+                            {# For conditional OAuth fields (like sap_c4c oauth2), only show if auth_mode matches #}
+                            {% set currentAuthMode = form.vars.data[field.getConditionalOn()]|default('basic') %}
+                            {% set showOAuthField = currentAuthMode == field.getConditionalValue() %}
+                        {% endif %}
+
+                        {% if showOAuthField %}
                         {% if config and config.id %}
                             {# Show OAuth connection button only after initial save #}
-                            <div class="oauth-section">
+                            <div class="oauth-section{% if isConditionalOAuth %} conditional-field{% endif %}"
+                                 {% if isConditionalOAuth %}
+                                     data-conditional-on="{{ field.getConditionalOn() }}"
+                                     data-conditional-value="{{ field.getConditionalValue() }}"
+                                 {% endif %}>
                                 <div class="alert alert-info">
                                     <h4>{{ field.getLabel() }}</h4>
                                     <p>{{ field.getHint() }}</p>
                                 </div>
-                                {% if config.encryptedCredentials %}
+                                {# Check for Azure tokens for SAP integrations #}
+                                {% set hasAzureTokens = false %}
+                                {% if integration.getType() in ['sap_c4c', 'sap_sac'] %}
+                                    {% set hasAzureTokens = form.vars.data['azure_refresh_token'] is defined and form.vars.data['azure_refresh_token'] %}
+                                {% endif %}
+                                {% if config.encryptedCredentials and (integration.getType() not in ['sap_c4c', 'sap_sac'] or hasAzureTokens) %}
                                     <div class="oauth-status connected">
                                         <i class="fas fa-check-circle"></i>
                                         {% if integration.getType() == 'hubspot' %}
                                             <span>{{ 'status.connected_hubspot'|trans|default('Connected to HubSpot') }}</span>
+                                        {% elseif integration.getType() == 'sap_c4c' %}
+                                            <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
+                                        {% elseif integration.getType() == 'sap_sac' %}
+                                            <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
                                         {% else %}
                                             <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
                                         {% endif %}
@@ -88,6 +110,18 @@
                                            class="btn btn-secondary"
                                            onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
                                             <i class="fab fa-hubspot"></i> {{ 'integration.reconnect_hubspot'|trans|default('Reconnect with HubSpot') }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_c4c' %}
+                                        <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_azure'|trans|default('Reconnect with Azure AD') }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_sac' %}
+                                        <a href="{{ path('app_tool_oauth_sap_sac_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_azure'|trans|default('Reconnect with Azure AD') }}
                                         </a>
                                     {% else %}
                                         <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
@@ -106,6 +140,16 @@
                                            class="btn btn-primary">
                                             <i class="fab fa-hubspot"></i> {{ field.getLabel() }}
                                         </a>
+                                    {% elseif integration.getType() == 'sap_c4c' %}
+                                        <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_sac' %}
+                                        <a href="{{ path('app_tool_oauth_sap_sac_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
                                     {% else %}
                                         <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
                                            class="btn btn-primary">
@@ -116,15 +160,22 @@
                             </div>
                         {% else %}
                             {# Show info message for new configs #}
-                            <div class="alert alert-info">
+                            <div class="alert alert-info{% if isConditionalOAuth %} conditional-field{% endif %}"
+                                 {% if isConditionalOAuth %}
+                                     data-conditional-on="{{ field.getConditionalOn() }}"
+                                     data-conditional-value="{{ field.getConditionalValue() }}"
+                                 {% endif %}>
                                 <h4>{{ field.getLabel() }}</h4>
                                 <p>{{ field.getHint() }}</p>
                                 {% if integration.getType() == 'hubspot' %}
                                     <p><strong>{{ 'integration.oauth_required_hubspot'|trans|default('HubSpot authorization is required. Click "Connect with HubSpot" below to continue.') }}</strong></p>
+                                {% elseif integration.getType() in ['sap_c4c', 'sap_sac'] %}
+                                    <p><strong>{{ 'integration.oauth_required_azure'|trans|default('Save this configuration first, then click "Connect with Azure AD" to authorize.') }}</strong></p>
                                 {% else %}
                                     <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
                                 {% endif %}
                             </div>
+                        {% endif %}
                         {% endif %}
                     {% else %}
                         {% set fieldName = field.getName() %}

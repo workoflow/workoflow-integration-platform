@@ -7,6 +7,9 @@ use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\SapC4cService;
+use App\Service\Integration\AzureOboTokenService;
+use App\Service\Integration\SapC4cOAuthService;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 // https://github.com/SAP-archive/C4CODATAAPIDEVGUIDE
@@ -14,8 +17,130 @@ class SapC4cIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private SapC4cService $sapC4cService,
-        private Environment $twig
+        private Environment $twig,
+        private ?AzureOboTokenService $azureOboTokenService = null,
+        private ?SapC4cOAuthService $sapC4cOAuthService = null,
+        private ?LoggerInterface $logger = null
     ) {
+    }
+
+    /**
+     * Get credentials with OAuth2 token exchange if in oauth2 mode.
+     *
+     * For OAuth2 user delegation, performs the token exchange:
+     * Azure refresh_token → Azure access_token → SAML2 assertion → SAP C4C access_token
+     *
+     * @param array $credentials Original credentials from config
+     * @return array Credentials with valid access token for API calls
+     */
+    private function getOAuth2EnrichedCredentials(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'basic';
+
+        // For basic auth, return credentials as-is
+        if ($authMode === 'basic') {
+            return $credentials;
+        }
+
+        // For OAuth2, perform token exchange
+        if ($authMode === 'oauth2') {
+            if (!$this->azureOboTokenService || !$this->sapC4cOAuthService) {
+                throw new \RuntimeException(
+                    'OAuth2 services not configured. Please ensure AzureOboTokenService and SapC4cOAuthService are available.'
+                );
+            }
+
+            // Check for required Azure refresh token
+            if (empty($credentials['azure_refresh_token'])) {
+                throw new \RuntimeException(
+                    'Azure AD authorization required. Please click "Connect with Azure AD" to authorize.'
+                );
+            }
+
+            // Check for required SAP C4C OAuth credentials
+            if (empty($credentials['c4c_oauth_client_id']) || empty($credentials['c4c_oauth_client_secret'])) {
+                throw new \RuntimeException(
+                    'SAP C4C OAuth credentials required. Please configure OAuth Client ID and Secret.'
+                );
+            }
+
+            try {
+                $this->logger?->info('Starting OAuth2 token exchange for SAP C4C');
+
+                // Get Azure AD app credentials from environment
+                $azureClientId = $_ENV['AZURE_CLIENT_ID'] ?? '';
+                $azureClientSecret = $_ENV['AZURE_CLIENT_SECRET'] ?? '';
+
+                if (empty($azureClientId) || empty($azureClientSecret)) {
+                    throw new \RuntimeException(
+                        'Azure AD app credentials not configured. Please set AZURE_CLIENT_ID and AZURE_CLIENT_SECRET.'
+                    );
+                }
+
+                // Step 1: Refresh Azure access token
+                $azureTenantId = $credentials['azure_tenant_id'] ?? 'common';
+                $azureAppIdUri = $credentials['azure_app_id_uri'] ?? '';
+
+                // Build scope for the target resource (SAP C4C)
+                $c4cTenantHost = parse_url($credentials['base_url'], PHP_URL_HOST) ?? '';
+
+                $azureResult = $this->azureOboTokenService->refreshAccessToken(
+                    $credentials['azure_refresh_token'],
+                    $azureTenantId,
+                    $azureClientId,
+                    $azureClientSecret,
+                    $azureAppIdUri ? $azureAppIdUri . '/.default' : 'openid profile email offline_access'
+                );
+
+                if (!$azureResult['success']) {
+                    throw new \RuntimeException(
+                        'Failed to refresh Azure AD token: ' . ($azureResult['error'] ?? 'Unknown error') .
+                        '. Please reconnect via Azure AD.'
+                    );
+                }
+
+                $azureAccessToken = $azureResult['access_token'];
+                $this->logger?->debug('Azure access token refreshed successfully');
+
+                // Step 2: Exchange Azure token for SAML2 assertion via OBO
+                $samlAssertion = $this->azureOboTokenService->exchangeJwtForSaml2(
+                    $azureAccessToken,
+                    $azureTenantId,
+                    $azureClientId,
+                    $azureClientSecret,
+                    $c4cTenantHost
+                );
+
+                $this->logger?->debug('SAML2 assertion obtained from Azure AD');
+
+                // Step 3: Exchange SAML2 assertion for SAP C4C token
+                $c4cResult = $this->sapC4cOAuthService->exchangeSaml2ForC4cToken(
+                    $samlAssertion,
+                    $credentials['base_url'],
+                    $credentials['c4c_oauth_client_id'],
+                    $credentials['c4c_oauth_client_secret']
+                );
+
+                if (!$c4cResult['success']) {
+                    throw new \RuntimeException(
+                        'Failed to get SAP C4C token: ' . ($c4cResult['error'] ?? 'Unknown error')
+                    );
+                }
+
+                $this->logger?->info('SAP C4C OAuth2 token exchange completed successfully');
+
+                // Return credentials with Bearer token for API calls
+                return array_merge($credentials, [
+                    'c4c_access_token' => $c4cResult['access_token'],
+                    'auth_type' => 'bearer',
+                ]);
+            } catch (\Exception $e) {
+                $this->logger?->error('OAuth2 token exchange failed: ' . $e->getMessage());
+                throw $e;
+            }
+        }
+
+        return $credentials;
     }
 
     public function getType(): string
@@ -806,6 +931,9 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             throw new \InvalidArgumentException('SAP C4C integration requires credentials');
         }
 
+        // For OAuth2 mode, perform token exchange to get valid C4C access token
+        $credentials = $this->getOAuth2EnrichedCredentials($credentials);
+
         return match ($toolName) {
             // Lead tools
             'c4c_create_lead' => $this->createLead($credentials, $parameters),
@@ -1332,7 +1460,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'Choose how to authenticate with SAP C4C',
                 [
                     'basic' => 'Basic Auth (Technical User)',
-                    'oauth2' => 'OAuth2 (User Delegation)',
+                    'oauth2' => 'OAuth2 (User Delegation via Azure AD)',
                 ]
             ),
 
@@ -1367,7 +1495,18 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'Azure AD Tenant ID',
                 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
                 false,
-                'Your Azure AD tenant ID (GUID format)',
+                'Customer\'s Azure AD tenant ID (GUID format) where users authenticate',
+                null,
+                'auth_mode',
+                'oauth2'
+            ),
+            new CredentialField(
+                'azure_app_id_uri',
+                'text',
+                'Azure AD App ID URI for SAP C4C',
+                'api://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                false,
+                'App ID URI of SAP C4C in Azure AD (from Azure Portal > Enterprise Apps > SAP C4C > Properties)',
                 null,
                 'auth_mode',
                 'oauth2'
@@ -1394,6 +1533,18 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'auth_mode',
                 'oauth2'
             ),
+            // OAuth button field (shown when auth_mode=oauth2, after config saved)
+            new CredentialField(
+                'oauth_sap_c4c',
+                'oauth',
+                'Connect with Azure AD',
+                null,
+                false,
+                'Authorize via Azure AD to enable user delegation. Actions will be attributed to individual users.',
+                null,
+                'auth_mode',
+                'oauth2'
+            ),
         ];
     }
 
@@ -1403,23 +1554,35 @@ class SapC4cIntegration implements PersonalizedSkillInterface
 <div class="setup-instructions" data-auth-instructions="true">
     <h4>Setup Instructions</h4>
     <div class="auth-option" data-auth-mode="basic">
-        <strong>Basic Auth Setup</strong>
+        <strong>Basic Auth Setup (Test Systems)</strong>
         <p>Simple setup - all actions attributed to the technical user account.</p>
         <ol>
             <li>Create a Communication Arrangement in SAP C4C</li>
             <li>Use the generated technical user credentials below</li>
         </ol>
+        <p class="note"><strong>Best for:</strong> Test/sandbox environments where user attribution is not required.</p>
     </div>
     <div class="auth-option" data-auth-mode="oauth2">
-        <strong>OAuth2 Setup (User Delegation)</strong>
-        <p>Actions attributed to individual users. Required configuration:</p>
+        <strong>OAuth2 Setup (Production with User Delegation)</strong>
+        <p>Actions attributed to individual users via Azure AD SSO. Required configuration:</p>
         <ol>
-            <li>Configure Azure AD as Identity Provider in SAP C4C Admin</li>
-            <li>Register OAuth Client in SAP C4C (Administrator > OAuth 2.0 Client Registration)</li>
-            <li>Ensure each user is provisioned as a Business User in SAP C4C</li>
-            <li>Grant admin consent in Azure AD for delegated permissions</li>
+            <li><strong>Azure AD Setup:</strong>
+                <ul>
+                    <li>Configure SAP C4C as Enterprise Application in Azure AD</li>
+                    <li>Note the App ID URI (starts with api://...)</li>
+                    <li>Grant admin consent for Workoflow app in your Azure AD tenant</li>
+                </ul>
+            </li>
+            <li><strong>SAP C4C Setup:</strong>
+                <ul>
+                    <li>Configure Azure AD as SAML Identity Provider (Administration > Common Settings)</li>
+                    <li>Register OAuth 2.0 Client (Administrator > OAuth 2.0 Client Registration)</li>
+                    <li>Note Client ID and Secret</li>
+                </ul>
+            </li>
+            <li><strong>User Provisioning:</strong> Each user must exist in both Azure AD and SAP C4C with matching email addresses</li>
         </ol>
-        <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP C4C with matching email addresses.</p>
+        <p class="note"><strong>Flow:</strong> User logs in via Azure AD → Token exchanged for SAP C4C access → Actions attributed to user</p>
     </div>
     <p class="docs-link"><a href="https://help.sap.com/docs/sap-cloud-for-customer/odata-services/sap-cloud-for-customer-odata-api" target="_blank" rel="noopener">SAP C4C OData API Documentation</a></p>
 </div>
