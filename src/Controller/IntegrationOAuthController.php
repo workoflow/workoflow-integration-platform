@@ -328,22 +328,14 @@ class IntegrationOAuthController extends AbstractController
         // Store the config ID in session for callback
         $request->getSession()->set('sap_c4c_oauth_config_id', $configId);
 
-        // Get the Azure AD App ID URI from stored credentials (needed for scope)
-        $appIdUri = $existingCredentials['azure_app_id_uri'] ?? '';
-
         // Redirect to Azure AD OAuth with appropriate scopes
-        // We need offline_access for refresh token, and the SAP C4C app scope
+        // We need offline_access for refresh token
         $scopes = [
             'openid',
             'profile',
             'email',
             'offline_access',
         ];
-
-        // Add the SAP C4C App ID URI scope if provided
-        if (!empty($appIdUri)) {
-            $scopes[] = $appIdUri . '/.default';
-        }
 
         return $clientRegistry
             ->getClient('azure')
@@ -408,12 +400,21 @@ class IntegrationOAuthController extends AbstractController
                 $existingCredentials = json_decode($decrypted, true) ?: [];
             }
 
+            // Extract tenant ID from the access token (JWT) for future API calls
+            $azureTenantId = null;
+            $tokenParts = explode('.', $accessToken->getToken());
+            if (count($tokenParts) >= 2) {
+                $payload = json_decode(base64_decode($tokenParts[1]), true);
+                $azureTenantId = $payload['tid'] ?? null;
+            }
+
             // Merge Azure OAuth tokens with existing credentials
             $credentials = array_merge($existingCredentials, [
                 'azure_access_token' => $accessToken->getToken(),
                 'azure_refresh_token' => $accessToken->getRefreshToken(),
                 'azure_expires_at' => $accessToken->getExpires(),
                 'azure_token_acquired_at' => time(),
+                'azure_tenant_id' => $azureTenantId, // Auto-extracted from token
             ]);
 
             // Encrypt and save credentials
@@ -480,9 +481,6 @@ class IntegrationOAuthController extends AbstractController
         // Store the config ID in session for callback
         $request->getSession()->set('sap_sac_oauth_config_id', $configId);
 
-        // Get the Azure AD App ID URI from stored credentials (needed for scope)
-        $appIdUri = $existingCredentials['azure_app_id_uri'] ?? '';
-
         // Redirect to Azure AD OAuth with appropriate scopes
         $scopes = [
             'openid',
@@ -490,11 +488,6 @@ class IntegrationOAuthController extends AbstractController
             'email',
             'offline_access',
         ];
-
-        // Add the SAP SAC App ID URI scope if provided
-        if (!empty($appIdUri)) {
-            $scopes[] = $appIdUri . '/.default';
-        }
 
         return $clientRegistry
             ->getClient('azure')
@@ -559,12 +552,21 @@ class IntegrationOAuthController extends AbstractController
                 $existingCredentials = json_decode($decrypted, true) ?: [];
             }
 
+            // Extract tenant ID from the access token (JWT) for future API calls
+            $azureTenantId = null;
+            $tokenParts = explode('.', $accessToken->getToken());
+            if (count($tokenParts) >= 2) {
+                $payload = json_decode(base64_decode($tokenParts[1]), true);
+                $azureTenantId = $payload['tid'] ?? null;
+            }
+
             // Merge Azure OAuth tokens with existing credentials
             $credentials = array_merge($existingCredentials, [
                 'azure_access_token' => $accessToken->getToken(),
                 'azure_refresh_token' => $accessToken->getRefreshToken(),
                 'azure_expires_at' => $accessToken->getExpires(),
                 'azure_token_acquired_at' => time(),
+                'azure_tenant_id' => $azureTenantId, // Auto-extracted from token
             ]);
 
             // Encrypt and save credentials

@@ -77,19 +77,19 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                     );
                 }
 
-                // Step 1: Refresh Azure access token
+                // Use tenant ID from stored token or 'common' for multi-tenant
                 $azureTenantId = $credentials['azure_tenant_id'] ?? 'common';
-                $azureAppIdUri = $credentials['azure_app_id_uri'] ?? '';
 
-                // Build scope for the target resource (SAP C4C)
+                // Derive C4C host from base URL for OBO scope
                 $c4cTenantHost = parse_url($credentials['base_url'], PHP_URL_HOST) ?? '';
 
+                // Step 1: Refresh Azure access token
                 $azureResult = $this->azureOboTokenService->refreshAccessToken(
                     $credentials['azure_refresh_token'],
                     $azureTenantId,
                     $azureClientId,
                     $azureClientSecret,
-                    $azureAppIdUri ? $azureAppIdUri . '/.default' : 'openid profile email offline_access'
+                    'openid profile email offline_access'
                 );
 
                 if (!$azureResult['success']) {
@@ -103,6 +103,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 $this->logger?->debug('Azure access token refreshed successfully');
 
                 // Step 2: Exchange Azure token for SAML2 assertion via OBO
+                // The scope is derived from C4C base URL
                 $samlAssertion = $this->azureOboTokenService->exchangeJwtForSaml2(
                     $azureAccessToken,
                     $azureTenantId,
@@ -1490,28 +1491,6 @@ class SapC4cIntegration implements PersonalizedSkillInterface
 
             // OAuth2 fields (shown when auth_mode=oauth2)
             new CredentialField(
-                'azure_tenant_id',
-                'text',
-                'Azure AD Tenant ID',
-                'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-                false,
-                'Customer\'s Azure AD tenant ID (GUID format) where users authenticate',
-                null,
-                'auth_mode',
-                'oauth2'
-            ),
-            new CredentialField(
-                'azure_app_id_uri',
-                'text',
-                'Azure AD App ID URI for SAP C4C',
-                'api://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-                false,
-                'App ID URI of SAP C4C in Azure AD (from Azure Portal > Enterprise Apps > SAP C4C > Properties)',
-                null,
-                'auth_mode',
-                'oauth2'
-            ),
-            new CredentialField(
                 'c4c_oauth_client_id',
                 'text',
                 'SAP C4C OAuth Client ID',
@@ -1564,25 +1543,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
     </div>
     <div class="auth-option" data-auth-mode="oauth2">
         <strong>OAuth2 Setup (Production with User Delegation)</strong>
-        <p>Actions attributed to individual users via Azure AD SSO. Required configuration:</p>
+        <p>Actions attributed to individual users via Azure AD SSO.</p>
         <ol>
-            <li><strong>Azure AD Setup:</strong>
-                <ul>
-                    <li>Configure SAP C4C as Enterprise Application in Azure AD</li>
-                    <li>Note the App ID URI (starts with api://...)</li>
-                    <li>Grant admin consent for Workoflow app in your Azure AD tenant</li>
-                </ul>
-            </li>
-            <li><strong>SAP C4C Setup:</strong>
-                <ul>
-                    <li>Configure Azure AD as SAML Identity Provider (Administration > Common Settings)</li>
-                    <li>Register OAuth 2.0 Client (Administrator > OAuth 2.0 Client Registration)</li>
-                    <li>Note Client ID and Secret</li>
-                </ul>
-            </li>
-            <li><strong>User Provisioning:</strong> Each user must exist in both Azure AD and SAP C4C with matching email addresses</li>
+            <li><strong>SAP C4C Admin:</strong> Register OAuth 2.0 Client (Administrator > OAuth 2.0 Client Registration) and enter Client ID/Secret below</li>
+            <li><strong>Connect:</strong> Click "Connect with Azure AD" to authorize</li>
         </ol>
-        <p class="note"><strong>Flow:</strong> User logs in via Azure AD → Token exchanged for SAP C4C access → Actions attributed to user</p>
+        <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP C4C with matching email addresses</p>
     </div>
     <p class="docs-link"><a href="https://help.sap.com/docs/sap-cloud-for-customer/odata-services/sap-cloud-for-customer-odata-api" target="_blank" rel="noopener">SAP C4C OData API Documentation</a></p>
 </div>
