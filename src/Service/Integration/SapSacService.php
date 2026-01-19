@@ -29,13 +29,15 @@ class SapSacService
      *
      * @param string $saml2Assertion Base64-encoded SAML2 assertion from Azure AD
      * @param string $sacTenantUrl SAC tenant URL (e.g., https://company.eu10.hcs.cloud.sap)
-     * @param string $azureAppIdUri Azure AD App ID URI for SAC (for scope)
+     * @param string $sacClientId SAC OAuth Client ID (from SAC App Integration)
+     * @param string $sacClientSecret SAC OAuth Client Secret
      * @return array Token result with success, access_token, or error
      */
     public function exchangeSaml2ForSacToken(
         string $saml2Assertion,
         string $sacTenantUrl,
-        string $azureAppIdUri
+        string $sacClientId,
+        string $sacClientSecret
     ): array {
         // Build the token URL from the SAC tenant URL
         $tokenUrl = $this->buildTokenUrl($sacTenantUrl);
@@ -48,12 +50,13 @@ class SapSacService
         try {
             $response = $this->httpClient->request('POST', $tokenUrl, [
                 'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode("{$sacClientId}:{$sacClientSecret}"),
                     'Content-Type' => 'application/x-www-form-urlencoded',
                 ],
                 'body' => [
                     'grant_type' => 'urn:ietf:params:oauth:grant-type:saml2-bearer',
-                    'assertion' => $saml2Assertion,
-                    'scope' => $azureAppIdUri ? $azureAppIdUri . '/.default' : '',
+                    'client_id' => $sacClientId,
+                    'assertion' => base64_encode($saml2Assertion),
                 ],
                 'timeout' => 30,
             ]);

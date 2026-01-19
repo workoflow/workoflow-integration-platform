@@ -2,12 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-19
+
+### Improved
+- **SAP C4C and SAC user delegation alignment** - Both SAP C4C and SAP SAC integrations now use consistent "User Delegation" naming and require SAP OAuth credentials for the SAML2 Bearer flow. Setup instructions updated with clear 3-step process.
+
 ## 2026-01-16
 
 ### Added
 - **SAP Analytics Cloud integration (experimental)** - New integration for querying analytics data from SAP SAC. AI agents can discover models, query sales/revenue data with filters, and access dashboards through 6 specialized tools.
 - **HubSpot CRM integration (experimental)** - New integration for managing contacts, companies, and deals in HubSpot CRM with OAuth2 authentication. AI agents can now search, view, create, and update HubSpot records through 12 specialized tools.
-- **SAP C4C OAuth2 User Delegation** - SAP C4C now supports OAuth2 authentication for user delegation. When configured with Azure AD integration, actions in SAP C4C are attributed to the actual user instead of a technical service account. Setup instructions are shown on the integration configuration page.
+- **SAP C4C and SAC User Delegation** - SAP C4C and SAP SAC now support user delegation via Azure AD. When configured, actions are attributed to the actual user instead of a technical service account. Setup instructions are shown on the integration configuration page.
 
 ### Improved
 - **SAP C4C agent now provides clickable links** - When asking for a link to an opportunity, account, contact, or lead, the agent now returns the SAP C4C web interface URL instead of API/XML links

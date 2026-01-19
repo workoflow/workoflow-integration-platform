@@ -67,6 +67,13 @@ class SapSacIntegration implements PersonalizedSkillInterface
                 );
             }
 
+            // Check for required SAP SAC OAuth credentials
+            if (empty($credentials['sac_oauth_client_id']) || empty($credentials['sac_oauth_client_secret'])) {
+                throw new \RuntimeException(
+                    'SAP SAC OAuth credentials required. Please configure OAuth Client ID and Secret.'
+                );
+            }
+
             try {
                 $this->logger?->info('Starting OAuth2 token exchange for SAP SAC');
 
@@ -121,7 +128,8 @@ class SapSacIntegration implements PersonalizedSkillInterface
                 $sacResult = $this->sapSacService->exchangeSaml2ForSacToken(
                     $samlAssertion,
                     $credentials['tenant_url'],
-                    '' // No app ID URI needed - derived from tenant URL
+                    $credentials['sac_oauth_client_id'],
+                    $credentials['sac_oauth_client_secret']
                 );
 
                 if (!$sacResult['success']) {
@@ -365,8 +373,12 @@ class SapSacIntegration implements PersonalizedSkillInterface
             }
         }
 
-        // For user delegation mode, tenant URL is sufficient - OAuth flow handles the rest
+        // For user delegation mode, require SAC OAuth credentials
         if ($authMode === 'user_delegation') {
+            // Require SAC OAuth credentials
+            if (empty($credentials['sac_oauth_client_id']) || empty($credentials['sac_oauth_client_secret'])) {
+                return false;
+            }
             // If Azure tokens exist, consider it valid (connected)
             if (!empty($credentials['azure_refresh_token'])) {
                 return true;
@@ -430,7 +442,29 @@ class SapSacIntegration implements PersonalizedSkillInterface
             ),
 
             // User Delegation fields (shown when auth_mode=user_delegation)
-            // Note: Azure Tenant ID is auto-extracted from the OAuth token
+            // SAC OAuth credentials for SAML2 Bearer exchange
+            new CredentialField(
+                'sac_oauth_client_id',
+                'text',
+                'SAP SAC OAuth Client ID',
+                null,
+                false,
+                'OAuth Client ID from SAC Admin > App Integration (with SAML2.0 Bearer grant)',
+                null,
+                'auth_mode',
+                'user_delegation'
+            ),
+            new CredentialField(
+                'sac_oauth_client_secret',
+                'password',
+                'SAP SAC OAuth Client Secret',
+                null,
+                false,
+                'OAuth Client Secret from SAC App Integration. Stored encrypted.',
+                null,
+                'auth_mode',
+                'user_delegation'
+            ),
             // OAuth button field (shown when auth_mode=user_delegation, after config saved)
             new CredentialField(
                 'oauth_sap_sac',
@@ -479,9 +513,11 @@ class SapSacIntegration implements PersonalizedSkillInterface
         <strong>User Delegation Setup (via Azure AD)</strong>
         <p>Actions attributed to individual users via Azure AD SSO.</p>
         <ol>
+            <li><strong>SAP SAC Admin:</strong> Create OAuth client with SAML2.0 Bearer grant (Admin > App Integration)</li>
+            <li><strong>Enter:</strong> OAuth Client ID and Secret below</li>
             <li><strong>Connect:</strong> Click "Connect with Azure AD" to authorize</li>
         </ol>
-        <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP SAC with matching email addresses. User delegation requires SAP SAC to support SAML2 Bearer Assertion OAuth flow.</p>
+        <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP SAC with matching email addresses</p>
     </div>
     <p class="docs-link"><a href="https://help.sap.com/docs/SAP_ANALYTICS_CLOUD/14cac91febef464dbb1efce20e3f1613/a8e2f4f5a47f401588fbcff8b75e27cd.html" target="_blank" rel="noopener">SAP SAC API Documentation</a></p>
 </div>

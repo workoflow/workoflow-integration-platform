@@ -25,9 +25,9 @@ class SapC4cIntegration implements PersonalizedSkillInterface
     }
 
     /**
-     * Get credentials with OAuth2 token exchange if in oauth2 mode.
+     * Get credentials with OAuth2 token exchange if in user_delegation mode.
      *
-     * For OAuth2 user delegation, performs the token exchange:
+     * For user delegation, performs the token exchange:
      * Azure refresh_token → Azure access_token → SAML2 assertion → SAP C4C access_token
      *
      * @param array $credentials Original credentials from config
@@ -42,8 +42,8 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             return $credentials;
         }
 
-        // For OAuth2, perform token exchange
-        if ($authMode === 'oauth2') {
+        // For user delegation, perform token exchange
+        if ($authMode === 'user_delegation') {
             if (!$this->azureOboTokenService || !$this->sapC4cOAuthService) {
                 throw new \RuntimeException(
                     'OAuth2 services not configured. Please ensure AzureOboTokenService and SapC4cOAuthService are available.'
@@ -1419,15 +1419,20 @@ class SapC4cIntegration implements PersonalizedSkillInterface
             if (empty($credentials['username']) || empty($credentials['password'])) {
                 return false;
             }
-        } else {
-            // OAuth2: require Azure AD and SAP C4C OAuth credentials
+        } elseif ($authMode === 'user_delegation') {
+            // User Delegation: require SAP C4C OAuth credentials
             if (
-                empty($credentials['azure_tenant_id']) ||
                 empty($credentials['c4c_oauth_client_id']) ||
                 empty($credentials['c4c_oauth_client_secret'])
             ) {
                 return false;
             }
+            // If Azure tokens exist, consider it connected and valid
+            if (!empty($credentials['azure_refresh_token'])) {
+                return true;
+            }
+            // No tokens yet - still valid config, just needs OAuth flow
+            return true;
         }
 
         // Use SapC4cService to validate credentials
@@ -1461,7 +1466,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'Choose how to authenticate with SAP C4C',
                 [
                     'basic' => 'Basic Auth (Technical User)',
-                    'oauth2' => 'OAuth2 (User Delegation via Azure AD)',
+                    'user_delegation' => 'User Delegation (via Azure AD)',
                 ]
             ),
 
@@ -1489,7 +1494,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'basic'
             ),
 
-            // OAuth2 fields (shown when auth_mode=oauth2)
+            // User Delegation fields (shown when auth_mode=user_delegation)
             new CredentialField(
                 'c4c_oauth_client_id',
                 'text',
@@ -1499,7 +1504,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'OAuth Client ID from SAP C4C Administrator > OAuth 2.0 Client Registration',
                 null,
                 'auth_mode',
-                'oauth2'
+                'user_delegation'
             ),
             new CredentialField(
                 'c4c_oauth_client_secret',
@@ -1510,9 +1515,9 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'OAuth Client Secret from SAP C4C Admin. Encrypted and stored securely.',
                 null,
                 'auth_mode',
-                'oauth2'
+                'user_delegation'
             ),
-            // OAuth button field (shown when auth_mode=oauth2, after config saved)
+            // OAuth button field (shown when auth_mode=user_delegation, after config saved)
             new CredentialField(
                 'oauth_sap_c4c',
                 'oauth',
@@ -1522,7 +1527,7 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'Authorize via Azure AD to enable user delegation. Actions will be attributed to individual users.',
                 null,
                 'auth_mode',
-                'oauth2'
+                'user_delegation'
             ),
         ];
     }
@@ -1541,11 +1546,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
         </ol>
         <p class="note"><strong>Best for:</strong> Test/sandbox environments where user attribution is not required.</p>
     </div>
-    <div class="auth-option" data-auth-mode="oauth2">
-        <strong>OAuth2 Setup (Production with User Delegation)</strong>
+    <div class="auth-option" data-auth-mode="user_delegation">
+        <strong>User Delegation Setup (via Azure AD)</strong>
         <p>Actions attributed to individual users via Azure AD SSO.</p>
         <ol>
-            <li><strong>SAP C4C Admin:</strong> Register OAuth 2.0 Client (Administrator > OAuth 2.0 Client Registration) and enter Client ID/Secret below</li>
+            <li><strong>SAP C4C Admin:</strong> Register OAuth 2.0 Client (Administrator > OAuth 2.0 Client Registration)</li>
+            <li><strong>Enter:</strong> OAuth Client ID and Secret below</li>
             <li><strong>Connect:</strong> Click "Connect with Azure AD" to authorize</li>
         </ol>
         <p class="note"><strong>Note:</strong> Users must exist in both Azure AD and SAP C4C with matching email addresses</p>
