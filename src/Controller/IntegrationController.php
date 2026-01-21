@@ -402,6 +402,9 @@ class IntegrationController extends AbstractController
                 // Redirect to the appropriate OAuth provider based on integration type
                 $oauthRoute = match ($type) {
                     'hubspot' => 'app_tool_oauth_hubspot_start',
+                    'jira', 'confluence' => 'app_tool_oauth_atlassian_start',
+                    'sap_c4c' => 'app_tool_oauth_sap_c4c_start',
+                    'sap_sac' => 'app_tool_oauth_sap_sac_start',
                     default => 'app_tool_oauth_microsoft_start',
                 };
 

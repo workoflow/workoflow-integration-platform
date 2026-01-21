@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Atlassian OAuth 2.0 authentication for Jira and Confluence** - Jira and Confluence integrations now support OAuth 2.0 authentication alongside the existing API token method. OAuth provides automatic token refresh and eliminates the need to manually manage API tokens. Users can choose their preferred authentication method during setup.
 
 ### Fixed
+- **Jira and Confluence OAuth setup now redirects to Atlassian** - Fixed issue where setting up Jira or Confluence with OAuth 2.0 incorrectly redirected to Microsoft login instead of Atlassian authorization
 - **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
 
 ## 2026-01-19
