@@ -184,6 +184,7 @@ integration:
   save_configuration: Konfiguration speichern
   connect_microsoft: Mit Microsoft verbinden
   connect_hubspot: Mit HubSpot verbinden
+  connect_atlassian: Mit Atlassian verbinden
   oauth_required: Microsoft-Autorisierung ist erforderlich. Klicken Sie unten auf "Mit Microsoft verbinden", um fortzufahren.
   oauth_required_hubspot: HubSpot-Autorisierung ist erforderlich. Klicken Sie unten auf "Mit HubSpot verbinden", um fortzufahren.
   oauth_reconnect_confirm: Dies ersetzt Ihre bestehende Verbindung. Fortfahren?
