@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - **OAuth 2.0 is now the default for Jira and Confluence** - When adding new Jira or Confluence skills, OAuth 2.0 is now pre-selected as the recommended authentication method. Setup instructions now update dynamically based on your selected authentication mode.
+- **User Delegation is now the default for SAP C4C and SAP SAC** - When adding new SAP skills, User Delegation (via Azure AD) is now pre-selected as the recommended authentication method for better security and user attribution.
 
 ### Fixed
 - **Jira and Confluence OAuth setup now redirects to Atlassian** - Fixed issue where setting up Jira or Confluence with OAuth 2.0 incorrectly redirected to Microsoft login instead of Atlassian authorization
