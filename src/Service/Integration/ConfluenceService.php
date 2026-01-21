@@ -143,7 +143,13 @@ class ConfluenceService
 
             // Test v1 API endpoint (used for search, get page, comments)
             try {
-                $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/user/current', array_merge(
+                $testUrl = $url . '/wiki/rest/api/user/current';
+                error_log("Confluence test connection - URL: {$testUrl}");
+                error_log("Confluence test connection - Auth mode: " . ($credentials['auth_mode'] ?? 'not_set'));
+                error_log("Confluence test connection - Has token: " . (!empty($credentials['access_token']) ? 'yes' : 'no'));
+                error_log("Confluence test connection - Cloud ID: " . ($credentials['cloud_id'] ?? 'not_set'));
+
+                $response = $this->httpClient->request('GET', $testUrl, array_merge(
                     $authOptions,
                     ['timeout' => 10]
                 ));
