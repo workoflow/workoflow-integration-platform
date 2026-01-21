@@ -344,6 +344,7 @@ class AtlassianOAuthService
             'read:confluence-content.all',
             'write:confluence-content',
             'read:confluence-space.summary',
+            'read:confluence-user',
             'offline_access',
         ];
     }
