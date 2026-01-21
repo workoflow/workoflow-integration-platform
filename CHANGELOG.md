@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - **Workoflow MCP in footer and release notes** - Added MCP Server project link to the footer's Open Source section and added Workoflow MCP release notes to the Release Notes page with automatic changelog fetching from GitHub
 
+### Changed
+- **User Delegation is now the default for SAP C4C and SAP SAC** - When adding new SAP skills, User Delegation (via Azure AD) is now pre-selected as the recommended authentication method for better security and user attribution.
+
 ### Fixed
 - **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
 

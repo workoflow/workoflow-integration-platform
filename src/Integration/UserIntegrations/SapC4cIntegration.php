@@ -1456,12 +1456,12 @@ class SapC4cIntegration implements PersonalizedSkillInterface
                 'Your SAP Cloud for Customer instance URL without trailing slash'
             ),
 
-            // Authentication mode selector
+            // Authentication mode selector (default: user_delegation for better security)
             new CredentialField(
                 'auth_mode',
                 'select',
                 'Authentication Mode',
-                'basic',
+                'user_delegation',
                 true,
                 'Choose how to authenticate with SAP C4C',
                 [
