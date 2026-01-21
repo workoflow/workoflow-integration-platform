@@ -132,11 +132,11 @@ class SapC4cService
     }
 
     /**
-     * Check if credentials use OAuth2 authentication mode
+     * Check if credentials use User Delegation authentication mode
      */
-    public function isOAuth2Mode(array $credentials): bool
+    public function isUserDelegationMode(array $credentials): bool
     {
-        return ($credentials['auth_mode'] ?? 'basic') === 'oauth2';
+        return ($credentials['auth_mode'] ?? 'basic') === 'user_delegation';
     }
 
     /**
@@ -273,10 +273,10 @@ class SapC4cService
         $testedEndpoints = [];
         $authMode = $credentials['auth_mode'] ?? 'basic';
 
-        // For OAuth2 mode, we can only verify the base URL is valid
+        // For user delegation mode, we can only verify the base URL is valid
         // since we don't have a user token at setup time
-        if ($authMode === 'oauth2') {
-            return $this->testOAuth2Configuration($credentials);
+        if ($authMode === 'user_delegation') {
+            return $this->testUserDelegationConfiguration($credentials);
         }
 
         try {
@@ -387,41 +387,20 @@ class SapC4cService
     }
 
     /**
-     * Test OAuth2 configuration by validating credentials format and URL accessibility
+     * Test User Delegation configuration by validating credentials format and URL accessibility
      * Note: Full OAuth2 flow validation requires a user token, which isn't available at setup time
      */
-    private function testOAuth2Configuration(array $credentials): array
+    private function testUserDelegationConfiguration(array $credentials): array
     {
         $testedEndpoints = [];
 
-        // Validate required OAuth2 credentials are present
-        if (empty($credentials['azure_tenant_id'])) {
-            return [
-                'success' => false,
-                'message' => 'Missing Azure AD Tenant ID',
-                'details' => 'Azure AD Tenant ID is required for OAuth2 authentication.',
-                'suggestion' => 'Enter your Azure AD tenant ID (GUID format).',
-                'tested_endpoints' => $testedEndpoints,
-            ];
-        }
-
+        // Validate required SAP C4C OAuth credentials are present
         if (empty($credentials['c4c_oauth_client_id']) || empty($credentials['c4c_oauth_client_secret'])) {
             return [
                 'success' => false,
                 'message' => 'Missing SAP C4C OAuth credentials',
-                'details' => 'SAP C4C OAuth Client ID and Secret are required.',
+                'details' => 'SAP C4C OAuth Client ID and Secret are required for User Delegation.',
                 'suggestion' => 'Enter OAuth credentials from SAP C4C Administrator > OAuth 2.0 Client Registration.',
-                'tested_endpoints' => $testedEndpoints,
-            ];
-        }
-
-        // Validate Azure Tenant ID format (GUID)
-        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $credentials['azure_tenant_id'])) {
-            return [
-                'success' => false,
-                'message' => 'Invalid Azure AD Tenant ID format',
-                'details' => 'Azure AD Tenant ID must be a GUID (e.g., xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).',
-                'suggestion' => 'Check your Azure AD tenant ID in the Azure Portal.',
                 'tested_endpoints' => $testedEndpoints,
             ];
         }
@@ -450,11 +429,11 @@ class SapC4cService
             if (in_array($statusCode, [200, 401, 403])) {
                 return [
                     'success' => true,
-                    'message' => 'OAuth2 configuration validated',
-                    'details' => 'SAP C4C instance is accessible. OAuth2 credentials will be validated when users authenticate.',
-                    'suggestion' => 'Ensure Azure AD is configured as Identity Provider in SAP C4C Admin.',
+                    'message' => 'User Delegation configuration validated',
+                    'details' => 'SAP C4C instance is accessible. User delegation will be completed when you click "Connect with Azure AD".',
+                    'suggestion' => 'Click "Connect with Azure AD" to authorize user delegation.',
                     'tested_endpoints' => $testedEndpoints,
-                    'auth_mode' => 'oauth2',
+                    'auth_mode' => 'user_delegation',
                 ];
             }
 

@@ -773,6 +773,40 @@ class IntegrationController extends AbstractController
                 }
             }
 
+            // For SAP C4C, use detailed testing
+            if ($type === 'sap_c4c') {
+                $sapC4cIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($sapC4cIntegration);
+                $property = $reflection->getProperty('sapC4cService');
+                $property->setAccessible(true);
+                $sapC4cService = $property->getValue($sapC4cIntegration);
+
+                $result = $sapC4cService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
             // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
                 // Auto-reconnect if previously disconnected
