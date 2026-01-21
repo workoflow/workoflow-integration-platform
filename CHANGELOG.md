@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **Jira and Confluence OAuth setup now redirects to Atlassian** - Fixed issue where setting up Jira or Confluence with OAuth 2.0 incorrectly redirected to Microsoft login instead of Atlassian authorization
 - **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
+- **Jira and Confluence OAuth test connection now works with expired tokens** - Fixed 401 error when testing Jira or Confluence OAuth connections after the access token expired. Tokens are now automatically refreshed before testing.
 
 ## 2026-01-19
 

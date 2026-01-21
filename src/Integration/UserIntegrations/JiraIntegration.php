@@ -27,7 +27,7 @@ class JiraIntegration implements PersonalizedSkillInterface
      * @param array $credentials Original credentials from config
      * @return array Credentials with valid access token for API calls
      */
-    private function getOAuth2EnrichedCredentials(array $credentials): array
+    public function getOAuth2EnrichedCredentials(array $credentials): array
     {
         $authMode = $credentials['auth_mode'] ?? 'api_token';
 

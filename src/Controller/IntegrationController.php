@@ -694,7 +694,21 @@ class IntegrationController extends AbstractController
 
             // For Jira, use detailed testing
             if ($type === 'jira') {
+                /** @var \App\Integration\UserIntegrations\JiraIntegration $jiraIntegration */
                 $jiraIntegration = $integration;
+
+                // Enrich OAuth credentials (refresh token if needed) before testing
+                $enrichedCredentials = $jiraIntegration->getOAuth2EnrichedCredentials($credentials);
+
+                // If token was refreshed, save the updated credentials
+                if ($enrichedCredentials !== $credentials) {
+                    $config->setEncryptedCredentials(
+                        $this->encryptionService->encrypt(json_encode($enrichedCredentials))
+                    );
+                    $this->entityManager->flush();
+                    $credentials = $enrichedCredentials;
+                }
+
                 // Access the service through reflection to get detailed results
                 $reflection = new \ReflectionClass($jiraIntegration);
                 $property = $reflection->getProperty('jiraService');
@@ -728,7 +742,21 @@ class IntegrationController extends AbstractController
 
             // For Confluence, use detailed testing
             if ($type === 'confluence') {
+                /** @var \App\Integration\UserIntegrations\ConfluenceIntegration $confluenceIntegration */
                 $confluenceIntegration = $integration;
+
+                // Enrich OAuth credentials (refresh token if needed) before testing
+                $enrichedCredentials = $confluenceIntegration->getOAuth2EnrichedCredentials($credentials);
+
+                // If token was refreshed, save the updated credentials
+                if ($enrichedCredentials !== $credentials) {
+                    $config->setEncryptedCredentials(
+                        $this->encryptionService->encrypt(json_encode($enrichedCredentials))
+                    );
+                    $this->entityManager->flush();
+                    $credentials = $enrichedCredentials;
+                }
+
                 // Access the service through reflection to get detailed results
                 $reflection = new \ReflectionClass($confluenceIntegration);
                 $property = $reflection->getProperty('confluenceService');
