@@ -394,6 +394,12 @@ class IntegrationController extends AbstractController
                 $tempConfig->setName($name);
                 $tempConfig->setActive(false);
 
+                // Save credentials (including auth_mode) so OAuth callback can verify
+                if (!empty($credentials)) {
+                    $encryptedCredentials = $this->encryptionService->encrypt(json_encode($credentials));
+                    $tempConfig->setEncryptedCredentials($encryptedCredentials);
+                }
+
                 $this->entityManager->persist($tempConfig);
                 $this->entityManager->flush();
 
