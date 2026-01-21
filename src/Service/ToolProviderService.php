@@ -304,7 +304,8 @@ class ToolProviderService
         }
 
         return match ($integrationType) {
-            'jira', 'confluence' => $credentials['url'] ?? null,
+            // Check API token URL first, then OAuth site_url
+            'jira', 'confluence' => $credentials['url'] ?? $credentials['site_url'] ?? null,
             'gitlab' => $credentials['gitlab_url'] ?? null,
             default => null  // SharePoint, Trello, or future integrations without URL
         };

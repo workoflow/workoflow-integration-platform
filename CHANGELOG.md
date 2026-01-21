@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 - **Reduced AI agent token usage by ~90%** - Jira and Confluence tools now return streamlined, AI-friendly responses instead of raw API data. This prevents context window overflow errors when working with large datasets like sprint issues or Confluence pages.
 - **Jira issue responses optimized for AI** - Sprint issues, search results, and board issues now return only essential fields (key, summary, status, assignee, priority, labels, dates) with descriptions converted from verbose Atlassian Document Format (ADF) to plain text.
 - **Confluence page content now AI-readable** - Page content is converted from HTML storage format to clean plain text with automatic truncation for large pages, preventing token overflow.
+- **Jira single issue view now fully optimized** - The `jira_get_issue` tool now returns a flat, AI-friendly structure with comments (last 10), attachments, linked issues, subtasks, and a direct web URL, dramatically reducing response size while keeping all essential data.
+- **Tool responses now include instance metadata** - All Jira and Confluence tool responses now include `_instance` metadata (siteUrl, siteName, cloudId) to help AI agents identify which instance data came from when working with multiple connections.
+- **OAuth site URLs now shown in tool descriptions** - When using OAuth authentication, Jira and Confluence tool descriptions now correctly display the connected instance URL (e.g., "company.atlassian.net"), making it easier to identify the correct integration.
 
 ### Changed
 - **OAuth 2.0 is now the default for Jira and Confluence** - When adding new Jira or Confluence skills, OAuth 2.0 is now pre-selected as the recommended authentication method. Setup instructions now update dynamically based on your selected authentication mode.
