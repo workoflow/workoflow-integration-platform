@@ -97,7 +97,12 @@
                                 {% if integration.getType() in ['sap_c4c', 'sap_sac'] %}
                                     {% set hasAzureTokens = form.vars.data['azure_refresh_token'] is defined and form.vars.data['azure_refresh_token'] %}
                                 {% endif %}
-                                {% if config.encryptedCredentials and (integration.getType() not in ['sap_c4c', 'sap_sac'] or hasAzureTokens) %}
+                                {# Check for Atlassian OAuth tokens #}
+                                {% set hasAtlassianTokens = false %}
+                                {% if integration.getType() in ['jira', 'confluence'] %}
+                                    {% set hasAtlassianTokens = form.vars.data['access_token'] is defined and form.vars.data['access_token'] and form.vars.data['cloud_id'] is defined and form.vars.data['cloud_id'] %}
+                                {% endif %}
+                                {% if config.encryptedCredentials and (integration.getType() not in ['sap_c4c', 'sap_sac', 'jira', 'confluence'] or hasAzureTokens or hasAtlassianTokens) %}
                                     <div class="oauth-status connected">
                                         <i class="fas fa-check-circle"></i>
                                         {% if integration.getType() == 'hubspot' %}
@@ -106,6 +111,8 @@
                                             <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
                                         {% elseif integration.getType() == 'sap_sac' %}
                                             <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
+                                        {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                            <span>{{ 'status.connected_atlassian'|trans|default('Connected to Atlassian') }}{% if form.vars.data['site_name'] is defined and form.vars.data['site_name'] %} ({{ form.vars.data['site_name'] }}){% endif %}</span>
                                         {% else %}
                                             <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
                                         {% endif %}
@@ -127,6 +134,12 @@
                                            class="btn btn-secondary"
                                            onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
                                             <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_azure'|trans|default('Reconnect with Azure AD') }}
+                                        </a>
+                                    {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                        <a href="{{ path('app_tool_oauth_atlassian_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-atlassian"></i> {{ 'integration.reconnect_atlassian'|trans|default('Reconnect with Atlassian') }}
                                         </a>
                                     {% else %}
                                         <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
@@ -155,6 +168,11 @@
                                            class="btn btn-primary">
                                             <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
                                         </a>
+                                    {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                        <a href="{{ path('app_tool_oauth_atlassian_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-atlassian"></i> {{ field.getLabel() }}
+                                        </a>
                                     {% else %}
                                         <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
                                            class="btn btn-primary">
@@ -176,6 +194,8 @@
                                     <p><strong>{{ 'integration.oauth_required_hubspot'|trans|default('HubSpot authorization is required. Click "Connect with HubSpot" below to continue.') }}</strong></p>
                                 {% elseif integration.getType() in ['sap_c4c', 'sap_sac'] %}
                                     <p><strong>{{ 'integration.oauth_required_azure'|trans|default('Save this configuration first, then click "Connect with Azure AD" to authorize.') }}</strong></p>
+                                {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                    <p><strong>{{ 'integration.oauth_required_atlassian'|trans|default('Save this configuration first, then click "Connect with Atlassian" to authorize.') }}</strong></p>
                                 {% else %}
                                     <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
                                 {% endif %}

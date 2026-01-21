@@ -7,14 +7,75 @@ use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\JiraService;
+use App\Service\Integration\AtlassianOAuthService;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 class JiraIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private JiraService $jiraService,
-        private Environment $twig
+        private Environment $twig,
+        private ?AtlassianOAuthService $atlassianOAuthService = null,
+        private ?LoggerInterface $logger = null
     ) {
+    }
+
+    /**
+     * Get credentials with OAuth2 token refresh if needed.
+     *
+     * @param array $credentials Original credentials from config
+     * @return array Credentials with valid access token for API calls
+     */
+    private function getOAuth2EnrichedCredentials(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        // For API token auth, return credentials as-is
+        if ($authMode === 'api_token') {
+            return $credentials;
+        }
+
+        // For OAuth mode, ensure token is valid
+        if ($authMode === 'oauth') {
+            if (!$this->atlassianOAuthService) {
+                throw new \RuntimeException(
+                    'Atlassian OAuth service not configured. Please ensure AtlassianOAuthService is available.'
+                );
+            }
+
+            // Check for required OAuth tokens
+            if (empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
+                throw new \RuntimeException(
+                    'Atlassian authorization required. Please click "Connect with Atlassian" to authorize.'
+                );
+            }
+
+            // Check for cloud_id
+            if (empty($credentials['cloud_id'])) {
+                throw new \RuntimeException(
+                    'Atlassian Cloud ID not found. Please reconnect via "Connect with Atlassian".'
+                );
+            }
+
+            try {
+                $this->logger?->info('Jira OAuth: Ensuring valid access token');
+
+                // Ensure token is valid (auto-refresh if needed)
+                $refreshedCredentials = $this->atlassianOAuthService->ensureValidToken($credentials);
+
+                $this->logger?->info('Jira OAuth: Token validation successful');
+
+                return $refreshedCredentials;
+            } catch (\Exception $e) {
+                $this->logger?->error('Jira OAuth: Token validation failed', [
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+        }
+
+        return $credentials;
     }
 
     public function getType(): string
@@ -531,6 +592,9 @@ class JiraIntegration implements PersonalizedSkillInterface
             throw new \InvalidArgumentException('Jira integration requires credentials');
         }
 
+        // For OAuth mode, perform token refresh if needed
+        $credentials = $this->getOAuth2EnrichedCredentials($credentials);
+
         return match ($toolName) {
             'jira_search' => $this->jiraService->search(
                 $credentials,
@@ -655,45 +719,95 @@ class JiraIntegration implements PersonalizedSkillInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        // First check if all required fields are present and not empty
-        if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
-            return false;
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'api_token') {
+            // API Token Auth: require url, username, and api_token
+            if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
+                return false;
+            }
+
+            // Use JiraService to validate credentials
+            try {
+                return $this->jiraService->testConnection($credentials);
+            } catch (\Exception $e) {
+                return false;
+            }
+        } elseif ($authMode === 'oauth') {
+            // OAuth: check for required OAuth tokens and cloud_id
+            if (!empty($credentials['access_token']) && !empty($credentials['cloud_id'])) {
+                return true;
+            }
+            // No tokens yet - still valid config, just needs OAuth flow
+            return true;
         }
 
-        // Use JiraService to validate credentials
-        try {
-            return $this->jiraService->testConnection($credentials);
-        } catch (\Exception $e) {
-            return false;
-        }
+        return false;
     }
 
     public function getCredentialFields(): array
     {
         return [
+            // Auth mode selector (default: api_token for backward compatibility)
+            new CredentialField(
+                'auth_mode',
+                'select',
+                'Authentication Mode',
+                'api_token',
+                true,
+                'Choose how to authenticate with Jira',
+                [
+                    'api_token' => 'API Token (Personal)',
+                    'oauth' => 'OAuth 2.0 (Recommended)',
+                ]
+            ),
+
+            // API Token fields (conditional on auth_mode=api_token)
             new CredentialField(
                 'url',
                 'url',
                 'Jira URL',
                 'https://your-domain.atlassian.net',
-                true,
-                'Your Jira instance URL'
+                false,
+                'Your Jira instance URL',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'username',
                 'email',
                 'Email',
                 'your-email@example.com',
-                true,
-                'Email address associated with your Jira account'
+                false,
+                'Email address associated with your Jira account',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'api_token',
                 'password',
                 'API Token',
                 null,
-                true,
-                'Your Jira API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
+                false,
+                'Your Jira API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>',
+                null,
+                'auth_mode',
+                'api_token'
+            ),
+
+            // OAuth field (conditional on auth_mode=oauth)
+            new CredentialField(
+                'oauth_atlassian',
+                'oauth',
+                'Connect with Atlassian',
+                null,
+                false,
+                'Authorize via Atlassian to access Jira. This is the recommended authentication method.',
+                null,
+                'auth_mode',
+                'oauth'
             ),
         ];
     }
@@ -713,6 +827,31 @@ class JiraIntegration implements PersonalizedSkillInterface
 
     public function getSetupInstructions(): ?string
     {
-        return null;
+        return <<<'HTML'
+<div class="setup-instructions" data-auth-instructions="true">
+    <h4>Setup Instructions</h4>
+    <div class="auth-option" data-auth-mode="api_token">
+        <strong>API Token Setup (Personal Access)</strong>
+        <p>Simple setup using your personal API token. Actions are attributed to your account.</p>
+        <ol>
+            <li>Go to <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Atlassian API Tokens</a></li>
+            <li>Create a new API token</li>
+            <li>Enter your Jira URL, email, and the API token below</li>
+        </ol>
+        <p class="note"><strong>Best for:</strong> Quick personal setup, testing, or when OAuth is not available.</p>
+    </div>
+    <div class="auth-option" data-auth-mode="oauth">
+        <strong>OAuth 2.0 Setup (Recommended)</strong>
+        <p>More secure authentication using Atlassian OAuth. No API tokens to manage.</p>
+        <ol>
+            <li><strong>Save:</strong> Click "Save Configuration" to create the integration</li>
+            <li><strong>Connect:</strong> Click "Connect with Atlassian" to authorize</li>
+            <li><strong>Select Site:</strong> Choose your Jira site when prompted</li>
+        </ol>
+        <p class="note"><strong>Benefits:</strong> No API token management, automatic token refresh, more secure.</p>
+    </div>
+    <p class="docs-link"><a href="https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/" target="_blank" rel="noopener">Jira REST API Documentation</a></p>
+</div>
+HTML;
     }
 }

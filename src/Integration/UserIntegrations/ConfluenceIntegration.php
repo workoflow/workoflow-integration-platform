@@ -6,14 +6,18 @@ use App\Entity\IntegrationConfig;
 use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
+use App\Service\Integration\AtlassianOAuthService;
 use App\Service\Integration\ConfluenceService;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 class ConfluenceIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private ConfluenceService $confluenceService,
-        private Environment $twig
+        private Environment $twig,
+        private AtlassianOAuthService $atlassianOAuthService,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -202,9 +206,54 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
         return true;
     }
 
+    /**
+     * Enrich OAuth credentials with refreshed tokens if needed.
+     *
+     * @param array $credentials Current credentials from database
+     *
+     * @return array Enriched credentials with valid access token
+     *
+     * @throws \RuntimeException If token refresh fails and re-authentication is required
+     */
+    public function getOAuth2EnrichedCredentials(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        // Only enrich OAuth credentials
+        if ($authMode !== 'oauth') {
+            return $credentials;
+        }
+
+        try {
+            return $this->atlassianOAuthService->ensureValidToken($credentials);
+        } catch (\RuntimeException $e) {
+            $this->logger->error('Confluence OAuth: Token refresh failed, re-authentication required', [
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
     public function validateCredentials(array $credentials): bool
     {
-        // First check if all required fields are present and not empty
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            // For OAuth, check if we have valid tokens and cloud_id
+            if (empty($credentials['access_token']) || empty($credentials['cloud_id'])) {
+                return false;
+            }
+
+            // Try to ensure token is valid (will refresh if needed)
+            try {
+                $enrichedCredentials = $this->getOAuth2EnrichedCredentials($credentials);
+                return $this->confluenceService->testConnection($enrichedCredentials);
+            } catch (\Exception) {
+                return false;
+            }
+        }
+
+        // API Token mode: check if all required fields are present and not empty
         if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
             return false;
         }
@@ -212,7 +261,7 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
         // Make actual API call to validate credentials
         try {
             return $this->confluenceService->testConnection($credentials);
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return false;
         }
     }
@@ -220,29 +269,66 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
     public function getCredentialFields(): array
     {
         return [
+            // Auth mode selector - defaults to api_token for backward compatibility
+            new CredentialField(
+                'auth_mode',
+                'select',
+                'Authentication Mode',
+                'api_token',
+                true,
+                'Choose how to authenticate with Confluence. OAuth 2.0 is recommended for better security and automatic token refresh.',
+                [
+                    'api_token' => 'API Token (Personal)',
+                    'oauth' => 'OAuth 2.0 (Recommended)',
+                ]
+            ),
+
+            // === API Token mode fields (shown when auth_mode = api_token) ===
             new CredentialField(
                 'url',
                 'url',
                 'Confluence URL',
                 'https://your-domain.atlassian.net',
-                true,
-                'Your Confluence instance URL (e.g., https://your-domain.atlassian.net) - do not include /wiki'
+                false, // Not globally required, only required for api_token mode
+                'Your Confluence instance URL (e.g., https://your-domain.atlassian.net) - do not include /wiki',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'username',
                 'email',
                 'Email',
                 'your-email@example.com',
-                true,
-                'Email address associated with your Confluence account'
+                false,
+                'Email address associated with your Confluence account',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'api_token',
                 'password',
                 'API Token',
                 null,
-                true,
-                'Your Confluence API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
+                false,
+                'Your Confluence API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>',
+                null,
+                'auth_mode',
+                'api_token'
+            ),
+
+            // === OAuth mode fields (shown when auth_mode = oauth) ===
+            new CredentialField(
+                'oauth_atlassian',
+                'oauth',
+                'Connect with Atlassian',
+                null,
+                false,
+                'Authorize via Atlassian to access Confluence. This grants secure access without sharing your password.',
+                null,
+                'auth_mode',
+                'oauth'
             ),
         ];
     }
@@ -262,6 +348,35 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
 
     public function getSetupInstructions(): ?string
     {
-        return null;
+        return <<<'HTML'
+<div class="setup-instructions">
+    <h4>Authentication Options</h4>
+    <p>You can connect to Confluence using one of two methods:</p>
+
+    <div class="auth-option">
+        <h5>Option 1: OAuth 2.0 (Recommended)</h5>
+        <p>The most secure option with automatic token refresh:</p>
+        <ol>
+            <li>Select "OAuth 2.0 (Recommended)" as the authentication mode</li>
+            <li>Click "Connect with Atlassian"</li>
+            <li>Sign in to your Atlassian account and authorize access</li>
+            <li>You'll be redirected back automatically</li>
+        </ol>
+        <p class="text-muted small">OAuth tokens are automatically refreshed, so you won't need to re-authenticate frequently.</p>
+    </div>
+
+    <div class="auth-option mt-3">
+        <h5>Option 2: API Token (Personal)</h5>
+        <p>Use a personal API token for authentication:</p>
+        <ol>
+            <li>Select "API Token (Personal)" as the authentication mode</li>
+            <li>Enter your Confluence URL (e.g., https://your-domain.atlassian.net)</li>
+            <li>Enter the email address associated with your Atlassian account</li>
+            <li>Create an API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Atlassian Account Settings</a></li>
+            <li>Enter the API token (not your password)</li>
+        </ol>
+    </div>
+</div>
+HTML;
     }
 }

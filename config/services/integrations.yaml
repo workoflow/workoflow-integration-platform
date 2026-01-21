@@ -78,3 +78,10 @@ services:
 
     App\Integration\UserIntegrations\SapSacIntegration:
         tags: ['app.integration']
+
+    # OAuth Services for custom OAuth flows (not using knp_oauth2_client)
+    App\Service\Integration\AtlassianOAuthService:
+        arguments:
+            $clientId: '%env(ATLASSIAN_CLIENT_ID)%'
+            $clientSecret: '%env(ATLASSIAN_CLIENT_SECRET)%'
+            $redirectUri: '%env(APP_URL)%/integrations/oauth/callback/atlassian'

@@ -14,6 +14,62 @@ class ConfluenceService
     ) {
     }
 
+    /**
+     * Get the API base URL based on auth mode.
+     *
+     * For OAuth: https://api.atlassian.com/ex/confluence/{cloudId}
+     * For API Token: user-provided URL (normalized)
+     *
+     * @param array $credentials Credentials including auth_mode, cloud_id, or url
+     *
+     * @return string API base URL
+     */
+    private function getApiBaseUrl(array $credentials): string
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            if (empty($credentials['cloud_id'])) {
+                throw new InvalidArgumentException('OAuth mode requires cloud_id');
+            }
+            return 'https://api.atlassian.com/ex/confluence/' . $credentials['cloud_id'];
+        }
+
+        // API Token mode: validate and normalize user-provided URL
+        return $this->validateAndNormalizeUrl($credentials['url']);
+    }
+
+    /**
+     * Get authentication options for HTTP client based on auth mode.
+     *
+     * For OAuth: Bearer token authorization header
+     * For API Token: Basic auth with username and api_token
+     *
+     * @param array $credentials Credentials including auth_mode and tokens
+     *
+     * @return array HTTP client options (either 'auth_basic' or 'headers')
+     */
+    private function getAuthOptions(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            if (empty($credentials['access_token'])) {
+                throw new InvalidArgumentException('OAuth mode requires access_token');
+            }
+            return [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $credentials['access_token'],
+                ],
+            ];
+        }
+
+        // API Token mode: Basic auth
+        return [
+            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+        ];
+    }
+
     private function validateAndNormalizeUrl(string $url): string
     {
         try {
@@ -81,15 +137,16 @@ class ConfluenceService
         $testedEndpoints = [];
 
         try {
-            // Validate and normalize URL
-            $url = $this->validateAndNormalizeUrl($credentials['url']);
+            // Get base URL based on auth mode (OAuth or API Token)
+            $url = $this->getApiBaseUrl($credentials);
+            $authOptions = $this->getAuthOptions($credentials);
 
             // Test v1 API endpoint (used for search, get page, comments)
             try {
-                $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/user/current', [
-                    'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                    'timeout' => 10,
-                ]);
+                $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/user/current', array_merge(
+                    $authOptions,
+                    ['timeout' => 10]
+                ));
 
                 $statusCode = $response->getStatusCode();
                 $testedEndpoints[] = [
@@ -101,11 +158,13 @@ class ConfluenceService
                 if ($statusCode === 200) {
                     // v1 API works, now test v2 API endpoint (used for creating/updating pages)
                     try {
-                        $v2Response = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', [
-                            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                            'query' => ['limit' => 1],
-                            'timeout' => 10,
-                        ]);
+                        $v2Response = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', array_merge(
+                            $authOptions,
+                            [
+                                'query' => ['limit' => 1],
+                                'timeout' => 10,
+                            ]
+                        ));
 
                         $v2StatusCode = $v2Response->getStatusCode();
                         $testedEndpoints[] = [
@@ -232,40 +291,52 @@ class ConfluenceService
 
     public function search(array $credentials, string $query, int $limit = 25): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/search', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'query' => [
-                'cql' => $query,
-                'limit' => $limit,
-            ],
-        ]);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
+
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/search', array_merge(
+            $authOptions,
+            [
+                'query' => [
+                    'cql' => $query,
+                    'limit' => $limit,
+                ],
+            ]
+        ));
 
         return $response->toArray();
     }
 
     public function getPage(array $credentials, string $pageId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId, [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'query' => [
-                'expand' => 'body.storage,version',
-            ],
-        ]);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
+
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId, array_merge(
+            $authOptions,
+            [
+                'query' => [
+                    'expand' => 'body.storage,version',
+                ],
+            ]
+        ));
 
         return $response->toArray();
     }
 
     public function getComments(array $credentials, string $pageId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
-        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId . '/child/comment', [
-            'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            'query' => [
-                'expand' => 'body.storage',
-            ],
-        ]);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
+
+        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId . '/child/comment', array_merge(
+            $authOptions,
+            [
+                'query' => [
+                    'expand' => 'body.storage',
+                ],
+            ]
+        ));
 
         return $response->toArray();
     }
@@ -401,15 +472,18 @@ class ConfluenceService
     public function updatePage(array $credentials, array $params): array
     {
         try {
-            $url = $this->validateAndNormalizeUrl($credentials['url']);
+            $url = $this->getApiBaseUrl($credentials);
+            $authOptions = $this->getAuthOptions($credentials);
 
             // First, get the current page to retrieve its version number
-            $currentPageResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/pages/' . $params['pageId'], [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'body-format' => 'storage',
-                ],
-            ]);
+            $currentPageResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/pages/' . $params['pageId'], array_merge(
+                $authOptions,
+                [
+                    'query' => [
+                        'body-format' => 'storage',
+                    ],
+                ]
+            ));
 
             $currentPage = $currentPageResponse->toArray();
             $currentVersion = $currentPage['version']['number'] ?? 1;
@@ -437,14 +511,19 @@ class ConfluenceService
             }
 
             // Update the page using the v2 API
-            $response = $this->httpClient->request('PUT', $url . '/wiki/api/v2/pages/' . $params['pageId'], [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'json' => $body,
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ],
-            ]);
+            $response = $this->httpClient->request('PUT', $url . '/wiki/api/v2/pages/' . $params['pageId'], array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json',
+                        ]
+                    ),
+                    'json' => $body,
+                ]
+            ));
 
             $pageData = $response->toArray();
 
@@ -507,7 +586,8 @@ class ConfluenceService
     public function createPage(array $credentials, array $params): array
     {
         try {
-            $url = $this->validateAndNormalizeUrl($credentials['url']);
+            $url = $this->getApiBaseUrl($credentials);
+            $authOptions = $this->getAuthOptions($credentials);
 
             // Prepare the request body
             $body = [
@@ -527,12 +607,14 @@ class ConfluenceService
                 $body['spaceId'] = $params['spaceId'];
             } elseif (!empty($params['spaceKey'])) {
                 // Get space by key to find the ID using v2 API
-                $spaceResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', [
-                    'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                    'query' => [
-                        'keys' => $params['spaceKey'],
-                    ],
-                ]);
+                $spaceResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', array_merge(
+                    $authOptions,
+                    [
+                        'query' => [
+                            'keys' => $params['spaceKey'],
+                        ],
+                    ]
+                ));
 
                 $spaceData = $spaceResponse->toArray();
                 if (!empty($spaceData['results'][0]['id'])) {
@@ -550,14 +632,19 @@ class ConfluenceService
             }
 
             // Create the page using the v2 API
-            $response = $this->httpClient->request('POST', $url . '/wiki/api/v2/pages', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'json' => $body,
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ],
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/wiki/api/v2/pages', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Accept' => 'application/json',
+                            'Content-Type' => 'application/json',
+                        ]
+                    ),
+                    'json' => $body,
+                ]
+            ));
 
             $pageData = $response->toArray();
 

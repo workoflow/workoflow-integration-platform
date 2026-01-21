@@ -16,6 +16,62 @@ class JiraService
     ) {
     }
 
+    /**
+     * Get the API base URL based on auth mode.
+     *
+     * For OAuth: https://api.atlassian.com/ex/jira/{cloudId}
+     * For API Token: user-provided URL (normalized)
+     *
+     * @param array $credentials Credentials including auth_mode, cloud_id, or url
+     *
+     * @return string API base URL
+     */
+    private function getApiBaseUrl(array $credentials): string
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            if (empty($credentials['cloud_id'])) {
+                throw new InvalidArgumentException('OAuth mode requires cloud_id');
+            }
+            return 'https://api.atlassian.com/ex/jira/' . $credentials['cloud_id'];
+        }
+
+        // API Token mode: validate and normalize user-provided URL
+        return $this->validateAndNormalizeUrl($credentials['url']);
+    }
+
+    /**
+     * Get authentication options for HTTP client based on auth mode.
+     *
+     * For OAuth: Bearer token authorization header
+     * For API Token: Basic auth with username and api_token
+     *
+     * @param array $credentials Credentials including auth_mode and tokens
+     *
+     * @return array HTTP client options (either 'auth_basic' or 'headers')
+     */
+    private function getAuthOptions(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            if (empty($credentials['access_token'])) {
+                throw new InvalidArgumentException('OAuth mode requires access_token');
+            }
+            return [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $credentials['access_token'],
+                ],
+            ];
+        }
+
+        // API Token mode: Basic auth
+        return [
+            'auth_basic' => [$credentials['username'], $credentials['api_token']],
+        ];
+    }
+
     private function validateAndNormalizeUrl(string $url): string
     {
         try {
@@ -83,15 +139,16 @@ class JiraService
         $testedEndpoints = [];
 
         try {
-            // Validate and normalize URL
-            $url = $this->validateAndNormalizeUrl($credentials['url']);
+            // Get base URL based on auth mode (OAuth or API Token)
+            $url = $this->getApiBaseUrl($credentials);
+            $authOptions = $this->getAuthOptions($credentials);
 
             // Test authentication endpoint
             try {
-                $response = $this->httpClient->request('GET', $url . '/rest/api/3/myself', [
-                    'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                    'timeout' => 10,
-                ]);
+                $response = $this->httpClient->request('GET', $url . '/rest/api/3/myself', array_merge(
+                    $authOptions,
+                    ['timeout' => 10]
+                ));
 
                 $statusCode = $response->getStatusCode();
                 $testedEndpoints[] = [
@@ -193,7 +250,8 @@ class JiraService
 
     public function search(array $credentials, string $jql, int $maxResults = 50): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Default to ordering by created date if JQL is empty
         if (empty(trim($jql))) {
@@ -202,14 +260,16 @@ class JiraService
 
         try {
             // Use /search/jql endpoint (the /search endpoint was deprecated and removed)
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'jql' => $jql,
-                    'maxResults' => $maxResults,
-                    'fields' => '*all',  // Include all fields (summary, status, assignee, etc.)
-                ],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', array_merge(
+                $authOptions,
+                [
+                    'query' => [
+                        'jql' => $jql,
+                        'maxResults' => $maxResults,
+                        'fields' => '*all',  // Include all fields (summary, status, assignee, etc.)
+                    ],
+                ]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -251,12 +311,11 @@ class JiraService
 
     public function getIssue(array $credentials, string $issueKey): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -286,16 +345,19 @@ class JiraService
 
     public function getSprintsFromBoard(array $credentials, int $boardId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/sprint', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'startAt' => 0,
-                    'maxResults' => 50,
-                ],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/sprint', array_merge(
+                $authOptions,
+                [
+                    'query' => [
+                        'startAt' => 0,
+                        'maxResults' => 50,
+                    ],
+                ]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -360,7 +422,8 @@ class JiraService
         ?string $assignee = null,
         ?string $jql = null
     ): array {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Build query with optional JQL filtering
         $query = [
@@ -380,10 +443,10 @@ class JiraService
         }
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/sprint/' . $sprintId . '/issue', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => $query,
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/sprint/' . $sprintId . '/issue', array_merge(
+                $authOptions,
+                ['query' => $query]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -411,7 +474,8 @@ class JiraService
 
     public function addComment(array $credentials, string $issueKey, string $comment): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         $payload = [
             'body' => [
@@ -432,14 +496,19 @@ class JiraService
         ];
 
         try {
-            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/comment', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $payload
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/comment', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $payload
+                ]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -476,12 +545,11 @@ class JiraService
      */
     public function getAvailableTransitions(array $credentials, string $issueKey): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -518,7 +586,8 @@ class JiraService
      */
     public function transitionIssue(array $credentials, string $issueKey, string $transitionId, ?string $comment = null): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         $payload = [
             'transition' => [
@@ -554,14 +623,19 @@ class JiraService
         }
 
         try {
-            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $payload
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/' . $issueKey . '/transitions', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $payload
+                ]
+            ));
 
             // Transitions return 204 No Content on success
             $statusCode = $response->getStatusCode();
@@ -616,7 +690,8 @@ class JiraService
         ?string $comment = null,
         int $maxAttempts = 10
     ): array {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        // Note: This method uses getIssue, getAvailableTransitions, and transitionIssue internally
+        // which already use the new helper methods, so no direct URL/auth changes needed here
         $path = [];
         $attempt = 0;
 
@@ -740,12 +815,11 @@ class JiraService
      */
     public function getBoard(array $credentials, int $boardId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId, $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -858,7 +932,8 @@ class JiraService
         ?string $assignee = null,
         ?string $jql = null
     ): array {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Build query with optional JQL filtering
         $query = [
@@ -880,10 +955,10 @@ class JiraService
         try {
             // Use the Jira Agile API to get all issues on the board
             // This endpoint works for both Kanban and Scrum boards
-            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/issue', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => $query,
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/agile/1.0/board/' . $boardId . '/issue', array_merge(
+                $authOptions,
+                ['query' => $query]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1012,12 +1087,11 @@ class JiraService
      */
     public function getEditMetadata(array $credentials, string $issueKey): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/editmeta', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey . '/editmeta', $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1054,12 +1128,11 @@ class JiraService
      */
     public function deleteIssue(array $credentials, string $issueKey): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('DELETE', $url . '/rest/api/3/issue/' . $issueKey, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('DELETE', $url . '/rest/api/3/issue/' . $issueKey, $authOptions);
 
             // DELETE endpoint returns 204 No Content on success
             $statusCode = $response->getStatusCode();
@@ -1106,12 +1179,11 @@ class JiraService
      */
     public function getIssueLinkTypes(array $credentials): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issueLinkType', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issueLinkType', $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1154,7 +1226,8 @@ class JiraService
         string $linkTypeId,
         ?string $comment = null
     ): array {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         $linkPayload = [
             'type' => ['id' => $linkTypeId],
@@ -1169,14 +1242,19 @@ class JiraService
         }
 
         try {
-            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issueLink', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $linkPayload
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issueLink', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $linkPayload
+                ]
+            ));
 
             // Link creation returns 201 Created on success
             $statusCode = $response->getStatusCode();
@@ -1227,19 +1305,16 @@ class JiraService
      */
     public function getProjectMetadata(array $credentials, string $projectKey): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
             // Get basic project info
-            $projectResponse = $this->httpClient->request('GET', $url . '/rest/api/3/project/' . $projectKey, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $projectResponse = $this->httpClient->request('GET', $url . '/rest/api/3/project/' . $projectKey, $authOptions);
             $projectData = $projectResponse->toArray();
 
             // Get issue types for this project with field information
-            $issueTypesResponse = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $issueTypesResponse = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes', $authOptions);
             $issueTypesData = $issueTypesResponse->toArray();
 
             // Log warning if no issue types are returned
@@ -1297,12 +1372,11 @@ class JiraService
      */
     public function getCreateFieldMetadata(array $credentials, string $projectKey, string $issueTypeId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes/' . $issueTypeId, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/createmeta/' . $projectKey . '/issuetypes/' . $issueTypeId, $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1339,7 +1413,8 @@ class JiraService
      */
     public function createIssue(array $credentials, array $issueData): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Build the fields object
         $fields = [
@@ -1406,14 +1481,19 @@ class JiraService
         $payload = ['fields' => $fields];
 
         try {
-            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $payload
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $payload
+                ]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1461,12 +1541,11 @@ class JiraService
      */
     public function getPriorities(array $credentials): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/priority', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/priority', $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1497,7 +1576,8 @@ class JiraService
      */
     public function updateIssue(array $credentials, string $issueKey, array $updates): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Build payload with fields to update
         $updatePayload = ['fields' => []];
@@ -1553,14 +1633,19 @@ class JiraService
         }
 
         try {
-            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey, [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $updatePayload
-            ]);
+            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey, array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $updatePayload
+                ]
+            ));
 
             // Update endpoint returns 204 No Content on success
             $statusCode = $response->getStatusCode();
@@ -1618,7 +1703,8 @@ class JiraService
      */
     public function bulkCreateIssues(array $credentials, array $issuesData): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Build issueUpdates array
         $bulkPayload = ['issueUpdates' => []];
@@ -1685,14 +1771,19 @@ class JiraService
         }
 
         try {
-            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/bulk', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $bulkPayload
-            ]);
+            $response = $this->httpClient->request('POST', $url . '/rest/api/3/issue/bulk', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $bulkPayload
+                ]
+            ));
 
             $result = $response->toArray();
             $issues = $result['issues'] ?? [];
@@ -1754,20 +1845,26 @@ class JiraService
      */
     public function assignIssue(array $credentials, string $issueKey, ?string $accountId): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         // Payload: {"accountId": "xxx"} or {"accountId": null}
         $payload = ['accountId' => $accountId];
 
         try {
-            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey . '/assignee', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json'
-                ],
-                'json' => $payload
-            ]);
+            $response = $this->httpClient->request('PUT', $url . '/rest/api/3/issue/' . $issueKey . '/assignee', array_merge(
+                $authOptions,
+                [
+                    'headers' => array_merge(
+                        $authOptions['headers'] ?? [],
+                        [
+                            'Content-Type' => 'application/json',
+                            'Accept' => 'application/json'
+                        ]
+                    ),
+                    'json' => $payload
+                ]
+            ));
 
             // Assign endpoint returns 204 No Content on success
             $statusCode = $response->getStatusCode();
@@ -1820,16 +1917,19 @@ class JiraService
      */
     public function searchUsers(array $credentials, string $query): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
             // API: GET /rest/api/3/user/search?query={query}
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/user/search', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-                'query' => [
-                    'query' => $query
-                ],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/user/search', array_merge(
+                $authOptions,
+                [
+                    'query' => [
+                        'query' => $query
+                    ],
+                ]
+            ));
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */
@@ -1865,12 +1965,11 @@ class JiraService
      */
     public function getMyself(array $credentials): array
     {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
+        $url = $this->getApiBaseUrl($credentials);
+        $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/myself', [
-                'auth_basic' => [$credentials['username'], $credentials['api_token']],
-            ]);
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/myself', $authOptions);
 
             return $response->toArray();
         /** @phpstan-ignore-next-line catch.neverThrown */

@@ -4,8 +4,10 @@ namespace App\Controller;
 
 use App\Entity\IntegrationConfig;
 use App\Service\EncryptionService;
+use App\Service\Integration\AtlassianOAuthService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -600,6 +602,208 @@ class IntegrationOAuthController extends AbstractController
             }
 
             $this->addFlash('error', 'Failed to connect to Azure AD: ' . $e->getMessage());
+            return $this->redirectToRoute('app_skills');
+        }
+    }
+
+    // ========================================
+    // Atlassian OAuth2 (3LO) Flow for Jira/Confluence
+    // ========================================
+
+    #[Route('/atlassian/start/{configId}', name: 'app_tool_oauth_atlassian_start')]
+    public function atlassianStart(
+        int $configId,
+        Request $request,
+        AtlassianOAuthService $atlassianOAuth,
+        LoggerInterface $logger
+    ): RedirectResponse {
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Verify this is an OAuth mode config
+        $existingCredentials = [];
+        if ($config->getEncryptedCredentials()) {
+            $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+            $existingCredentials = json_decode($decrypted, true) ?: [];
+        }
+
+        if (($existingCredentials['auth_mode'] ?? 'api_token') !== 'oauth') {
+            $this->addFlash('error', 'This integration is not configured for OAuth authentication');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Store the config ID in session for callback
+        $request->getSession()->set('atlassian_oauth_config_id', $configId);
+
+        // Generate a state parameter for CSRF protection
+        $state = bin2hex(random_bytes(16));
+        $request->getSession()->set('atlassian_oauth_state', $state);
+
+        // Determine scopes based on integration type
+        $integrationType = $config->getIntegrationType();
+        if ($integrationType === 'confluence') {
+            $scopes = AtlassianOAuthService::getConfluenceScopes();
+        } else {
+            $scopes = AtlassianOAuthService::getJiraScopes();
+        }
+
+        $logger->info('Atlassian OAuth: Starting authorization flow', [
+            'configId' => $configId,
+            'integrationType' => $integrationType,
+            'scopes' => $scopes,
+        ]);
+
+        // Redirect to Atlassian OAuth
+        $authUrl = $atlassianOAuth->getAuthorizationUrl($scopes, $state);
+        return $this->redirect($authUrl);
+    }
+
+    #[Route('/callback/atlassian', name: 'app_tool_oauth_atlassian_callback')]
+    public function atlassianCallback(
+        Request $request,
+        AtlassianOAuthService $atlassianOAuth,
+        LoggerInterface $logger
+    ): Response {
+        $error = $request->query->get('error');
+        $configId = $request->getSession()->get('atlassian_oauth_config_id');
+        $state = $request->query->get('state');
+        $savedState = $request->getSession()->get('atlassian_oauth_state');
+
+        // Verify state to prevent CSRF
+        if ($state !== $savedState) {
+            $this->addFlash('error', 'Invalid OAuth state. Please try again.');
+            $request->getSession()->remove('atlassian_oauth_config_id');
+            $request->getSession()->remove('atlassian_oauth_state');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Handle OAuth errors or user cancellation
+        if ($error) {
+            if ($configId) {
+                $tempConfig = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+                $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+
+                if ($tempConfig && $oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                    $request->getSession()->remove('oauth_flow_integration');
+                    $request->getSession()->remove('atlassian_oauth_config_id');
+                    $request->getSession()->remove('atlassian_oauth_state');
+                    $this->entityManager->remove($tempConfig);
+                    $this->entityManager->flush();
+
+                    if ($error === 'access_denied') {
+                        $this->addFlash('warning', 'Atlassian setup cancelled. Authorization is required to use this integration.');
+                    } else {
+                        $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                    }
+                } else {
+                    $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                }
+            }
+
+            $request->getSession()->remove('atlassian_oauth_config_id');
+            $request->getSession()->remove('atlassian_oauth_state');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        if (!$configId) {
+            $this->addFlash('error', 'OAuth session expired. Please try again.');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        try {
+            // Exchange the authorization code for tokens
+            $code = $request->query->get('code');
+            if (!$code) {
+                throw new \RuntimeException('No authorization code received from Atlassian');
+            }
+
+            $tokens = $atlassianOAuth->exchangeCodeForTokens($code);
+
+            // Get accessible resources to find the cloud_id
+            $resources = $atlassianOAuth->getAccessibleResources($tokens['access_token']);
+
+            if (empty($resources)) {
+                throw new \RuntimeException('No accessible Atlassian sites found. Please ensure you have access to at least one Jira or Confluence site.');
+            }
+
+            // Use the first available resource (cloud site)
+            // In the future, we could allow users to select from multiple sites
+            $selectedResource = $resources[0];
+
+            $logger->info('Atlassian OAuth: Found accessible resources', [
+                'count' => count($resources),
+                'selectedSite' => $selectedResource['name'] ?? 'Unknown',
+                'cloudId' => $selectedResource['id'],
+            ]);
+
+            // Get existing credentials to preserve auth_mode
+            $existingCredentials = [];
+            if ($config->getEncryptedCredentials()) {
+                $decrypted = $this->encryptionService->decrypt($config->getEncryptedCredentials());
+                $existingCredentials = json_decode($decrypted, true) ?: [];
+            }
+
+            // Store the credentials
+            $credentials = array_merge($existingCredentials, [
+                'auth_mode' => 'oauth',
+                'access_token' => $tokens['access_token'],
+                'refresh_token' => $tokens['refresh_token'] ?? null,
+                'expires_at' => $tokens['expires_at'],
+                'cloud_id' => $selectedResource['id'],
+                'site_url' => $selectedResource['url'] ?? null,
+                'site_name' => $selectedResource['name'] ?? 'Atlassian Site',
+                'scopes' => $tokens['scope'] ?? null,
+            ]);
+
+            // Encrypt and save credentials
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            $this->entityManager->flush();
+
+            // Clean up session
+            $request->getSession()->remove('atlassian_oauth_config_id');
+            $request->getSession()->remove('atlassian_oauth_state');
+
+            // Check if this was part of initial setup flow
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            $integrationType = ucfirst($config->getIntegrationType());
+
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->addFlash('success', "{$integrationType} integration created and connected to {$credentials['site_name']} successfully!");
+            } else {
+                $this->addFlash('success', "{$integrationType} integration connected to {$credentials['site_name']} successfully!");
+            }
+
+            return $this->redirectToRoute('app_skills');
+        } catch (\Exception $e) {
+            $logger->error('Atlassian OAuth: Failed to complete authorization', [
+                'error' => $e->getMessage(),
+            ]);
+
+            // If this was initial setup and failed, remove the temporary config
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->entityManager->remove($config);
+                $this->entityManager->flush();
+            }
+
+            $this->addFlash('error', 'Failed to connect to Atlassian: ' . $e->getMessage());
             return $this->redirectToRoute('app_skills');
         }
     }
