@@ -32,6 +32,7 @@ services:
             - '../src/Kernel.php'
             - '../src/Integration/SystemTools/'
             - '../src/Integration/UserIntegrations/'
+            - '../src/Service/Integration/AtlassianOAuthService.php'
 
     App\Controller\:
         resource: '../src/Controller/'
