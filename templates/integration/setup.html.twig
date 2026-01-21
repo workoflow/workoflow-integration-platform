@@ -64,15 +64,20 @@
                 <h3>{{ 'integration.credentials'|trans|default('Credentials') }}</h3>
 
                 {% set hasOAuthField = false %}
+                {% set oauthFieldApplicable = false %}
                 {% for field in credentialFields %}
                     {% if field.getType() == 'oauth' %}
                         {% set hasOAuthField = true %}
                         {% set isConditionalOAuth = field.isConditional() %}
                         {% set showOAuthField = not isConditionalOAuth %}
                         {% if isConditionalOAuth %}
-                            {# For conditional OAuth fields (like sap_c4c oauth2), only show if auth_mode matches #}
+                            {# For conditional OAuth fields (like sap_c4c user_delegation), only show if auth_mode matches #}
                             {% set currentAuthMode = form.vars.data[field.getConditionalOn()]|default('basic') %}
                             {% set showOAuthField = currentAuthMode == field.getConditionalValue() %}
+                        {% endif %}
+                        {# Track if OAuth is actually applicable (for button logic) #}
+                        {% if showOAuthField %}
+                            {% set oauthFieldApplicable = true %}
                         {% endif %}
 
                         {% if showOAuthField %}
@@ -269,8 +274,8 @@
                 {% endif %}
 
                 <div class="form-actions">
-                    {% if hasOAuthField and not config %}
-                        {# For new OAuth integrations, show provider-specific button #}
+                    {% if oauthFieldApplicable and not config %}
+                        {# For new OAuth integrations where OAuth is actually needed, show provider-specific button #}
                         {% if integration.getType() == 'hubspot' %}
                             <button type="submit" class="btn btn-primary">
                                 <i class="fab fa-hubspot"></i> {{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}

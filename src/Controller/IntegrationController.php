@@ -270,7 +270,7 @@ class IntegrationController extends AbstractController
 
                     // Prepare credentials for display - mask sensitive fields like api_token
                     foreach ($decryptedCredentials as $key => $value) {
-                        if ($key === 'api_token' || $key === 'password' || $key === 'client_secret') {
+                        if (in_array($key, ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'])) {
                             // Don't show the actual token, just indicate it exists
                             $existingCredentials[$key] = ''; // Leave empty, we'll show a placeholder
                             $existingCredentials[$key . '_exists'] = true;
@@ -344,14 +344,26 @@ class IntegrationController extends AbstractController
             // Process credential fields
             foreach ($integration->getCredentialFields() as $field) {
                 if ($field->getType() === 'oauth') {
-                    $hasOAuthField = true;
+                    // Only consider OAuth flow needed if the field is applicable
+                    // Check if OAuth field is conditional (e.g., only for user_delegation auth_mode)
+                    if ($field->isConditional()) {
+                        $conditionalFieldName = $field->getConditionalOn();
+                        $conditionalValue = $field->getConditionalValue();
+                        $currentValue = $formData[$conditionalFieldName] ?? $credentials[$conditionalFieldName] ?? null;
+                        // Only set hasOAuthField if the condition is met
+                        if ($currentValue === $conditionalValue) {
+                            $hasOAuthField = true;
+                        }
+                    } else {
+                        $hasOAuthField = true;
+                    }
                     continue;
                 }
 
                 $value = $formData[$field->getName()] ?? null;
 
                 // For sensitive fields, only update if new value provided
-                if (in_array($field->getName(), ['api_token', 'password', 'client_secret'])) {
+                if (in_array($field->getName(), ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'])) {
                     if (!empty($value)) {
                         $credentials[$field->getName()] = $value;
                         $credentialsModified = true; // Mark as modified
