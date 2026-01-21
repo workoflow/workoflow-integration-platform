@@ -406,11 +406,14 @@ class ConfluenceService
         $url = $this->getApiBaseUrl($credentials);
         $authOptions = $this->getAuthOptions($credentials);
 
-        $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId, array_merge(
+        // Use v2 API which requires read:page:confluence scope (granular)
+        // instead of v1 API which requires read:confluence-content.all (classic)
+        $response = $this->httpClient->request('GET', $url . '/wiki/api/v2/pages/' . $pageId, array_merge(
             $authOptions,
             [
                 'query' => [
-                    'expand' => 'body.storage,version,space',
+                    'body-format' => 'storage',
+                    'include-version' => 'true',
                 ],
             ]
         ));
@@ -418,21 +421,37 @@ class ConfluenceService
         $data = $response->toArray();
 
         // Convert to AI-friendly format with plain text content
+        // v2 API returns body.storage.value structure
         $storageContent = $data['body']['storage']['value'] ?? '';
+
+        // Get space info via separate call if needed for v2 API
+        $spaceKey = '';
+        $spaceName = '';
+        if (!empty($data['spaceId'])) {
+            try {
+                $spaceResponse = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces/' . $data['spaceId'], $authOptions);
+                $spaceData = $spaceResponse->toArray();
+                $spaceKey = $spaceData['key'] ?? '';
+                $spaceName = $spaceData['name'] ?? '';
+            } catch (\Exception $e) {
+                // Space info is optional, continue without it
+                error_log("Failed to fetch space info for page {$pageId}: " . $e->getMessage());
+            }
+        }
 
         return [
             'id' => $data['id'] ?? '',
-            'type' => $data['type'] ?? '',
+            'type' => 'page',
             'status' => $data['status'] ?? '',
             'title' => $data['title'] ?? '',
             'space' => [
-                'key' => $data['space']['key'] ?? '',
-                'name' => $data['space']['name'] ?? '',
+                'key' => $spaceKey,
+                'name' => $spaceName,
             ],
             'version' => [
                 'number' => $data['version']['number'] ?? 1,
-                'when' => $data['version']['when'] ?? '',
-                'by' => $data['version']['by']['displayName'] ?? '',
+                'when' => $data['version']['createdAt'] ?? '',
+                'by' => $data['version']['authorId'] ?? '',
             ],
             // Convert storage format to plain text for AI readability
             'content' => $this->convertStorageToPlainText($storageContent, self::MAX_CONTENT_LENGTH),
