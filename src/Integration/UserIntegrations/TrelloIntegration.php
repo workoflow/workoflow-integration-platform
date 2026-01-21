@@ -2,15 +2,18 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\TrelloService;
+use Twig\Environment;
 
-class TrelloIntegration implements IntegrationInterface
+class TrelloIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private TrelloService $trelloService
+        private TrelloService $trelloService,
+        private Environment $twig
     ) {
     }
 
@@ -29,7 +32,7 @@ class TrelloIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'trello_search',
-                'Search across all Trello boards, cards, and lists using a query string. Returns boards, cards, and lists matching the search term.',
+                'Search across all Trello boards, cards, and lists using a query string. Returns: Object with arrays of boards, cards, and lists matching the search term. Each board includes id, name, url, shortUrl, desc, closed. Each card includes id, name, idList, idBoard, desc, url, shortUrl, closed, pos. Each list includes id, name, idBoard, closed, pos.',
                 [
                     [
                         'name' => 'query',
@@ -47,12 +50,12 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_boards',
-                'Get all Trello boards accessible to the authenticated user. Returns list of boards with their names, IDs, and URLs.',
+                'Get all Trello boards accessible to the authenticated user. Returns: Array of boards, each with id, name, url, shortUrl, desc, closed, idOrganization, pinned, starred, prefs, labelNames.',
                 []
             ),
             new ToolDefinition(
                 'trello_get_board',
-                'Get detailed information about a specific Trello board including its name, description, and URL.',
+                'Get detailed information about a specific Trello board including its name, description, and URL. Returns: Board object with id, name, desc, url, shortUrl, closed, idOrganization, pinned, starred, prefs, labelNames, limits, memberships.',
                 [
                     [
                         'name' => 'boardId',
@@ -64,7 +67,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_board_lists',
-                'Get all lists on a specific Trello board. Lists are containers that hold cards (e.g., "To Do", "In Progress", "Done").',
+                'Get all lists on a specific Trello board. Lists are containers that hold cards (e.g., "To Do", "In Progress", "Done"). Returns: Array of lists, each with id, name, closed, pos, softLimit, idBoard, subscribed, limits.',
                 [
                     [
                         'name' => 'boardId',
@@ -76,7 +79,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_board_cards',
-                'Get all cards on a specific Trello board across all lists. Useful for analyzing the entire board content.',
+                'Get all cards on a specific Trello board across all lists. Useful for analyzing the entire board content. Returns: Array of cards, each with id, name, desc, url, shortUrl, idList, idBoard, idMembers, idLabels, labels, due, dueComplete, closed, pos, badges, dateLastActivity.',
                 [
                     [
                         'name' => 'boardId',
@@ -88,7 +91,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_list_cards',
-                'Get all cards in a specific list. Use this to see cards in a particular column/list on a board.',
+                'Get all cards in a specific list. Use this to see cards in a particular column/list on a board. Returns: Array of cards, each with id, name, desc, url, shortUrl, idList, idBoard, idMembers, idLabels, labels, due, dueComplete, closed, pos, badges, dateLastActivity.',
                 [
                     [
                         'name' => 'listId',
@@ -100,7 +103,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_card',
-                'Get detailed information about a specific card including title, description, members, labels, attachments, and checklists.',
+                'Get detailed information about a specific card including title, description, members, labels, attachments, and checklists. Returns: Card object with id, name, desc, url, shortUrl, idList, idBoard, idMembers, idLabels, labels, due, dueComplete, closed, pos, badges (with attachments, comments, checkItems counts), dateLastActivity, idChecklists, cover.',
                 [
                     [
                         'name' => 'cardId',
@@ -112,7 +115,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_card_comments',
-                'Get all comments on a specific Trello card. Returns comment text, author, and timestamp.',
+                'Get all comments on a specific Trello card. Returns comment text, author, and timestamp. Returns: Array of action objects with type "commentCard", each containing id, idMemberCreator, date, data (with text, card, board, list info), memberCreator (with id, username, fullName, avatarUrl).',
                 [
                     [
                         'name' => 'cardId',
@@ -124,7 +127,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_get_card_checklists',
-                'Get all checklists and checklist items on a specific card. Shows todo items with their completion status.',
+                'Get all checklists and checklist items on a specific card. Shows todo items with their completion status. Returns: Array of checklist objects, each with id, name, idCard, pos, checkItems (array with id, name, state, pos, due, idMember).',
                 [
                     [
                         'name' => 'cardId',
@@ -136,7 +139,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_create_card',
-                'Create a new card in a specific list. You can set title, description, due date, members, and labels.',
+                'Create a new card in a specific list. You can set title, description, due date, members, and labels. Returns: Created card object with id, name, desc, url, shortUrl, idList, idBoard, idMembers, idLabels, labels, due, dueComplete, closed, pos, badges, dateLastActivity, shortLink.',
                 [
                     [
                         'name' => 'idList',
@@ -184,7 +187,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_update_card',
-                'Update an existing Trello card. Can modify title, description, due date, members, labels, position, or close/archive the card.',
+                'Update an existing Trello card. Can modify title, description, due date, members, labels, position, or close/archive the card. Returns: Updated card object with id, name, desc, url, shortUrl, idList, idBoard, idMembers, idLabels, labels, due, dueComplete, closed, pos, badges, dateLastActivity.',
                 [
                     [
                         'name' => 'cardId',
@@ -250,7 +253,7 @@ class TrelloIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'trello_add_comment',
-                'Add a comment to a Trello card. Comments are visible to all board members.',
+                'Add a comment to a Trello card. Comments are visible to all board members. Returns: Action object with id, type "commentCard", idMemberCreator, date, data (with text, card, board, list info), memberCreator (with id, username, fullName).',
                 [
                     [
                         'name' => 'cardId',
@@ -368,5 +371,23 @@ class TrelloIntegration implements IntegrationInterface
                 'Your Trello API Token. After getting your API Key, click the "Token" link on the same page to generate a token.'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/trello_full.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
     }
 }

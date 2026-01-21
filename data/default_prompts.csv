@@ -1,0 +1,664 @@
+import_key,title,content,description,category
+jira_sprint_analysis_pm,"Sprint Analysis Report","Analyze the current Jira sprint and provide a comprehensive status report:
+
+1. Get the active sprint from the board using jira_get_sprints_from_board
+2. Fetch all issues in the sprint using jira_get_sprint_issues
+3. Categorize issues by status (To Do, In Progress, Done, Blocked)
+4. Calculate completion percentage and velocity
+
+Please provide:
+- Total story points committed vs completed
+- Issues at risk of not completing (still in To Do or blocked)
+- Team workload distribution by assignee
+- Recommendations for sprint success
+
+Board URL: [PASTE_BOARD_URL]","Comprehensive sprint health analysis for status reporting",project_manager
+jira_daily_standup_sm,"Daily Standup Preparation","Prepare daily standup information from Jira:
+
+1. Search for my assigned issues in the current sprint
+2. Identify what I completed yesterday (status changed to Done in last 24h)
+3. List what I'm working on today (status = In Progress)
+4. Flag any blockers or dependencies
+
+Format the output as:
+**DONE YESTERDAY:**
+- [List completed items]
+
+**WORKING ON TODAY:**
+- [List in-progress items]
+
+**BLOCKERS:**
+- [List any blockers or help needed]
+
+Board URL: [PASTE_BOARD_URL]","Generate standup notes from Jira sprint data",scrum_master
+jira_ticket_review_qa,"Ticket Quality Assessment","Review this Jira ticket for completeness and testability:
+
+1. Use jira_get_issue to fetch full ticket details
+2. Evaluate the acceptance criteria clarity (1-10 scale)
+3. Check for missing information:
+   - User story format (As a... I want... So that...)
+   - Acceptance criteria
+   - Technical details or constraints
+   - Edge cases mentioned
+   - Test scenarios suggested
+4. Suggest improvements for better testability
+
+Ticket URL: [PASTE_TICKET_URL]","Assess Jira ticket quality for QA refinement preparation",qa_engineer
+jira_code_review_checklist_dev,"Code Review Checklist Generator","Generate a code review checklist based on this Jira ticket:
+
+1. Use jira_get_issue to fetch the full ticket description and acceptance criteria
+2. Create a checklist covering:
+   - Functional requirements from acceptance criteria
+   - Unit test coverage requirements
+   - Security considerations (input validation, auth, etc.)
+   - Performance implications
+   - Documentation needs
+   - Edge cases to verify
+   - API contract compliance (if applicable)
+
+Ticket URL: [PASTE_TICKET_URL]","Generate comprehensive code review checklist from ticket requirements",developer
+jira_estimation_helper_tl,"Development Estimation Assistant","Help estimate development effort for this Jira ticket:
+
+1. Use jira_get_issue to analyze the ticket scope
+2. Break down the work into components:
+   - Backend changes
+   - Frontend changes
+   - Database migrations
+   - API changes
+   - Testing effort
+3. Consider complexity factors and provide story point recommendation
+4. Identify potential risks that could affect the estimate
+
+Ticket URL: [PASTE_TICKET_URL]","Assist with story point estimation based on ticket analysis",tech_lead
+jira_sprint_goal_summary_po,"Sprint Goals Summary","Summarize the current sprint goals and progress:
+
+1. Get sprint details using jira_get_sprints_from_board
+2. Analyze the sprint goal/description
+3. Map completed features to business value
+4. Identify what's still needed to meet the sprint goal
+5. Prepare stakeholder communication summary
+
+Board URL: [PASTE_BOARD_URL]","Create sprint goal summary for stakeholder communication",product_owner
+jira_bug_triage_qa,"Bug Triage Assistant","Help triage and prioritize this bug report:
+
+1. Use jira_get_issue to fetch bug details
+2. Assess severity based on:
+   - User impact (critical, major, minor, cosmetic)
+   - Affected functionality scope
+   - Workaround availability
+   - Security implications
+3. Suggest priority level (P1-P4)
+4. Recommend next steps and potential assignee
+
+Bug Ticket: [PASTE_TICKET_URL]","Systematic bug triage and prioritization",qa_engineer
+jira_sprint_retrospective_sm,"Sprint Retrospective Data","Gather data for sprint retrospective:
+
+1. Get completed sprint issues using jira_get_sprint_issues
+2. Analyze:
+   - Planned vs delivered story points
+   - Carryover items and reasons
+   - Bug count introduced vs fixed
+   - Cycle time patterns
+3. Identify patterns for discussion:
+   - What went well (completed on time, quality)
+   - What could improve (delays, blockers)
+   - Action items from data
+
+Board URL: [PASTE_BOARD_URL]","Generate retrospective insights from sprint data",scrum_master
+jira_release_scope_pm,"Release Scope Documentation","Document the scope of an upcoming release:
+
+1. Search for all issues with the target fixVersion
+2. Group by epic/feature area
+3. Create release scope document with:
+   - Feature list with descriptions
+   - Known limitations or deferred items
+   - Dependencies on external systems
+   - Rollback considerations
+4. Format for stakeholder review
+
+Project Key: [PROJECT_KEY]
+Fix Version: [VERSION]","Create release scope documentation from Jira issues",project_manager
+jira_workload_analysis_pm,"Team Workload Distribution","Analyze team workload distribution:
+
+1. Get all issues in current sprint using jira_get_sprint_issues
+2. Calculate per-person metrics:
+   - Story points assigned
+   - Issue count by type (story, bug, task)
+   - Time in current status
+3. Identify:
+   - Overloaded team members
+   - Available capacity
+   - Potential bottlenecks
+4. Suggest workload rebalancing if needed
+
+Board URL: [PASTE_BOARD_URL]","Analyze and balance team workload across sprint",project_manager
+confluence_release_notes_pm,"Release Notes Generator","Generate release notes from completed work:
+
+1. Search Jira for completed issues in this release version
+2. Group changes by category:
+   - New Features
+   - Improvements
+   - Bug Fixes
+   - Technical Changes
+3. Write user-friendly descriptions (not technical jargon)
+4. Use confluence_create_page to publish release notes with:
+   - Version number and release date
+   - Highlights section
+   - Detailed change list
+   - Known issues
+   - Upgrade instructions (if applicable)
+
+Project: [PROJECT_KEY]
+Version: [VERSION]
+Space Key: [CONFLUENCE_SPACE]","Create and publish release notes to Confluence",project_manager
+confluence_meeting_notes_ba,"Meeting Notes Template","Create structured meeting notes in Confluence:
+
+1. Use confluence_create_page with this structure:
+   - Meeting Title and Date
+   - Attendees
+   - Agenda Items
+   - Discussion Summary (per agenda item)
+   - Decisions Made
+   - Action Items (with owners and due dates)
+   - Next Meeting Date
+2. Link to relevant Jira tickets or other Confluence pages mentioned
+3. Tag relevant stakeholders
+
+Space Key: [CONFLUENCE_SPACE]
+Meeting Topic: [TOPIC]","Create standardized meeting documentation in Confluence",business_analyst
+confluence_project_handover_pm,"Project Handover Documentation","Create a comprehensive project handover document:
+
+1. Gather information from Jira board and existing Confluence pages
+2. Document:
+   - Project overview and goals
+   - Current status and progress
+   - Key stakeholders and contacts
+   - Technical architecture summary
+   - Important decisions made (with rationale)
+   - Open items and risks
+   - Access and credentials needed
+   - Regular meetings and ceremonies
+3. Create or update Confluence page with handover guide
+
+Project: [PROJECT_NAME]
+Space Key: [CONFLUENCE_SPACE]","Generate comprehensive project handover documentation",project_manager
+confluence_architecture_decision_sa,"Architecture Decision Record","Create an Architecture Decision Record (ADR):
+
+1. Use confluence_create_page with ADR template:
+   - Title: ADR-XXX: [Decision Title]
+   - Status: Proposed/Accepted/Deprecated/Superseded
+   - Context: Why this decision is needed
+   - Decision: What was decided
+   - Alternatives Considered: Other options evaluated
+   - Consequences: Impact of this decision
+   - Related Documents: Links to relevant pages
+2. Link to related ADRs if this supersedes previous decisions
+
+Space Key: [CONFLUENCE_SPACE]
+Decision Topic: [TOPIC]","Document architecture decisions in standardized ADR format",solution_architect
+confluence_knowledge_search_ba,"Knowledge Base Search","Search the Confluence knowledge base:
+
+1. Use confluence_search with relevant keywords
+2. Summarize top matching pages:
+   - Page title and link
+   - Key content summary
+   - Last updated date
+   - Author/owner
+3. Identify knowledge gaps if search yields poor results
+4. Suggest related topics to explore
+
+Search Topic: [TOPIC]
+Space Key (optional): [SPACE]","Search and summarize relevant Confluence documentation",business_analyst
+gitlab_mr_code_review_dev,"Merge Request Code Review","Perform a comprehensive code review of this merge request:
+
+1. Get MR details using gitlab_get_merge_request
+2. Review all changes using gitlab_get_merge_request_changes
+3. Evaluate:
+   - Code style and consistency
+   - Test coverage for new/changed code
+   - Security considerations (SQL injection, XSS, auth)
+   - Performance implications
+   - Documentation updates needed
+   - Breaking changes or API contract compliance
+4. Provide constructive feedback with specific line references
+5. Summarize: Approve, Request Changes, or Comment
+
+MR URL: [PASTE_MR_URL]","Thorough code review workflow for merge requests",developer
+gitlab_pipeline_debug_devops,"Pipeline Failure Analysis","Debug this failing GitLab pipeline:
+
+1. Get pipeline status using gitlab_get_pipeline
+2. Identify failed jobs using gitlab_get_pipeline_jobs
+3. Analyze error logs using gitlab_get_job_trace
+4. Diagnose the failure:
+   - Is it a code issue, configuration issue, or infrastructure issue?
+   - Are dependencies properly installed?
+   - Are environment variables set correctly?
+   - Is it a flaky test?
+5. Suggest specific fixes and next steps
+6. Recommend if gitlab_retry_job would help
+
+Pipeline URL: [PASTE_PIPELINE_URL]","Diagnose and resolve CI/CD pipeline failures",devops
+gitlab_open_mrs_review_tl,"Open Merge Requests Overview","Review all open merge requests for the team:
+
+1. List all open MRs in the repository
+2. For each MR, summarize:
+   - Title and author
+   - Target branch
+   - Age (days open)
+   - Review status (approved, changes requested, pending)
+   - Pipeline status
+3. Identify:
+   - Stale MRs (open > 7 days)
+   - MRs blocked on reviews
+   - MRs with failing pipelines
+4. Suggest prioritization for review
+
+Repository: [REPO_PATH]","Overview of open merge requests requiring attention",tech_lead
+gitlab_security_review_sec,"Security-Focused Code Review","Perform a security-focused review of this merge request:
+
+1. Get MR changes using gitlab_get_merge_request_changes
+2. Check for security vulnerabilities:
+   - Input validation and sanitization
+   - SQL injection risks
+   - XSS vulnerabilities
+   - Authentication/authorization issues
+   - Sensitive data exposure
+   - Insecure dependencies
+   - Hardcoded secrets or credentials
+3. Rate severity of any findings (Critical, High, Medium, Low)
+4. Provide remediation suggestions for each finding
+
+MR URL: [PASTE_MR_URL]","Security audit of merge request changes",security_engineer
+gitlab_release_changelog_pm,"Release Changelog Generation","Generate a changelog from merged MRs:
+
+1. List all merged MRs between two tags/branches
+2. Categorize by:
+   - Features (feat:, feature:)
+   - Bug Fixes (fix:, bugfix:)
+   - Improvements (improve:, perf:)
+   - Documentation (docs:)
+   - Breaking Changes (BREAKING:)
+3. Format as Markdown changelog
+4. Include MR references and authors
+
+Repository: [REPO_PATH]
+From: [TAG_OR_BRANCH]
+To: [TAG_OR_BRANCH]","Generate changelog from merged merge requests",project_manager
+c4c_lead_qualification_ba,"Lead Qualification Workflow","Qualify a new sales lead:
+
+1. Use c4c_get_lead to fetch lead details
+2. Evaluate against BANT criteria:
+   - Budget: Does the prospect have budget?
+   - Authority: Are we talking to decision makers?
+   - Need: Is there a genuine business need?
+   - Timeline: What is the expected decision timeline?
+3. Score the lead (Hot, Warm, Cold)
+4. Use c4c_update_lead to set qualification status
+5. If qualified, recommend creating opportunity with c4c_create_opportunity
+
+Lead ID: [LEAD_ID]","Structured BANT lead qualification process",business_analyst
+c4c_pipeline_review_pm,"Sales Pipeline Analysis","Review the current sales pipeline:
+
+1. Use c4c_search_opportunities to get all open opportunities
+2. Analyze by sales phase:
+   - Qualification
+   - Discovery
+   - Proposal
+   - Negotiation
+   - Closing
+3. Calculate:
+   - Total pipeline value
+   - Weighted forecast (value x probability)
+   - Average deal size
+   - Expected close dates
+4. Identify:
+   - Deals at risk (stalled, past expected close)
+   - High-value opportunities needing attention
+   - Pipeline coverage vs target
+
+Provide executive summary with key metrics.","Sales pipeline analysis and forecasting",project_manager
+c4c_account_research_ba,"Account Research Summary","Research and summarize an account:
+
+1. Use c4c_get_account to fetch account details
+2. Use c4c_search_opportunities to find related opportunities
+3. Use c4c_search_contacts to list key contacts
+4. Compile account overview:
+   - Company profile
+   - Relationship history
+   - Current opportunities
+   - Key contacts and roles
+   - Recent activities
+   - Revenue potential
+5. Identify upsell/cross-sell opportunities
+
+Account ID: [ACCOUNT_ID]","Comprehensive account research for sales preparation",business_analyst
+c4c_contact_management_ba,"Contact Update Workflow","Manage and update contact information:
+
+1. Use c4c_get_contact to review current contact details
+2. Verify and update:
+   - Job title and department
+   - Contact information
+   - Account association
+   - Role in buying process
+3. Use c4c_update_contact to save changes
+4. Log activity for audit trail
+
+Contact ID: [CONTACT_ID]
+Updates: [DESCRIBE_UPDATES]","Maintain accurate contact records in CRM",business_analyst
+projektron_weekly_timesheet_pm,"Weekly Time Report","Generate weekly time tracking summary:
+
+1. Use projektron_get_worklog for the current week (Monday to Sunday)
+2. Summarize:
+   - Total hours logged per day
+   - Hours by project/task
+   - Comparison to target hours (e.g., 40h/week)
+3. Identify:
+   - Days with missing entries
+   - Projects with significant time investment
+   - Overtime or undertime
+4. Format as a clean weekly report
+
+Date Range: [START_DATE] to [END_DATE]","Review and validate weekly time tracking entries",project_manager
+projektron_vacation_planning_sm,"Team Availability Check","Check team availability for planning:
+
+1. Use projektron_get_absences for the specified period
+2. Create availability overview:
+   - Who is available when
+   - Vacation and leave overlap
+   - Coverage gaps
+3. Identify critical periods with low availability
+4. Suggest backup assignments for key responsibilities
+
+Team Members: [LIST_MEMBERS]
+Date Range: [START_DATE] to [END_DATE]","Plan around team absences and vacation schedules",scrum_master
+projektron_time_booking_pm,"Time Booking Assistant","Help book time to the correct tasks:
+
+1. Use projektron_get_all_tasks to list available bookable tasks
+2. Match activities to appropriate tasks based on:
+   - Project name
+   - Task description
+   - Activity type (development, meeting, admin)
+3. Use projektron_add_worklog to book time
+4. Confirm booking details
+
+Date: [DATE]
+Hours: [HOURS]
+Activity Description: [WHAT_YOU_WORKED_ON]","Assist with booking time to correct project tasks",project_manager
+sharepoint_document_search_ba,"SharePoint Document Search","Search for documents in SharePoint:
+
+1. Use sharepoint_search with relevant keywords
+2. Filter by:
+   - Document type (Word, Excel, PowerPoint, PDF)
+   - Site or library
+   - Date range
+3. Summarize top results:
+   - Document title and location
+   - Last modified date
+   - Key content summary
+4. Provide direct links to relevant documents
+
+Search Query: [KEYWORDS]
+Site (optional): [SITE_NAME]","Search and retrieve documents from SharePoint",business_analyst
+sharepoint_knowledge_query_ba,"Knowledge Base Query","Query the SharePoint knowledge base:
+
+1. Search for relevant content using keywords
+2. Extract and synthesize information from multiple sources
+3. Provide:
+   - Summary of findings
+   - Source documents with links
+   - Confidence level in the information
+   - Gaps in available documentation
+4. Suggest related topics to explore
+
+Topic: [TOPIC]","Extract knowledge from SharePoint document repository",business_analyst
+system_pdf_report_pm,"Generate PDF Status Report","Create a professional PDF status report:
+
+1. Gather relevant data from connected integrations (Jira, etc.)
+2. Structure the report:
+   - Executive Summary
+   - Key Metrics and KPIs
+   - Progress Overview (charts/tables)
+   - Risks and Issues
+   - Next Steps and Action Items
+3. Format in Markdown with clear sections
+4. Use generate_and_upload_pdf to create the PDF
+5. Return the download link for distribution
+
+Report Title: [TITLE]
+Data Sources: [DESCRIBE_DATA_NEEDED]","Generate downloadable PDF project reports",project_manager
+system_pptx_presentation_pm,"Generate PowerPoint Presentation","Create a PowerPoint presentation:
+
+1. Define the presentation structure:
+   - Title slide
+   - Agenda/Overview
+   - Content slides (one topic per slide)
+   - Summary/Next Steps
+2. Use generate_pptx to create slides with:
+   - Clear headings
+   - Bullet points (max 5 per slide)
+   - Key data points
+3. Return the download link
+
+Presentation Topic: [TOPIC]
+Key Points: [LIST_KEY_POINTS]","Create professional PowerPoint presentations",project_manager
+system_web_research_ba,"Web Research Assistant","Conduct web research on a topic:
+
+1. Use web_search to find relevant information
+2. Cross-reference multiple sources for accuracy
+3. Compile research findings:
+   - Key insights and facts
+   - Source URLs with citations
+   - Conflicting information (if any)
+   - Confidence level assessment
+4. Provide actionable recommendations based on findings
+
+Research Topic: [TOPIC]
+Focus Areas: [SPECIFIC_QUESTIONS]","Research and synthesize web information",business_analyst
+system_employee_skills_pm,"Team Skills Matrix","Build a team skills inventory:
+
+1. Use employee_query to find team members
+2. For each team member, gather:
+   - Technical skills
+   - Certifications
+   - Project experience
+   - Language skills
+3. Create a skills matrix showing:
+   - Skill coverage across team
+   - Expertise levels
+   - Training needs/gaps
+4. Identify areas needing additional resources
+
+Team/Department: [TEAM_NAME]","Map team competencies and identify skill gaps",project_manager
+system_employee_search_pm,"Find Expert Colleague","Find a colleague with specific expertise:
+
+1. Use employee_query to search for skills/experience
+2. Filter by:
+   - Technical expertise
+   - Project experience
+   - Certifications
+   - Availability
+3. Provide candidate profiles:
+   - Name and contact
+   - Relevant experience
+   - Current project involvement
+4. Suggest best matches for the requirement
+
+Required Skills: [SKILLS]
+Project Type: [PROJECT_CONTEXT]","Find team members with specific skills or experience",project_manager
+system_company_events_pm,"Upcoming Company Events","Check upcoming company events:
+
+1. Use fetch_valantic_events to retrieve event calendar
+2. Filter by:
+   - Date range
+   - Event type (training, social, conference)
+   - Relevance to your role/team
+3. Summarize key events:
+   - Event name and date
+   - Description
+   - Registration requirements
+   - Relevance to current projects
+
+Date Range: [START_DATE] to [END_DATE]","View and filter upcoming company events",project_manager
+system_competitor_research_ba,"Competitor Analysis","Research competitor information:
+
+1. Use web_search to gather competitor intelligence
+2. Analyze:
+   - Product/service offerings
+   - Market positioning
+   - Recent news and announcements
+   - Strengths and weaknesses
+3. Compare to our offerings
+4. Identify competitive advantages and threats
+5. Format as executive summary
+
+Competitor: [COMPANY_NAME]
+Focus Areas: [SPECIFIC_ASPECTS]","Gather and analyze competitor intelligence",business_analyst
+system_file_summary_ba,"Document Summary","Summarize an uploaded document:
+
+1. Read the uploaded file content
+2. Extract:
+   - Main topic and purpose
+   - Key points (bullet list)
+   - Important data or metrics
+   - Action items or recommendations
+3. Provide concise summary (1-2 paragraphs)
+4. Highlight anything requiring attention
+
+File: [UPLOAD_FILE]","Extract and summarize key information from documents",business_analyst
+devops_deployment_checklist,"Deployment Checklist Generator","Generate a deployment checklist:
+
+1. Based on the changes in this release, create checklist for:
+   - Pre-deployment verification
+   - Backup procedures
+   - Deployment steps
+   - Post-deployment validation
+   - Rollback procedures
+2. Include:
+   - Database migrations
+   - Configuration changes
+   - Cache clearing
+   - Service restarts
+   - Health checks
+3. Assign responsibilities for each step
+
+Release Version: [VERSION]
+Environment: [ENV]","Create comprehensive deployment checklist",devops
+qa_test_case_generator,"Test Case Generator","Generate test cases from requirements:
+
+1. Analyze the Jira ticket acceptance criteria
+2. Create test cases covering:
+   - Happy path scenarios
+   - Edge cases
+   - Error handling
+   - Boundary conditions
+   - Security scenarios
+3. Format each test case with:
+   - Test ID
+   - Description
+   - Preconditions
+   - Steps
+   - Expected results
+4. Prioritize by risk level
+
+Ticket URL: [PASTE_TICKET_URL]","Generate comprehensive test cases from requirements",qa_engineer
+support_issue_diagnosis,"Customer Issue Diagnosis","Help diagnose a customer issue:
+
+1. Gather issue details:
+   - Error messages
+   - Steps to reproduce
+   - Environment information
+   - Recent changes
+2. Search knowledge base for similar issues
+3. Analyze potential causes:
+   - Configuration issues
+   - Known bugs
+   - User error
+   - Environment-specific problems
+4. Recommend troubleshooting steps
+5. Suggest escalation path if needed
+
+Issue Description: [DESCRIBE_ISSUE]","Systematic customer issue diagnosis and resolution",support_engineer
+data_pipeline_documentation,"Data Pipeline Documentation","Document a data pipeline:
+
+1. Describe the pipeline components:
+   - Data sources
+   - Transformations
+   - Destinations
+   - Scheduling
+2. Create documentation including:
+   - Architecture diagram (text-based)
+   - Data flow description
+   - Dependencies
+   - Error handling
+   - Monitoring and alerts
+3. Format for technical reference
+
+Pipeline Name: [PIPELINE_NAME]","Create technical documentation for data pipelines",data_engineer
+designer_brand_colors,"Extract Brand Colors","Extract brand colors from a website:
+
+1. Use web_search or fetch the website
+2. Identify:
+   - Primary brand colors (HEX, RGB)
+   - Secondary/accent colors
+   - Background colors
+   - Text colors
+3. Create a color palette summary
+4. Suggest complementary colors for designs
+
+Website URL: [URL]","Extract and document brand color palette from website",designer
+pm_status_update,"Weekly Status Update","Generate weekly status update:
+
+1. Gather data from Jira, Confluence, and other sources
+2. Summarize:
+   - Accomplishments this week
+   - Key metrics/progress
+   - Risks and issues
+   - Plans for next week
+   - Help needed
+3. Format for stakeholder communication
+4. Keep concise (1 page max)
+
+Project: [PROJECT_NAME]
+Week Ending: [DATE]","Create weekly project status update for stakeholders",project_manager
+pm_risk_register,"Risk Register Update","Update the project risk register:
+
+1. Review current risks from Jira/Confluence
+2. For each risk, document:
+   - Risk description
+   - Probability (High/Medium/Low)
+   - Impact (High/Medium/Low)
+   - Mitigation strategy
+   - Owner
+   - Status
+3. Identify new risks from recent events
+4. Recommend risk response actions
+
+Project: [PROJECT_NAME]","Maintain and update project risk register",project_manager
+ba_requirements_analysis,"Requirements Analysis","Analyze and refine requirements:
+
+1. Review the provided requirements document/ticket
+2. Check for:
+   - Completeness (all scenarios covered)
+   - Clarity (unambiguous language)
+   - Testability (verifiable acceptance criteria)
+   - Feasibility (technically achievable)
+   - Consistency (no contradictions)
+3. Identify gaps and questions
+4. Suggest improvements and clarifications
+
+Requirements Source: [TICKET_OR_DOC_LINK]","Analyze requirements for completeness and clarity",business_analyst
+sa_system_integration,"Integration Design Review","Review system integration design:
+
+1. Analyze the proposed integration:
+   - Source and target systems
+   - Data flow direction
+   - Integration pattern (sync/async, push/pull)
+   - Authentication mechanism
+2. Evaluate:
+   - Security considerations
+   - Performance implications
+   - Error handling strategy
+   - Monitoring approach
+3. Identify risks and recommend improvements
+
+Integration Description: [DESCRIBE_INTEGRATION]","Review and improve system integration designs",solution_architect

@@ -2,6 +2,351 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-21
+
+### Added
+- **Workoflow MCP in footer and release notes** - Added MCP Server project link to the footer's Open Source section and added Workoflow MCP release notes to the Release Notes page with automatic changelog fetching from GitHub
+- **Atlassian OAuth 2.0 authentication for Jira and Confluence** - Jira and Confluence integrations now support OAuth 2.0 authentication alongside the existing API token method. OAuth provides automatic token refresh and eliminates the need to manually manage API tokens. Users can choose their preferred authentication method during setup.
+
+### Improved
+- **Reduced AI agent token usage by ~90%** - Jira and Confluence tools now return streamlined, AI-friendly responses instead of raw API data. This prevents context window overflow errors when working with large datasets like sprint issues or Confluence pages.
+- **Jira issue responses optimized for AI** - Sprint issues, search results, and board issues now return only essential fields (key, summary, status, assignee, priority, labels, dates) with descriptions converted from verbose Atlassian Document Format (ADF) to plain text.
+- **Confluence page content now AI-readable** - Page content is converted from HTML storage format to clean plain text with automatic truncation for large pages, preventing token overflow.
+
+### Changed
+- **OAuth 2.0 is now the default for Jira and Confluence** - When adding new Jira or Confluence skills, OAuth 2.0 is now pre-selected as the recommended authentication method. Setup instructions now update dynamically based on your selected authentication mode.
+- **User Delegation is now the default for SAP C4C and SAP SAC** - When adding new SAP skills, User Delegation (via Azure AD) is now pre-selected as the recommended authentication method for better security and user attribution.
+
+### Fixed
+- **Jira and Confluence OAuth setup now redirects to Atlassian** - Fixed issue where setting up Jira or Confluence with OAuth 2.0 incorrectly redirected to Microsoft login instead of Atlassian authorization
+- **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
+- **Jira and Confluence OAuth test connection now works with expired tokens** - Fixed 401 error when testing Jira or Confluence OAuth connections after the access token expired. Tokens are now automatically refreshed before testing.
+
+## 2026-01-19
+
+### Improved
+- **SAP C4C and SAC user delegation alignment** - Both SAP C4C and SAP SAC integrations now use consistent "User Delegation" naming and require SAP OAuth credentials for the SAML2 Bearer flow. Setup instructions updated with clear 3-step process.
+
+## 2026-01-16
+
+### Added
+- **SAP Analytics Cloud integration (experimental)** - New integration for querying analytics data from SAP SAC. AI agents can discover models, query sales/revenue data with filters, and access dashboards through 6 specialized tools.
+- **HubSpot CRM integration (experimental)** - New integration for managing contacts, companies, and deals in HubSpot CRM with OAuth2 authentication. AI agents can now search, view, create, and update HubSpot records through 12 specialized tools.
+- **SAP C4C and SAC User Delegation** - SAP C4C and SAP SAC now support user delegation via Azure AD. When configured, actions are attributed to the actual user instead of a technical service account. Setup instructions are shown on the integration configuration page.
+
+### Improved
+- **SAP C4C agent now provides clickable links** - When asking for a link to an opportunity, account, contact, or lead, the agent now returns the SAP C4C web interface URL instead of API/XML links
+- **SAP C4C agent checks for duplicate accounts** - Before creating a new account, the agent now searches for existing accounts with similar names and asks for confirmation if matches are found
+- **SAP C4C agent requests required fields** - When creating opportunities, accounts, contacts, or leads with incomplete information, the agent now clearly lists which fields are required vs recommended
+- **Integration setup instructions** - Integrations can now display detailed setup instructions on their configuration page to guide users through complex setup requirements
+
+## 2026-01-15
+
+### Added
+- **MCP Server Configuration UI** - Skills page "API Access" button now shows Claude Desktop MCP configuration instead of curl examples
+- **Copy-paste ready MCP config** - Users can copy JSON configuration with their personal access token pre-filled for Claude Desktop setup
+- **Token requirement for MCP config** - Users without a personal access token see a prompt to generate one in their profile before viewing MCP configuration
+- **MCP tools documentation** - Skills page now lists available MCP tools (workoflow_list_tools, workoflow_execute, workoflow_refresh) with descriptions
+
+### Improved
+- **Projektron task names now include project hierarchy** - Tasks returned by `projektron_get_all_tasks` now display the full path including project and subproject names (e.g., "Incubator AI > Meeting" instead of just "Meeting"), making it easier to identify and book time to the correct task
+- **Projektron worklog now includes booking descriptions** - Time entries returned by `projektron_get_worklog` now contain individual booking comments/descriptions, making it easier for AI agents to understand what work was done
+- **AI agent anti-hallucination improvements** - All 7 sub-agents (Projektron, Jira, Confluence, SharePoint, GitLab, Trello, SAP C4C) now have strengthened prompts that enforce tool calls before responding with user data, reducing cases where agents would invent information instead of fetching it from APIs
+
+### Changed
+- **SAP C4C marked as experimental** - SAP C4C integration now shows experimental badge in the UI to indicate it's still under development
+
+### Fixed
+- **MCP API authentication** - Added dedicated `mcp_api` firewall for `/api/mcp` routes using `PromptApiTokenAuthenticator` - previously requests fell through to the generic `api` firewall which used JWT authentication, causing valid X-Prompt-Token headers to be rejected with 401
+- **Projektron worklog duplicate entries** - Fixed issue where the same booking appeared multiple times with wrong dates when fetching weekly time entries
+
+## 2026-01-14
+
+### Added
+- **MCP API endpoints** - New `/api/mcp/tools` and `/api/mcp/execute` endpoints for MCP server integration with token-based authentication
+- **Prompt Vault hero banner** - Added description section explaining what the Prompt Vault is and how personal vs team prompts work
+- **Skills API helper** - Copy-able curl commands on the Skills page for listing tools, executing tools, and filtering by type
+
+### Changed
+- **Platform Skills management redesign** - Replaced card-based layout with compact table view showing all tools at a glance with toggle switches on the right
+
+---
+
+## 2026-01-13
+
+### Added
+- **Prompt Vault** - New feature for managing and organizing AI prompts at personal and team level with categories, upvotes, and comments
+- **Prompt import command** - Console command to import default prompts from CSV into organisations
+- **Prompt API** - REST API for AI agents to retrieve prompts using personal access tokens
+- **Prompt sorting** - Sort prompts by newest, oldest, most popular, alphabetically, or by category
+- **API helper section** - Copy-able curl commands on the Prompts page for easy API access
+- **Jira user filtering** - AI agents can now filter sprint, board, and Kanban issues by assignee (e.g., "show my assigned issues") and apply custom JQL filters (e.g., "issues completed yesterday")
+
+### Fixed
+- **Copy button feedback** - All copy buttons now show green success indicator when clicked
+
+## 2025-12-16
+
+### Fixed
+- **SAP C4C search filtering now works correctly** - AI agents now use the correct OData V2 filter syntax for partial name searches (substringof instead of contains) and correct field names for opportunity filters (ProspectPartyID instead of AccountPartyID)
+
+## 2025-12-12
+
+### Added
+- **Experimental skill banner** - Skills marked as experimental now display a warning banner on their setup page, informing users that features may change
+- **Projektron session expiration notice** - Projektron skill setup page now shows a note near the JSESSIONID and CSRF token fields explaining that these values expire after a day
+
+## 2025-12-05
+
+### Added
+- **Projektron absence tracking** - AI agents can now view vacation, sickness, and other absences for any year with details including dates, duration, status (approved/pending/rejected), and vacation balance summary
+- **Projektron worklog debug script** - New helper script (`scripts/projektron_add_worklog_helper.sh`) for testing and debugging Projektron time bookings from the command line
+- **Integration connection status tracking** - Integrations now track their connection status and display when credentials need to be renewed
+
+### Fixed
+- **Projektron absence details now parse correctly** - Fixed a bug where vacation entries showed null values for duration, end date, and status; multi-day vacations now correctly display their full date range (e.g., Dec 22-31 instead of just Dec 22)
+- **Projektron time entries now book to correct date** - Fixed a bug where time entries were being booked to the wrong date (one day earlier than intended) due to an incorrect date adjustment in the booking logic
+
+## 2025-12-04
+
+### Added
+- **Execution ID tracking in Audit Log** - API calls can now be grouped by execution_id parameter, making it easier to trace all actions from a single AI agent workflow execution
+- **Audit Log grouped view** - New toggle between flat and grouped view modes, allowing you to see related API calls collapsed under their execution_id
+- **Execution ID filtering** - Filter audit log entries by specific execution_id to trace a single workflow execution
+
+### Changed
+- **Audit Log now shows last 15 minutes by default** - For better performance and focus, the audit log initially displays only the last 15 minutes of entries; use the date filters to view older logs
+- **Audit Log table layout optimized** - Removed User column to make room for Data column on smaller screens
+
+### Fixed
+- **Audit Log expand details now scrollable** - Large JSON data in expanded log details is now scrollable instead of expanding infinitely
+
+## 2025-12-03
+
+### Added
+- **SAP C4C metadata discovery tool** - AI agents can now discover available entity properties before searching, preventing filter errors from invalid property names like "SalesPhaseCode" that don't exist in the OData API
+- **SAP C4C related data expansion** - AI agents can now include related collections (parties, items, notes) in opportunity queries with a single request, reducing API calls
+- **SAP C4C automatic date format correction** - AI agent now automatically converts simple dates (e.g., "2026-03-03") to SAP's required ISO 8601 format with time component ("2026-03-03T00:00:00") without asking for user confirmation
+
+### Improved
+- **Multi-language response consistency** - Main AI agent now correctly responds in the same language as the user's input (English input → English response, German input → German response)
+
+### Fixed
+- **SAP C4C opportunity creation 403 error** - Fixed issue where creating opportunities failed with "permission denied" due to session cookies being lost during CSRF token fetch redirect; CSRF token endpoint now avoids redirect for reliable session handling
+- **SAP C4C opportunity creation with account/contact links** - Fixed issue where linking opportunities to accounts and contacts failed due to wrong SAP field names (AccountPartyID→ProspectPartyID, MainContactPartyID→PrimaryContactPartyID) and wrong ID types; now correctly uses AccountID/ContactID instead of ObjectID
+- **SAP C4C account/contact lookup from opportunities** - Fixed issue where agent incorrectly used PartyID values to fetch accounts and contacts, resulting in 404 errors; agent now uses name-based search for reliable lookups
+
+## 2025-12-02
+
+### Added
+- **SAP C4C Opportunity management** - AI agents can now create, search, update, and list sales opportunities in SAP Cloud for Customer with support for linking to accounts and contacts
+- **SAP C4C Account management** - AI agents can now manage corporate accounts including address and contact information, with optional expansion to show linked contacts
+- **SAP C4C Contact management** - AI agents can now create and manage contact persons with support for linking to corporate accounts
+
+### Fixed
+- **Projektron time booking now works correctly** - Fixed issue where worklog entries appeared to save successfully but were not actually created; added missing required form fields (effortWorkingTimeType, effortChargeability, edit_form_data_submitted) that Projektron expects
+
+### Changed
+- **Projektron time booking requires CSRF token** - Users must now provide their CSRF_Token cookie alongside JSESSIONID for worklog booking; this improves reliability by using the browser's existing token instead of trying to extract it from HTML
+
+## 2025-12-01
+
+### Added
+- **Release Notes page** - New page displaying changelogs from all Workoflow components (Bot, Platform, Tests, Load Tests, Infrastructure) with GitHub links and project descriptions
+- Accessible via Settings dropdown → Release Notes
+- Content cached for 1 hour for performance
+- **Projektron worklog retrieval** - AI agents can now fetch time entries from Projektron by specifying a date, returning the full week's bookings with task names and hour breakdowns
+- **Projektron time booking** - AI agents can now book time entries directly to Projektron tasks with support for hours, minutes, description, and billable/non-billable classification
+
+## 2025-11-27
+
+### Fixed
+- **Agent response display issues** - Fixed encoding problems that could cause garbled characters (like corrupted checkmarks) in AI agent responses
+
+### Improved
+- **Simpler Projektron setup** - Removed CSRF token requirement from Projektron integration; only JSESSIONID cookie is now needed for authentication
+- **Better AI agent compatibility** - Streamlined agent instructions for improved performance with newer AI models including GPT-5
+
+## 2025-11-26
+
+### Fixed
+- **Jira agent HTTP tool confusion** - Fixed issue where Jira AI agent incorrectly passed system prompt data to HTTP tools; simplified prompt to match working Confluence pattern
+- **Skills API user isolation** - Fixed security issue where Skills API could return integration data from all users in an organisation; now requires workflow_user_id parameter and properly filters by user
+- **Cleaner magic link login experience** - Removed unnecessary success notification banner after logging in via magic link for a smoother user experience
+
+### Added
+- **Smart document format selection** - AI agent now intelligently chooses between PDF and PowerPoint based on user request
+- **Explicit format override support** - When you explicitly mention "als PDF" or "PDF Datei", the agent respects your choice even when asking for a "Präsentation"
+- **Format clarification prompts** - For ambiguous requests like "Erstelle Unterlagen", the agent asks which format you prefer instead of guessing
+
+### Fixed
+- **PDF/PowerPoint format confusion** - Fixed issue where requesting a "Präsentation in Form einer PDF Datei" would incorrectly create a PowerPoint instead of respecting the explicit PDF request
+
+### Improved
+- **Detailed API error messages** - Tool execution errors now include specific error details, HTTP status codes, context (tool_id, tool_name, integration_type), and actionable hints for troubleshooting
+- **Credential validation** - Clear error message when integration credentials are missing or invalid
+
+## 2025-11-25
+
+### Added
+- **Jira reporter field support** - AI agents can now set themselves as the reporter when creating Jira issues using their own account ID
+- **Jira get myself tool** - New tool to retrieve the current authenticated user's account information, enabling proper reporter assignment during issue creation
+
+### Changed
+- **Complete README rewrite** - Professional documentation with logo, feature overview, architecture diagram, quick start guide, API examples, and development instructions
+
+## 2025-11-24
+
+### Changed
+- **Compact navigation** - Grouped navigation items into two dropdown menus (Workspace and Settings) with icons for a cleaner header
+
+### Added
+- **Projektron integration** - New integration for Projektron time tracking and project management system
+- **Projektron task discovery** - View all available projects and tasks from your Projektron account with direct booking URLs for quick time entry access
+
+### Changed
+- Workflow visualization reverted back to cloud-hosted n8n service for better reliability and maintenance-free operation
+- Experimental integrations indicator moved from separate badge to flask icon in type column with hover tooltip for cleaner table layout
+
+### Fixed
+- Fixed Audit Log table not responding to clicks - sorting by column headers and JSON data modal now work correctly
+- Fixed Projektron task fetching error in AI workflows - resolved issue where n8n agent would fail with "schema validation error" when trying to get project and task lists
+- Fixed Projektron integration not working in n8n workflows - simplified system prompt to match working Jira pattern by removing overly detailed tool schema documentation that was confusing the AI agent
+- Fixed issue where Jira project metadata wasn't returning available issue types, preventing AI agents from creating Jira issues
+- Fixed language selector not displaying flag emojis - flags now render properly instead of showing country codes like "GB"
+
+### Added
+- **Audit Log sorting** - Click column headers to sort audit logs by timestamp, action, user, or IP address in ascending or descending order
+- **Audit Log JSON viewer** - Click any data cell to open a formatted JSON viewer with syntax highlighting, search functionality, and copy-to-clipboard button for easy debugging
+- **Audit Log page** - New page showing complete history of all activities in your account and organization including user actions, integration changes, file operations, and tool executions
+- **Audit Log search and filtering** - Search by action name and filter by date range to quickly find specific activities
+- **Audit Log detailed view** - Click to expand any log entry to see full details including complete data, IP addresses, and user agent information
+- **Tool execution tracking** - All API tool executions are now logged in the audit trail, providing visibility into what integrations are being used and when
+- **SAP Cloud for Customer (C4C) integration** - New integration for managing sales leads in SAP C4C with AI assistance
+- **SAP C4C lead creation** - Create new leads with customizable fields including contact information, company details, qualification levels, and custom SAP fields
+- **SAP C4C lead search** - Search leads using powerful filters (by status, company, qualification level, etc.) with support for complex queries
+- **SAP C4C lead management** - View detailed lead information, update lead fields, and track lead status changes through natural language
+- **SAP C4C pagination support** - Browse through large lead lists with automatic pagination for better performance
+- **Jira issue creation** - Create new Jira tickets (stories, bugs, tasks) directly from chat with automatic field discovery that adapts to your Jira configuration
+- **Jira issue updates** - Update any field on existing issues including summary, description, priority, assignee, labels, and custom fields
+- **Jira bulk operations** - Create up to 50 issues at once for faster sprint planning and task setup
+- **Jira user management** - Search for team members and assign issues with automatic user lookup
+- **Jira issue linking** - Link related issues together (blocks, relates to, duplicates) to show relationships between work items
+- **Jira priority and metadata discovery** - Automatically discover available priorities, components, and required fields for your specific Jira projects
+- **Jira custom field support** - Full support for custom fields across all operations, automatically handling different field types and validation rules
+- **GitLab merge request workflow completion** - AI agents can now merge merge requests, approve/unapprove changes, check approval status, assign reviewers, trigger merge request pipelines, and view all pipelines for a merge request - enabling fully automated code review workflows from review to merge
+- **GitLab CI/CD pipeline and job control** - AI can now retry or cancel failed pipelines and jobs, trigger new pipelines on any branch, and download job artifacts for analysis - giving you complete control over your continuous integration workflows
+- **GitLab repository file management** - AI agents can now create, update, and delete files directly in repositories with commit messages, compare branches to see what changed between any two points, and protect branches with access control rules - enabling automated code modifications and repository management
+- **GitLab branch and tag operations** - AI can now create and delete branches for feature development, create and delete tags for releases (with automatic version detection for semantic versioning), enabling release automation workflows like "create tag v2.4.0 from main branch"
+- **GitLab issue collaboration** - AI agents can now add comments to issues, list all issue discussions, assign users to issues, and search issues across all your projects - making issue management and team collaboration easier
+- **GitLab merge request discussions** - AI can now create discussion threads on merge requests, resolve discussions when feedback is addressed, and reply to existing threads - improving code review collaboration
+- **GitLab project organization** - AI agents can now list project labels, list project milestones with filtering by state, and view all issues in a milestone - helping you track project progress and organize work
+- **GitLab team collaboration** - AI can now list project members with their access levels and search for users by name or username - making team management and user lookup easier
+- GitLab agent can now identify specific failing jobs in CI/CD pipelines - AI can tell you exactly which build, test, or deployment step failed instead of just showing "pipeline failed"
+- GitLab agent can now read actual error logs from failed jobs - AI analyzes error messages, stack traces, and console output to explain what went wrong and suggest fixes
+- GitLab pipeline troubleshooting now includes detailed job information - see job names, stages, failure reasons, and execution times for comprehensive debugging
+- GitLab agent can now list your merge requests across all projects - see all MRs assigned to you or created by you without specifying individual projects, supports filtering by state (opened/closed/merged) and searching across your entire GitLab workspace
+
+### Improved
+- **Audit Log now captures complete request payloads** - See exactly what parameters were sent to each tool execution with automatic redaction of sensitive fields like passwords and API keys for security
+- **Audit Log now stores response data** - View what data was returned by tool executions (up to 5KB per response) for debugging and compliance purposes
+- **Audit Log tabbed interface** - Easier navigation between request and response data with separate tabs, making it simple to inspect API calls and their results
+- GitLab agent provides more actionable pipeline debugging - instead of "pipeline failed, check the logs", AI now says "PHPStan job failed due to type error in UserController.php line 45"
+- GitLab job trace analysis now faster and more efficient - shows only the last 500 lines where errors typically appear, speeding up AI diagnostics while reducing processing overhead
+- GitLab integration now covers complete software development lifecycle - from creating branches and modifying code, to reviewing and merging changes, to managing CI/CD pipelines and creating release tags - all available through natural language commands
+- **API tools now include tool_id field** - Tools endpoint response now provides both "name" and "tool_id" fields with the same value, improving consistency between tool discovery and tool execution endpoints for AI agents
+
+## 2025-11-21
+
+### Changed
+- Simplified SharePoint search to single endpoint - AI agents now build KQL (Keyword Query Language) queries directly instead of using multiple search tools
+- SharePoint search now accepts full KQL syntax including wildcards, field filters (author:, filename:, filetype:), date ranges, and boolean operators for more powerful searches
+- Reduced SharePoint agent prompt complexity by 50% - cleaner, faster, more maintainable AI instructions
+
+### Improved
+- SharePoint search results now always include clickable links to documents and pages for faster access
+- Main AI agent now preserves clickable links from SharePoint and other integrations - links are no longer stripped during response formatting, ensuring you can directly access documents, pages, and resources
+- SharePoint agent now intelligently filters search results by relevance - only shows documents actually about your topic instead of overwhelming you with documents that just mention keywords
+- Search results are now ranked by relevance - documents with matching titles appear first, followed by documents with relevant content
+- SharePoint agent now explains when results were filtered (e.g., "found 4 relevant documents out of 25 total results")
+- SharePoint search results now include complete drive information - improved reliability when accessing documents found through search
+
+### Fixed
+- SharePoint search now returns only actual documents from your environment - fixed critical issue where AI agent could show example/placeholder documents instead of real search results from SharePoint API
+- SharePoint document reading now works reliably - fixed error where AI agents couldn't open documents found through search, now successfully accesses files in SharePoint document libraries
+- SharePoint search now returns comprehensive results - fixed issue where "filename:" prefix in queries caused post-filtering that excluded valid results
+- SharePoint agent now correctly uses the primary search tool (search_pages) for comprehensive document discovery matching native SharePoint search behavior
+
+## 2025-11-20
+
+### Added
+- New Skills API endpoint (`/api/skills/`) for retrieving AI agent system prompts dynamically - AI workflows can now fetch integration-specific instructions and tool documentation on demand
+- System prompts now visible on skill configuration pages - users can review AI agent instructions for each connected integration (Jira, Confluence, SharePoint, Trello, GitLab) directly in the web interface
+- Skill request feature - users can now request new integrations directly from the Skills page by clicking "Request New Skill" button and filling out a form with service name, description, API documentation URL, and priority level
+
+### Changed
+- System prompts now managed within skill definitions instead of separate XML files - prompts are now part of the codebase for easier version control and maintenance
+- Improved integration architecture with Platform Skills and Personalized Skills distinction - clearer separation between system-level tools (file sharing, PDF generation) and user-specific integrations (Jira, Confluence)
+
+### Fixed
+- Skills API endpoint now accessible without authentication errors - resolved HTTP 500 error preventing platform from loading
+- System prompt section on skill edit pages now displays correctly with proper translations and dark theme styling - replaced placeholder text and white backgrounds with formatted XML display
+- Fixed critical system prompt incompleteness for all PersonalizedSkill integrations - AI agents now receive complete instructions matching production specifications for SharePoint (6%→100%), GitLab (5.5%→100%), Trello (7%→100%), Confluence (24%→100%), and Jira (72%→100%), including all workflow guidelines, tool definitions, example interactions, best practices, and safety rules that were previously missing
+
+## 2025-11-19
+
+### Added
+- Kanban board support for Jira - AI agents can now work with Kanban boards in addition to Scrum boards (previously only Scrum was supported)
+- New Jira board detection tool - AI agents can now check if a board is Scrum or Kanban before choosing the right approach
+- Universal Jira board tool - automatically detects board type and retrieves issues (active sprint for Scrum, all issues for Kanban)
+
+### Improved
+- Enhanced GitLab integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from all 24 GitLab tools (project details, MR states, issue info, commit data, pipeline status, package versions, file content, branch info) making it easier to search code, review merge requests, track issues, monitor CI/CD pipelines, and manage repositories
+- Enhanced Jira integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each Jira tool (issue keys, statuses, assignees, sprint details, transition options, comment metadata) making it easier to search issues, manage workflows, track sprints, and update tickets
+- Enhanced Trello integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each Trello tool (board names, card details, list positions, comments, checklists) making it easier to search boards, manage cards, and track tasks
+- Enhanced SharePoint integration tool descriptions with detailed return value documentation - AI agents now know exactly what data they'll receive from each SharePoint tool (file names, sizes, URLs, timestamps, author info) making document search, file listings, and page reading more reliable
+- Enhanced Confluence integration tool descriptions with detailed return value documentation - AI agents now know exactly what data fields they'll receive (page IDs, titles, URLs, content, version info) making it easier to work with Confluence pages, comments, and search results
+- Better error messages for Kanban boards - when trying to get sprints from a Kanban board, the system now explains that Kanban boards don't have sprints and suggests using the correct tool instead
+- SharePoint search now finds significantly more results using intelligent multi-keyword search - the system automatically searches with all relevant variations (synonyms, German+English translations, acronyms) in a single query
+- SharePoint search results are now grouped by type (Files, Sites, Pages, Lists, Drives) matching SharePoint's native search interface - making it easier to find what you're looking for
+- Simplified SharePoint search workflow - agents now make one comprehensive search instead of multiple attempts, providing faster results
+- Better error messages when SharePoint search fails - now includes troubleshooting tips about permissions, token validity, and Search API configuration
+
+### Fixed
+- Fixed Kanban board returning no issues - AI agents can now successfully retrieve all issues from Kanban boards (the tool was using an invalid query that always returned empty results)
+- Fixed n8n Main Agent workflow errors - corrected parameter schema configuration that was preventing multi-agent workflows from executing properly
+- Fixed Jira integration failing with HTTP 410 errors - updated to use Jira's current API after Atlassian removed the deprecated endpoint, restoring full functionality for searching issues and retrieving Kanban board data
+- Fixed Jira search returning HTTP 400 errors - switched to standard Jira API endpoint that works more reliably with all query types
+- Improved error messages when Jira operations fail - now shows detailed Jira error descriptions instead of generic "HTTP 400" messages, making it easier to understand and fix issues like invalid queries, missing permissions, or incorrect board/issue IDs
+- Fixed "Sprints not supported" error when working with Kanban boards - system now detects board type and uses the appropriate method to get issues
+- Fixed SharePoint search returning no results for multilingual queries - system now automatically includes both German and English keywords for better coverage in bilingual workspaces
+- Fixed missing clickable links in search results across all agents - SharePoint, Confluence, Jira, and Trello search results now include direct URLs to access documents, pages, issues, and cards with a single click
+
+## 2025-11-18
+
+### Added
+- Comprehensive multi-agent AI system documentation including n8n workflow configurations and system prompts for JIRA, Confluence, SharePoint, GitLab, and Trello integrations
+- n8n workflow JSON files for Main Agent (orchestrator) and JIRA Agent with detailed import and configuration guides
+- System prompt templates for all specialized agents with tool definitions, workflow guidelines, and best practices
+
+### Improved
+- Deployment reliability enhanced with automatic asset verification - production deployments now automatically rebuild frontend assets if they're missing, preventing 500 errors after Docker cleanup operations
+- Production deployments now use clean builds to ensure all components are properly compiled and up-to-date
+
+### Fixed
+- Fixed header overlap issue on homepage for visitors - navigation now displays cleanly without visual overlap
+
+## 2025-11-13
+
+### Added
+- Multiple integration type filtering in REST API - you can now request tools from several integrations at once using comma-separated values (e.g., `tool_type=jira,confluence,sharepoint`)
+- This enables more flexible tool queries for AI agents and automation platforms that need access to multiple service types simultaneously
+
+### Improved
+- Simplified and optimized API integration code for better maintainability and performance
+- API tool filtering is now more efficient when handling requests for multiple integration types
+- Improved AI agent tool selection by adding domain information to integration descriptions - AI agents can now automatically identify the correct integration when you mention a URL (e.g., when asked about https://company.atlassian.net/browse/TICKET-123, the agent knows to use the matching Jira instance)
+
 ## 2025-10-30
 
 ### Changed

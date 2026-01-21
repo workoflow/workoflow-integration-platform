@@ -32,171 +32,20 @@ class SharePointService
         }
     }
 
-    public function searchDocuments(array $credentials, string $query, int $limit = 25): array
-    {
-        // The /search/query endpoint requires Application permissions
-        // With delegated permissions, we need to use site-specific search
-        // First, get the user's sites, then search within them
-
-        try {
-            $results = [];
-            $remainingLimit = $limit;
-
-            // 1. Search for matching sites
-            try {
-                $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                    'auth_bearer' => $credentials['access_token'],
-                    'query' => [
-                        'search' => $query,
-                        '$top' => min($remainingLimit, 10)
-                    ]
-                ]);
-
-                $sites = $sitesResponse->toArray();
-
-                if (isset($sites['value'])) {
-                    foreach ($sites['value'] as $site) {
-                        $results[] = [
-                            'type' => 'site',
-                            'id' => $site['id'] ?? '',
-                            'name' => $site['displayName'] ?? $site['name'] ?? '',
-                            'webUrl' => $site['webUrl'] ?? '',
-                            'description' => $site['description'] ?? ''
-                        ];
-                        $remainingLimit--;
-                        if ($remainingLimit <= 0) {
-                            break;
-                        }
-                    }
-
-                    // For each site found, also search for pages and documents within it
-                    foreach ($sites['value'] as $site) {
-                        if ($remainingLimit <= 0) {
-                            break;
-                        }
-
-                        // Search for pages in this site
-                        try {
-                            $pagesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/pages', [
-                                'auth_bearer' => $credentials['access_token'],
-                                'query' => [
-                                    '$top' => min($remainingLimit, 10),
-                                    '$filter' => "contains(title,'" . str_replace("'", "''", $query) . "') or contains(name,'" . str_replace("'", "''", $query) . "')"
-                                ]
-                            ]);
-
-                            $pages = $pagesResponse->toArray();
-                            if (isset($pages['value'])) {
-                                foreach ($pages['value'] as $page) {
-                                    $results[] = [
-                                        'type' => 'page',
-                                        'id' => $page['id'] ?? '',
-                                        'name' => $page['title'] ?? $page['name'] ?? '',
-                                        'webUrl' => $page['webUrl'] ?? '',
-                                        'description' => $page['description'] ?? '',
-                                        'siteId' => $site['id'],
-                                        'siteName' => $site['displayName'] ?? $site['name'] ?? ''
-                                    ];
-                                    $remainingLimit--;
-                                    if ($remainingLimit <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            error_log('Pages search in site ' . $site['id'] . ' failed: ' . $e->getMessage());
-                        }
-
-                        // Search for documents in this site's drive
-                        try {
-                            $driveSearchResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites/' . $site['id'] . '/drive/search(q=\'' . urlencode($query) . '\')', [
-                                'auth_bearer' => $credentials['access_token'],
-                                'query' => [
-                                    '$top' => min($remainingLimit, 10)
-                                ]
-                            ]);
-
-                            $driveResults = $driveSearchResponse->toArray();
-                            if (isset($driveResults['value'])) {
-                                foreach ($driveResults['value'] as $item) {
-                                    $results[] = [
-                                        'type' => 'document',
-                                        'id' => $item['id'] ?? '',
-                                        'name' => $item['name'] ?? '',
-                                        'webUrl' => $item['webUrl'] ?? '',
-                                        'size' => $item['size'] ?? 0,
-                                        'lastModified' => $item['lastModifiedDateTime'] ?? '',
-                                        'siteId' => $site['id'],
-                                        'siteName' => $site['displayName'] ?? $site['name'] ?? ''
-                                    ];
-                                    $remainingLimit--;
-                                    if ($remainingLimit <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch (\Exception $e) {
-                            error_log('Drive search in site ' . $site['id'] . ' failed: ' . $e->getMessage());
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-                error_log('Sites search failed: ' . $e->getMessage());
-            }
-
-            // 2. Also search in user's OneDrive if we still have room
-            if ($remainingLimit > 0) {
-                try {
-                    $driveSearchResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/me/drive/search(q=\'' . urlencode($query) . '\')', [
-                        'auth_bearer' => $credentials['access_token'],
-                        'query' => [
-                            '$top' => $remainingLimit
-                        ]
-                    ]);
-
-                    $driveResults = $driveSearchResponse->toArray();
-                    if (isset($driveResults['value'])) {
-                        foreach ($driveResults['value'] as $item) {
-                            $results[] = [
-                                'type' => 'driveItem',
-                                'id' => $item['id'] ?? '',
-                                'name' => $item['name'] ?? '',
-                                'webUrl' => $item['webUrl'] ?? '',
-                                'size' => $item['size'] ?? 0,
-                                'lastModified' => $item['lastModifiedDateTime'] ?? '',
-                                'siteId' => 'me',  // Personal OneDrive files use 'me' as siteId
-                                'siteName' => 'Personal OneDrive'
-                            ];
-                        }
-                    }
-                } catch (\Exception $e) {
-                    error_log('Personal drive search failed: ' . $e->getMessage());
-                }
-            }
-
-            return [
-                'value' => $results,
-                'count' => count($results)
-            ];
-        } catch (\Exception $e) {
-            error_log('SharePoint Search Error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    public function searchPages(array $credentials, string $query, int $limit = 25): array
+    public function search(array $credentials, string $kqlQuery, int $limit = 25): array
     {
         try {
-            error_log('SharePoint searchPages called with query: ' . $query . ', limit: ' . $limit);
+            error_log('SharePoint search called with KQL: ' . $kqlQuery . ', limit: ' . $limit);
             $results = [];
 
-            // Use the Microsoft Graph Search API
+            // Use the Microsoft Graph Search API with comprehensive entity types
+            // Supporting Files, Sites, Pages, Lists, and Drives to match SharePoint native search
             $searchRequest = [
                 'requests' => [
                     [
-                        'entityTypes' => ['listItem', 'site', 'driveItem'],
+                        'entityTypes' => ['driveItem', 'site', 'listItem', 'list', 'drive'],
                         'query' => [
-                            'queryString' => $query
+                            'queryString' => $kqlQuery  // KQL query passed directly from agent
                         ],
                         'size' => $limit,
                         'fields' => [
@@ -207,13 +56,16 @@ class SharePointService
                             'createdDateTime',
                             'lastModifiedDateTime',
                             'siteId',
-                            'id'
+                            'id',
+                            'fileSystemInfo',
+                            'size',
+                            'parentReference'
                         ]
                     ]
                 ]
             ];
 
-            error_log('Attempting Microsoft Graph Search API with query: ' . json_encode($searchRequest));
+            error_log('Attempting Microsoft Graph Search API with KQL query: ' . json_encode($searchRequest));
 
             $searchResponse = $this->httpClient->request('POST', self::GRAPH_API_BASE . '/search/query', [
                 'auth_bearer' => $credentials['access_token'],
@@ -237,17 +89,25 @@ class SharePointService
                                 // Log all available fields for debugging
                                 error_log('Resource fields: ' . json_encode(array_keys($resource)));
 
-                                // More flexible filtering - include any SharePoint content
-                                // Determine the type based on @odata.type
+                                // Determine the type based on @odata.type for proper grouping
                                 $odataType = $resource['@odata.type'] ?? 'unknown';
                                 $resultType = 'page'; // default
 
                                 if (str_contains($odataType, 'driveItem')) {
-                                    $resultType = 'document';
+                                    // Files in document libraries
+                                    $resultType = 'file';
                                 } elseif (str_contains($odataType, 'site')) {
+                                    // SharePoint sites
                                     $resultType = 'site';
                                 } elseif (str_contains($odataType, 'listItem')) {
+                                    // List items (includes pages)
                                     $resultType = 'page';
+                                } elseif (str_contains($odataType, 'list')) {
+                                    // SharePoint lists
+                                    $resultType = 'list';
+                                } elseif (str_contains($odataType, 'drive')) {
+                                    // Document libraries
+                                    $resultType = 'drive';
                                 }
 
                                 // Extract siteId properly based on the resource type
@@ -269,9 +129,13 @@ class SharePointService
                                     }
                                 }
 
+                                // Extract driveId from parentReference for proper file access
+                                $driveId = $resource['parentReference']['driveId'] ?? '';
+
                                 $results[] = [
                                     'type' => $resultType,
                                     'id' => $resource['id'] ?? '',
+                                    'driveId' => $driveId,
                                     'title' => $resource['title'] ?? $resource['name'] ?? $hit['summary'] ?? '',
                                     'name' => $resource['name'] ?? '',
                                     'webUrl' => $resource['webUrl'] ?? '',
@@ -296,15 +160,36 @@ class SharePointService
 
             error_log('Search API found ' . count($results) . ' results');
 
+            // Group results by type for better user experience (matching SharePoint native search UI)
+            $groupedResults = $this->groupResultsByType($results);
+
             return [
-                'value' => $results,
+                'value' => $results,  // Keep flat list for backward compatibility
+                'grouped_results' => $groupedResults,  // New grouped format
                 'count' => count($results),
-                'searchQuery' => $query
+                'grouped_summary' => $this->createGroupedSummary($groupedResults),
+                'searchQuery' => $kqlQuery
             ];
         } catch (\Exception $e) {
             error_log('SharePoint Pages Search Error: ' . $e->getMessage());
             error_log('Error trace: ' . $e->getTraceAsString());
-            throw $e;
+
+            // Return detailed error message for better debugging
+            return [
+                'value' => [],
+                'error' => true,
+                'error_message' => $e->getMessage(),
+                'error_details' => [
+                    'query' => $kqlQuery,
+                    'limit' => $limit,
+                    'timestamp' => date('Y-m-d H:i:s')
+                ],
+                'troubleshooting' => [
+                    'check_permissions' => 'Ensure Application permissions Sites.Read.All and Files.Read.All are granted',
+                    'check_token' => 'Verify access token is valid and not expired',
+                    'check_search_api' => 'Confirm Microsoft Graph Search API is enabled in tenant'
+                ]
+            ];
         }
     }
 
@@ -681,67 +566,77 @@ class SharePointService
      * @param int $maxLength Maximum content length to return (default 5000)
      * @return array Document content and metadata
      */
-    public function readDocument(array $credentials, string $siteId, string $itemId, int $maxLength = 5000): array
+    public function readDocument(array $credentials, string $siteId, string $itemId, int $maxLength = 5000, ?string $driveId = null): array
     {
         try {
-            error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId);
+            error_log('Reading SharePoint document content - SiteID: ' . $siteId . ', ItemID: ' . $itemId . ($driveId ? ', DriveID: ' . $driveId : ''));
 
-            // Check if this is a personal OneDrive file (siteId is "me" or empty)
-            $isPersonalDrive = empty($siteId) || $siteId === 'me' || $siteId === 'personal';
-
-            if ($isPersonalDrive) {
-                error_log('Accessing personal OneDrive file');
-                $driveEndpoint = '/me/drive';
+            // Prioritize driveId-based access if provided (more reliable from search results)
+            if (!empty($driveId)) {
+                error_log('Using driveId-based access for better reliability');
+                $driveEndpoint = "/drives/{$driveId}";
+                $apiEndpoint = self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}";
             } else {
-                // Check if siteId needs to be resolved (if it's a site name rather than ID)
-                // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
-                if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
-                    error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
+                // Fallback to site-based access
+                // Check if this is a personal OneDrive file (siteId is "me" or empty)
+                $isPersonalDrive = empty($siteId) || $siteId === 'me' || $siteId === 'personal';
 
-                    // Try to resolve the site name to a proper site ID
-                    try {
-                        $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
-                            'auth_bearer' => $credentials['access_token'],
-                            'query' => [
-                                'search' => $siteId,
-                                '$top' => 5
-                            ]
-                        ]);
+                if ($isPersonalDrive) {
+                    error_log('Accessing personal OneDrive file');
+                    $driveEndpoint = '/me/drive';
+                } else {
+                    // Check if siteId needs to be resolved (if it's a site name rather than ID)
+                    // A proper site ID contains commas or periods (e.g., "contoso.sharepoint.com,guid,guid")
+                    if (!str_contains($siteId, ',') && !str_contains($siteId, '.')) {
+                        error_log('SiteID appears to be a site name, attempting to resolve to actual site ID');
 
-                        $sites = $sitesResponse->toArray();
+                        // Try to resolve the site name to a proper site ID
+                        try {
+                            $sitesResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . '/sites', [
+                                'auth_bearer' => $credentials['access_token'],
+                                'query' => [
+                                    'search' => $siteId,
+                                    '$top' => 5
+                                ]
+                            ]);
 
-                        if (isset($sites['value']) && count($sites['value']) > 0) {
-                            // Try to find exact match first
-                            foreach ($sites['value'] as $site) {
-                                if (
-                                    (isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
-                                    (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)
-                                ) {
-                                    $siteId = $site['id'];
-                                    error_log('Resolved site name to ID: ' . $siteId);
-                                    break;
+                            $sites = $sitesResponse->toArray();
+
+                            if (isset($sites['value']) && count($sites['value']) > 0) {
+                                // Try to find exact match first
+                                foreach ($sites['value'] as $site) {
+                                    if (
+                                        (isset($site['displayName']) && strcasecmp($site['displayName'], $siteId) === 0) ||
+                                        (isset($site['name']) && strcasecmp($site['name'], $siteId) === 0)
+                                    ) {
+                                        $siteId = $site['id'];
+                                        error_log('Resolved site name to ID: ' . $siteId);
+                                        break;
+                                    }
                                 }
-                            }
 
-                            // If no exact match, use the first result as fallback
-                            if (!str_contains($siteId, ',')) {
-                                $siteId = $sites['value'][0]['id'];
-                                error_log('Using first matching site ID: ' . $siteId);
+                                // If no exact match, use the first result as fallback
+                                if (!str_contains($siteId, ',')) {
+                                    $siteId = $sites['value'][0]['id'];
+                                    error_log('Using first matching site ID: ' . $siteId);
+                                }
+                            } else {
+                                error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
                             }
-                        } else {
-                            error_log('Warning: Could not resolve site name "' . $siteId . '" to a site ID, proceeding anyway');
+                        } catch (\Exception $e) {
+                            error_log('Failed to resolve site name: ' . $e->getMessage());
+                            // Continue with the original siteId
                         }
-                    } catch (\Exception $e) {
-                        error_log('Failed to resolve site name: ' . $e->getMessage());
-                        // Continue with the original siteId
                     }
+
+                    $driveEndpoint = "/sites/{$siteId}/drive";
                 }
 
-                $driveEndpoint = "/sites/{$siteId}/drive";
+                $apiEndpoint = self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}";
             }
 
             // First get file metadata to understand what we're dealing with
-            $metadataResponse = $this->httpClient->request('GET', self::GRAPH_API_BASE . "{$driveEndpoint}/items/{$itemId}", [
+            $metadataResponse = $this->httpClient->request('GET', $apiEndpoint, [
                 'auth_bearer' => $credentials['access_token'],
             ]);
 
@@ -1255,5 +1150,80 @@ class SharePointService
         }
 
         return trim($text);
+    }
+
+    /**
+     * Group search results by type (Files, Sites, Pages, Lists, Drives)
+     *
+     * @param array $results Flat array of search results
+     * @return array Grouped results by type
+     */
+    private function groupResultsByType(array $results): array
+    {
+        $grouped = [
+            'files' => [],
+            'sites' => [],
+            'pages' => [],
+            'lists' => [],
+            'drives' => []
+        ];
+
+        foreach ($results as $result) {
+            $type = $result['type'] ?? 'unknown';
+
+            switch ($type) {
+                case 'file':
+                case 'document':  // Backward compatibility
+                    $grouped['files'][] = $result;
+                    break;
+                case 'site':
+                    $grouped['sites'][] = $result;
+                    break;
+                case 'page':
+                    $grouped['pages'][] = $result;
+                    break;
+                case 'list':
+                    $grouped['lists'][] = $result;
+                    break;
+                case 'drive':
+                    $grouped['drives'][] = $result;
+                    break;
+                default:
+                    // Unknown types go to pages as fallback
+                    $grouped['pages'][] = $result;
+            }
+        }
+
+        // Remove empty groups
+        return array_filter($grouped, fn($group) => !empty($group));
+    }
+
+    /**
+     * Create a human-readable summary of grouped results
+     *
+     * @param array $groupedResults Results grouped by type
+     * @return string Summary like "Files: 8, Sites: 2, Pages: 5"
+     */
+    private function createGroupedSummary(array $groupedResults): string
+    {
+        $summaryParts = [];
+
+        $typeLabels = [
+            'files' => 'Files',
+            'sites' => 'Sites',
+            'pages' => 'Pages',
+            'lists' => 'Lists',
+            'drives' => 'Drives'
+        ];
+
+        foreach ($groupedResults as $type => $items) {
+            if (!empty($items)) {
+                $label = $typeLabels[$type] ?? ucfirst($type);
+                $count = count($items);
+                $summaryParts[] = "$label: $count";
+            }
+        }
+
+        return implode(', ', $summaryParts);
     }
 }

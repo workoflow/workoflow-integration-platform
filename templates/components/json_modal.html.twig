@@ -1,0 +1,60 @@
+{# JSON Modal Component #}
+<div class="json-modal"
+     data-controller="json-modal"
+     data-json-modal-target="modal"
+     data-action="click->json-modal#closeOnBackdrop">
+    <div class="json-modal-dialog">
+        <div class="json-modal-content">
+            {# Header #}
+            <div class="json-modal-header">
+                <h3 class="json-modal-title" data-json-modal-target="title">
+                    JSON Data
+                </h3>
+                <button type="button"
+                        class="json-modal-close"
+                        data-action="click->json-modal#close"
+                        aria-label="{{ 'common.close'|trans }}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            {# Search bar #}
+            <div class="json-modal-search">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text"
+                           class="json-search-input"
+                           placeholder="{{ 'audit_log.json_modal.search_placeholder'|trans }}"
+                           data-json-modal-target="searchInput"
+                           data-action="input->json-modal#search">
+                </div>
+                <button type="button"
+                        class="btn-copy"
+                        data-json-modal-target="copyButton"
+                        data-action="click->json-modal#copy">
+                    <i class="fas fa-copy"></i> {{ 'audit_log.json_modal.copy'|trans }}
+                </button>
+            </div>
+
+            {# JSON Content #}
+            <div class="json-modal-body">
+                <div class="json-content" data-json-modal-target="content">
+                    {# JSON will be rendered here #}
+                </div>
+            </div>
+
+            {# Footer #}
+            <div class="json-modal-footer">
+                <div class="json-modal-hint">
+                    <i class="fas fa-info-circle"></i>
+                    {{ 'audit_log.json_modal.hint'|trans }}
+                </div>
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-action="click->json-modal#close">
+                    {{ 'common.close'|trans }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -51,7 +51,7 @@ class IntegrationConfigType extends AbstractType
             };
 
             $constraints = [];
-            $isSensitiveField = in_array($field->getName(), ['api_token', 'password', 'client_secret']);
+            $isSensitiveField = in_array($field->getName(), ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret']);
 
             // For sensitive fields in edit mode, they're not required (keep existing)
             // For new configs or non-sensitive fields, apply required validation

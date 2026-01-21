@@ -32,6 +32,7 @@ services:
             - '../src/Kernel.php'
             - '../src/Integration/SystemTools/'
             - '../src/Integration/UserIntegrations/'
+            - '../src/Service/Integration/AtlassianOAuthService.php'
 
     App\Controller\:
         resource: '../src/Controller/'
@@ -41,7 +42,12 @@ services:
         arguments:
             $apiAuthUser: '%app.api_auth_user%'
             $apiAuthPassword: '%app.api_auth_password%'
-    
+
+    App\Controller\SkillsApiController:
+        arguments:
+            $apiAuthUser: '%app.api_auth_user%'
+            $apiAuthPassword: '%app.api_auth_password%'
+
     App\Security\TestAuthenticator:
         arguments:
             $environment: '%kernel.environment%'

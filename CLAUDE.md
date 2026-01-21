@@ -24,6 +24,27 @@ The Workoflow Integration Platform is a production-ready Symfony 7.2 application
         - `composer code-check` - Run both PHPStan and PHPCS
     - Ensure code passes both checks before considering task complete
 
+3. **llms.txt Maintenance**:
+    - `/public/llms.txt` serves AI agents and provides platform overview for LLM assistants
+    - Update llms.txt when making these changes:
+        - Adding new integration type (e.g., GitHub, Slack, MS Teams)
+        - Changing API endpoints or authentication methods
+        - Adding major documentation files
+        - Updating tool counts or capabilities
+        - Modifying architecture (e.g., new authentication mechanism)
+    - Keep content concise and AI-friendly (avoid jargon, use clear structure)
+    - Verify all links in llms.txt work correctly
+    - Test changes by asking Claude/GPT-4 questions about the platform
+    - Purpose: Enable AI assistants to understand and explain the platform without human documentation
+
+4. **UI/Styling Guidelines**:
+    - **ALWAYS** reference `CONCEPT/SYMFONY_IMPLEMENTATION_GUIDE.md` for UI tasks
+    - This guide contains design system patterns, component structures, and styling conventions
+    - Add new CSS styles to `assets/styles/app.scss`, NOT inline in templates
+    - Follow existing alert patterns (`.alert-*`) for notification components
+    - Use CSS custom properties (`var(--space-md)`, `var(--text-sm)`, etc.) for consistency
+    - Run `docker-compose exec frankenphp npm run build` after SCSS changes
+
 ### Main Features
 - OAuth2 Google Login
 - Multi-Tenant Organisation Management
@@ -253,6 +274,29 @@ puppeteer.test2@example.com (Member)
 - MariaDB for database tests
 
 ## Deployment
+
+### official way to deploy (https://github.com/workoflow/workoflow-hosting project)
+example script call ../workoflow-ai-setup/scripts/deploy.sh prod
+
+### Production Docker Compose
+**CRITICAL**: Always use `docker-compose-prod.yml` for production operations:
+```bash
+# Correct - uses external volumes with production data
+docker-compose -f docker-compose-prod.yml up -d
+docker-compose -f docker-compose-prod.yml restart frankenphp
+
+# WRONG - creates new prefixed volumes, loses production data!
+docker-compose up -d
+docker-compose restart frankenphp
+```
+
+The production compose file uses `external: true` volumes that reference existing data volumes (`mariadb_data`, `redis_data`, etc.). Using the default `docker-compose.yml` will create new prefixed volumes and disconnect from production data.
+
+### how to connect to prod
+sh val-workoflow-prod
+sudo -iu docker
+cd docker-setups
+docker ps
 
 ### Environment Variables
 All critical configurations via .env:

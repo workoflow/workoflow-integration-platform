@@ -2,6 +2,8 @@
 
 namespace App\Integration;
 
+use App\Entity\IntegrationConfig;
+
 interface IntegrationInterface
 {
     /**
@@ -44,4 +46,18 @@ interface IntegrationInterface
      * @return CredentialField[]
      */
     public function getCredentialFields(): array;
+
+    /**
+     * Check if this integration is experimental
+     * Experimental integrations are shown with a warning badge in the UI
+     */
+    public function isExperimental(): bool;
+
+    /**
+     * Get setup instructions for this integration
+     * Returns HTML content to display in the setup page, or null if no instructions needed
+     *
+     * @return string|null HTML content for setup instructions
+     */
+    public function getSetupInstructions(): ?string;
 }

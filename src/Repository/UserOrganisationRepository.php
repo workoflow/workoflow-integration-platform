@@ -55,4 +55,35 @@ class UserOrganisationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Find the first admin user for an organisation (for prompt ownership)
+     * Falls back to first member if no admin exists
+     */
+    public function findFirstAdminByOrganisation(Organisation $organisation): ?UserOrganisation
+    {
+        // Try to find an admin first
+        $admin = $this->createQueryBuilder('uo')
+            ->andWhere('uo.organisation = :organisation')
+            ->andWhere('uo.role = :role')
+            ->setParameter('organisation', $organisation)
+            ->setParameter('role', 'ADMIN')
+            ->orderBy('uo.joinedAt', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($admin !== null) {
+            return $admin;
+        }
+
+        // Fall back to first member if no admin
+        return $this->createQueryBuilder('uo')
+            ->andWhere('uo.organisation = :organisation')
+            ->setParameter('organisation', $organisation)
+            ->orderBy('uo.joinedAt', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

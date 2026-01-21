@@ -56,3 +56,5 @@ composer.phar
 ###< lexik/jwt-authentication-bundle ###
 /.phpunit.cache/
 .playwright-mcp
+
+customer_screenshots

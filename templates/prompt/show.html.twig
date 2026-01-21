@@ -1,0 +1,193 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ prompt.title }} - {{ 'prompt.vault_title'|trans }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="prompts-page">
+    <div class="prompts-container prompt-detail-container">
+        {# Back link #}
+        <a href="{{ path('app_prompts', {scope: prompt.scope}) }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> {{ 'action.back'|trans }}
+        </a>
+
+        {# Prompt Header #}
+        <div class="prompt-detail-header">
+            <div class="prompt-detail-meta">
+                <span class="prompt-category-badge large">{{ ('prompt.category_' ~ prompt.category)|trans }}</span>
+                {% if prompt.scope == 'organisation' %}
+                    <span class="prompt-scope-badge organisation large">
+                        <i class="fas fa-users"></i> {{ 'prompt.scope_organisation'|trans }}
+                    </span>
+                {% else %}
+                    <span class="prompt-scope-badge personal large">
+                        <i class="fas fa-user"></i> {{ 'prompt.scope_personal'|trans }}
+                    </span>
+                {% endif %}
+            </div>
+            <h1 class="prompt-detail-title">{{ prompt.title }}</h1>
+            <div class="prompt-detail-info">
+                <span><i class="fas fa-user"></i> {{ prompt.owner.name }}</span>
+                <span><i class="fas fa-calendar"></i> {{ prompt.createdAt|date('d.m.Y H:i') }}</span>
+                {% if prompt.updatedAt > prompt.createdAt %}
+                    <span><i class="fas fa-edit"></i> {{ 'prompt.updated_label'|trans }}: {{ prompt.updatedAt|date('d.m.Y H:i') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Prompt Actions #}
+        <div class="prompt-detail-actions">
+            {% if canEdit %}
+                <a href="{{ path('app_prompt_edit', {uuid: prompt.uuid}) }}" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> {{ 'prompt.edit'|trans }}
+                </a>
+            {% endif %}
+            {% if canDelete %}
+                <button type="button" class="btn btn-danger" onclick="showDeleteModal()">
+                    <i class="fas fa-trash"></i> {{ 'prompt.delete'|trans }}
+                </button>
+            {% endif %}
+            {% if prompt.scope == 'organisation' %}
+                <form method="post" action="{{ path('app_prompt_upvote', {uuid: prompt.uuid}) }}" class="upvote-form" id="upvoteForm">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('upvote-prompt-' ~ prompt.uuid) }}">
+                    <button type="submit" class="btn btn-upvote {% if hasUpvoted %}upvoted{% endif %}">
+                        <i class="fas fa-arrow-up"></i>
+                        <span id="upvoteCount">{{ prompt.upvoteCount }}</span>
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        {# UUID Display #}
+        <div class="prompt-uuid-section">
+            <label>{{ 'prompt.uuid'|trans }}:</label>
+            <code class="prompt-uuid">{{ prompt.uuid }}</code>
+            <button type="button" class="btn btn-copy" onclick="copyToClipboard(this, '{{ prompt.uuid }}')">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+
+        {# Description #}
+        {% if prompt.description %}
+            <div class="prompt-description-section">
+                <h3>{{ 'prompt.description'|trans }}</h3>
+                <p>{{ prompt.description }}</p>
+            </div>
+        {% endif %}
+
+        {# Content #}
+        <div class="prompt-content-section">
+            <h3>{{ 'prompt.content'|trans }}</h3>
+            <div class="prompt-content">
+                <pre>{{ prompt.content }}</pre>
+            </div>
+            <button type="button" class="btn btn-secondary btn-copy-content" onclick="copyToClipboard(this, `{{ prompt.content|e('js') }}`)">
+                <i class="fas fa-copy"></i> {{ 'prompt.copy_content'|trans }}
+            </button>
+        </div>
+
+        {# Comments Section (for organisation prompts only) #}
+        {% if prompt.scope == 'organisation' %}
+            <div class="prompt-comments-section">
+                <h3>{{ 'prompt.comments'|trans }} ({{ prompt.comments|length }})</h3>
+
+                {# Add Comment Form #}
+                {% if commentForm %}
+                    <form method="post" action="{{ path('app_prompt_comment', {uuid: prompt.uuid}) }}" class="comment-form">
+                        {{ form_start(commentForm) }}
+                        {{ form_widget(commentForm.content, {attr: {placeholder: 'prompt.comment_placeholder'|trans}}) }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> {{ 'prompt.add_comment'|trans }}
+                        </button>
+                        {{ form_end(commentForm) }}
+                    </form>
+                {% endif %}
+
+                {# Comments List #}
+                <div class="comments-list">
+                    {% for comment in prompt.comments %}
+                        {% include 'prompt/_comment.html.twig' %}
+                    {% else %}
+                        <p class="no-comments">{{ 'prompt.no_comments'|trans }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Delete Modal #}
+{% if canDelete %}
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <form method="post" action="{{ path('app_prompt_delete', {uuid: prompt.uuid}) }}">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ 'prompt.delete'|trans }}</h3>
+                <button type="button" class="modal-close" onclick="hideDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>{{ 'prompt.delete_confirm'|trans }}</p>
+                <p><strong>{{ prompt.title }}</strong></p>
+            </div>
+            <div class="modal-footer">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('delete-prompt-' ~ prompt.uuid) }}">
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">{{ 'action.cancel'|trans }}</button>
+                <button type="submit" class="btn btn-danger">{{ 'prompt.delete'|trans }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function showDeleteModal() {
+    document.getElementById('deleteModal').classList.add('show');
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('show');
+}
+
+function copyToClipboard(btn, text) {
+    navigator.clipboard.writeText(text).then(function() {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> {{ "action.copied"|trans }}';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
+// Handle upvote form with AJAX
+document.getElementById('upvoteForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const btn = form.querySelector('.btn-upvote');
+        const count = document.getElementById('upvoteCount');
+
+        if (data.hasUpvoted) {
+            btn.classList.add('upvoted');
+        } else {
+            btn.classList.remove('upvoted');
+        }
+        count.textContent = data.upvoteCount;
+    });
+});
+
+// Close modal when clicking outside
+document.getElementById('deleteModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        hideDeleteModal();
+    }
+});
+</script>
+{% endblock %}

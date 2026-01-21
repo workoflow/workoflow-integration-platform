@@ -2,11 +2,11 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 
-class WebPageReaderIntegration implements IntegrationInterface
+class WebPageReaderIntegration implements PlatformSkillInterface
 {
     public function getType(): string
     {
@@ -62,5 +62,14 @@ class WebPageReaderIntegration implements IntegrationInterface
     public function getCredentialFields(): array
     {
         return []; // System tools don't need credential fields
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
     }
 }

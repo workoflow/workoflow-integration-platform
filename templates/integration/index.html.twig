@@ -13,6 +13,78 @@
             </div>
         </div>
 
+        {# MCP Server Configuration Section - Collapsible #}
+        <div class="api-helper-section" id="skillsApiHelperSection" style="display: none;">
+            <div class="api-helper-content">
+                <div class="api-helper-header">
+                    <h3><i class="fas fa-plug"></i> {{ 'integration.mcp_access'|trans|default('MCP Server Configuration') }}</h3>
+                    <button type="button" class="btn-close" onclick="toggleSkillsApiHelper()">&times;</button>
+                </div>
+
+                {% if userOrganisation and userOrganisation.hasToken() %}
+                    <div class="mcp-config-section">
+                        <p class="mcp-description">
+                            <i class="fas fa-info-circle"></i>
+                            {{ 'integration.mcp.description'|trans|default('Connect your AI assistant (Claude Desktop, Cursor, etc.) to Workoflow using the MCP protocol. Your personal access token automatically identifies you and your organisation.') }}
+                        </p>
+
+                        {# Claude Desktop Configuration #}
+                        <div class="api-helper-item">
+                            <label><i class="fas fa-desktop"></i> {{ 'integration.mcp.claude_desktop'|trans|default('Claude Desktop Configuration') }}</label>
+                            <p class="mcp-hint">{{ 'integration.mcp.claude_desktop_hint'|trans|default('Add this to your Claude Desktop settings file:') }}</p>
+                            <p class="mcp-path"><code>~/.config/Claude/claude_desktop_config.json</code> (Linux) or <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS)</p>
+                            <div class="curl-command-wrapper">
+                                <pre><code id="mcpClaudeDesktop">{
+  "mcpServers": {
+    "workoflow": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://workoflow-mcp.vcec.cloud/sse",
+        "--header",
+        "X-Prompt-Token: {{ userOrganisation.personalAccessToken }}"
+      ]
+    }
+  }
+}</code></pre>
+                                <button type="button" class="btn btn-copy btn-sm" onclick="copySkillsCurl(this, 'mcpClaudeDesktop')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {# Available Tools Info #}
+                        <div class="api-helper-item">
+                            <label><i class="fas fa-tools"></i> {{ 'integration.mcp.available_tools'|trans|default('Available MCP Tools') }}</label>
+                            <div class="mcp-tools-list">
+                                <ul>
+                                    <li><strong>workoflow_list_tools</strong> - {{ 'integration.mcp.tool_list_desc'|trans|default('List all available tools from your organisation') }}</li>
+                                    <li><strong>workoflow_execute</strong> - {{ 'integration.mcp.tool_execute_desc'|trans|default('Execute any tool by name with parameters') }}</li>
+                                    <li><strong>workoflow_refresh</strong> - {{ 'integration.mcp.tool_refresh_desc'|trans|default('Refresh the cached tool list after adding integrations') }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="api-helper-footer">
+                        <p class="api-helper-hint">
+                            <i class="fas fa-shield-alt"></i>
+                            {{ 'integration.mcp.hint_token'|trans|default('Your X-Prompt-Token automatically identifies your user and organisation. Keep it secure and do not share it.') }}
+                        </p>
+                    </div>
+                {% else %}
+                    <div class="api-helper-no-token">
+                        <i class="fas fa-key"></i>
+                        <p>{{ 'integration.mcp.no_token'|trans|default('You need to generate a personal access token to use the MCP server.') }}</p>
+                        <a href="{{ path('app_profile') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-cog"></i> {{ 'integration.mcp.generate_token'|trans|default('Generate Token in Profile') }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
         {% if integrations|length == 0 %}
             <div class="empty-state">
                 <p>{{ 'integration.no_integrations'|trans }}</p>
@@ -60,6 +132,30 @@
 </div>
 
 <script>
+// API Helper toggle and copy functions
+function toggleSkillsApiHelper() {
+    const section = document.getElementById('skillsApiHelperSection');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+function copySkillsCurl(btn, elementId) {
+    const code = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(code).then(function() {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+
 // Modal close functions (needed for the modal close button)
 function hideTestModal() {
     const modal = document.getElementById('testConnectionModal');
@@ -77,6 +173,31 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('testConnectionModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         hideTestModal();
+    }
+});
+
+// Skill Request Modal functions
+function hideSkillRequestModal() {
+    const modal = document.getElementById('skillRequestModal');
+    modal.classList.remove('show');
+    // Reset form
+    document.getElementById('skillRequestForm')?.reset();
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const skillModal = document.getElementById('skillRequestModal');
+        if (skillModal?.classList.contains('show')) {
+            hideSkillRequestModal();
+        }
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('skillRequestModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideSkillRequestModal();
     }
 });
 </script>

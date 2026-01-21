@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'prompt.edit'|trans }} - {{ prompt.title }} - Workoflow{% endblock %}
+
+{% block body %}
+<div class="prompts-page">
+    <div class="prompts-container prompt-form-container">
+        {# Back link #}
+        <a href="{{ path('app_prompt_show', {uuid: prompt.uuid}) }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> {{ 'action.back'|trans }}
+        </a>
+
+        <h1>{{ 'prompt.edit'|trans }}</h1>
+
+        {{ form_start(form, {attr: {class: 'prompt-form'}}) }}
+            <div class="form-group">
+                {{ form_label(form.title) }}
+                {{ form_widget(form.title) }}
+                {{ form_errors(form.title) }}
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.description) }}
+                {{ form_widget(form.description) }}
+                {{ form_errors(form.description) }}
+                <small class="form-help">{{ 'prompt.description_help'|trans }}</small>
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.category) }}
+                {{ form_widget(form.category) }}
+                {{ form_errors(form.category) }}
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.scope) }}
+                <div class="scope-options">
+                    {{ form_widget(form.scope) }}
+                </div>
+                {{ form_errors(form.scope) }}
+                <small class="form-help">{{ 'prompt.scope_help'|trans }}</small>
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.content) }}
+                {{ form_widget(form.content) }}
+                {{ form_errors(form.content) }}
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ path('app_prompt_show', {uuid: prompt.uuid}) }}" class="btn btn-secondary">{{ 'action.cancel'|trans }}</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {{ 'prompt.save'|trans }}
+                </button>
+            </div>
+        {{ form_end(form) }}
+    </div>
+</div>
+{% endblock %}

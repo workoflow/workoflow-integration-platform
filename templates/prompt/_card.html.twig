@@ -1,0 +1,40 @@
+<div class="prompt-card">
+    <a href="{{ path('app_prompt_show', {uuid: prompt.uuid}) }}" class="prompt-card-link">
+        <div class="prompt-card-header">
+            <span class="prompt-category-badge">{{ ('prompt.category_' ~ prompt.category)|trans }}</span>
+            {% if prompt.scope == 'organisation' %}
+                <span class="prompt-scope-badge organisation">
+                    <i class="fas fa-users"></i>
+                </span>
+            {% else %}
+                <span class="prompt-scope-badge personal">
+                    <i class="fas fa-user"></i>
+                </span>
+            {% endif %}
+        </div>
+        <h3 class="prompt-card-title">{{ prompt.title }}</h3>
+        {% if prompt.description %}
+            <p class="prompt-card-description">{{ prompt.description|length > 120 ? prompt.description|slice(0, 120) ~ '...' : prompt.description }}</p>
+        {% endif %}
+        <div class="prompt-card-footer">
+            <div class="prompt-card-meta">
+                <span class="prompt-owner">
+                    <i class="fas fa-user"></i> {{ prompt.owner.name }}
+                </span>
+                <span class="prompt-date">
+                    {{ prompt.createdAt|date('d.m.Y') }}
+                </span>
+            </div>
+            {% if prompt.scope == 'organisation' %}
+                <div class="prompt-card-stats">
+                    <span class="prompt-upvotes">
+                        <i class="fas fa-arrow-up"></i> {{ prompt.upvoteCount }}
+                    </span>
+                    <span class="prompt-comments">
+                        <i class="fas fa-comment"></i> {{ prompt.comments|length }}
+                    </span>
+                </div>
+            {% endif %}
+        </div>
+    </a>
+</div>

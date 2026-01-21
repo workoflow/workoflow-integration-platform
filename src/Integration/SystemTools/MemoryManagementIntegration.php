@@ -2,11 +2,11 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 
-class MemoryManagementIntegration implements IntegrationInterface
+class MemoryManagementIntegration implements PlatformSkillInterface
 {
     public function getType(): string
     {
@@ -55,5 +55,14 @@ class MemoryManagementIntegration implements IntegrationInterface
     public function getCredentialFields(): array
     {
         return []; // System tools don't need credential fields
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
     }
 }

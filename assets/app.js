@@ -4,6 +4,9 @@ import './styles/app.scss';
 // Import Font Awesome
 import '@fortawesome/fontawesome-free/css/all.css';
 
+// Import flag icons
+import 'flag-icons/css/flag-icons.min.css';
+
 // Import n8n demo web component
 import '@n8n_io/n8n-demo-component';
 

@@ -8,6 +8,7 @@ use App\Form\IntegrationConfigType;
 use App\Integration\IntegrationRegistry;
 use App\Repository\IntegrationConfigRepository;
 use App\Service\AuditLogService;
+use App\Service\ConnectionStatusService;
 use App\Service\EncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -27,8 +28,9 @@ class IntegrationController extends AbstractController
         private IntegrationRegistry $integrationRegistry,
         private EncryptionService $encryptionService,
         private AuditLogService $auditLogService,
+        private ConnectionStatusService $connectionStatusService,
         private EntityManagerInterface $entityManager,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
     ) {
     }
 
@@ -123,8 +125,11 @@ class IntegrationController extends AbstractController
                     'tools' => $tools,
                     'hasCredentials' => false,
                     'active' => $config ? $config->isActive() : true,
+                    'isConnected' => true, // System integrations are always connected
+                    'disconnectReason' => null,
                     'lastAccessedAt' => $config?->getLastAccessedAt(),
-                    'logoPath' => $this->getLogoPath($integration->getType(), true)
+                    'logoPath' => $this->getLogoPath($integration->getType(), true),
+                    'isExperimental' => $integration->isExperimental()
                 ];
             } else {
                 // For user integrations, show each instance
@@ -140,8 +145,11 @@ class IntegrationController extends AbstractController
                         'tools' => [],
                         'hasCredentials' => false,
                         'active' => false,
+                        'isConnected' => false,
+                        'disconnectReason' => null,
                         'lastAccessedAt' => null,
-                        'logoPath' => $this->getLogoPath($integration->getType(), false)
+                        'logoPath' => $this->getLogoPath($integration->getType(), false),
+                        'isExperimental' => $integration->isExperimental()
                     ];
                 } else {
                     // Show each configured instance
@@ -166,8 +174,11 @@ class IntegrationController extends AbstractController
                             'tools' => $tools,
                             'hasCredentials' => $config->hasCredentials(),
                             'active' => $config->isActive(),
+                            'isConnected' => $config->isConnected(),
+                            'disconnectReason' => $config->getDisconnectReason(),
                             'lastAccessedAt' => $config->getLastAccessedAt(),
-                            'logoPath' => $this->getLogoPath($integration->getType(), false)
+                            'logoPath' => $this->getLogoPath($integration->getType(), false),
+                            'isExperimental' => $integration->isExperimental()
                         ];
                     }
                 }
@@ -191,10 +202,14 @@ class IntegrationController extends AbstractController
             ];
         }
 
+        // Sort alphabetically by name
+        usort($availableTypes, fn(array $a, array $b) => strcasecmp($a['name'], $b['name']));
+
         return $this->render('integration/index.html.twig', [
             'integrations' => $displayData,
             'organisation' => $organisation,
-            'availableTypes' => $availableTypes
+            'availableTypes' => $availableTypes,
+            'userOrganisation' => $userOrg
         ]);
     }
 
@@ -255,7 +270,7 @@ class IntegrationController extends AbstractController
 
                     // Prepare credentials for display - mask sensitive fields like api_token
                     foreach ($decryptedCredentials as $key => $value) {
-                        if ($key === 'api_token' || $key === 'password' || $key === 'client_secret') {
+                        if (in_array($key, ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'])) {
                             // Don't show the actual token, just indicate it exists
                             $existingCredentials[$key] = ''; // Leave empty, we'll show a placeholder
                             $existingCredentials[$key . '_exists'] = true;
@@ -329,14 +344,26 @@ class IntegrationController extends AbstractController
             // Process credential fields
             foreach ($integration->getCredentialFields() as $field) {
                 if ($field->getType() === 'oauth') {
-                    $hasOAuthField = true;
+                    // Only consider OAuth flow needed if the field is applicable
+                    // Check if OAuth field is conditional (e.g., only for user_delegation auth_mode)
+                    if ($field->isConditional()) {
+                        $conditionalFieldName = $field->getConditionalOn();
+                        $conditionalValue = $field->getConditionalValue();
+                        $currentValue = $formData[$conditionalFieldName] ?? $credentials[$conditionalFieldName] ?? null;
+                        // Only set hasOAuthField if the condition is met
+                        if ($currentValue === $conditionalValue) {
+                            $hasOAuthField = true;
+                        }
+                    } else {
+                        $hasOAuthField = true;
+                    }
                     continue;
                 }
 
                 $value = $formData[$field->getName()] ?? null;
 
                 // For sensitive fields, only update if new value provided
-                if (in_array($field->getName(), ['api_token', 'password', 'client_secret'])) {
+                if (in_array($field->getName(), ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'])) {
                     if (!empty($value)) {
                         $credentials[$field->getName()] = $value;
                         $credentialsModified = true; // Mark as modified
@@ -367,12 +394,27 @@ class IntegrationController extends AbstractController
                 $tempConfig->setName($name);
                 $tempConfig->setActive(false);
 
+                // Save credentials (including auth_mode) so OAuth callback can verify
+                if (!empty($credentials)) {
+                    $encryptedCredentials = $this->encryptionService->encrypt(json_encode($credentials));
+                    $tempConfig->setEncryptedCredentials($encryptedCredentials);
+                }
+
                 $this->entityManager->persist($tempConfig);
                 $this->entityManager->flush();
 
                 $request->getSession()->set('oauth_flow_integration', $tempConfig->getId());
 
-                return $this->redirectToRoute('app_tool_oauth_microsoft_start', [
+                // Redirect to the appropriate OAuth provider based on integration type
+                $oauthRoute = match ($type) {
+                    'hubspot' => 'app_tool_oauth_hubspot_start',
+                    'jira', 'confluence' => 'app_tool_oauth_atlassian_start',
+                    'sap_c4c' => 'app_tool_oauth_sap_c4c_start',
+                    'sap_sac' => 'app_tool_oauth_sap_sac_start',
+                    default => 'app_tool_oauth_microsoft_start',
+                };
+
+                return $this->redirectToRoute($oauthRoute, [
                     'configId' => $tempConfig->getId()
                 ]);
             }
@@ -425,6 +467,11 @@ class IntegrationController extends AbstractController
                 $this->encryptionService->encrypt(json_encode($credentials))
             );
             $config->setActive(true);
+
+            // Auto-reconnect if previously disconnected (credentials updated)
+            if (!$config->isConnected()) {
+                $this->connectionStatusService->markReconnected($config);
+            }
 
             // Auto-disable less useful tools for SharePoint
             if ($type === 'sharepoint' && !$instanceId) {
@@ -647,7 +694,21 @@ class IntegrationController extends AbstractController
 
             // For Jira, use detailed testing
             if ($type === 'jira') {
+                /** @var \App\Integration\UserIntegrations\JiraIntegration $jiraIntegration */
                 $jiraIntegration = $integration;
+
+                // Enrich OAuth credentials (refresh token if needed) before testing
+                $enrichedCredentials = $jiraIntegration->getOAuth2EnrichedCredentials($credentials);
+
+                // If token was refreshed, save the updated credentials
+                if ($enrichedCredentials !== $credentials) {
+                    $config->setEncryptedCredentials(
+                        $this->encryptionService->encrypt(json_encode($enrichedCredentials))
+                    );
+                    $this->entityManager->flush();
+                    $credentials = $enrichedCredentials;
+                }
+
                 // Access the service through reflection to get detailed results
                 $reflection = new \ReflectionClass($jiraIntegration);
                 $property = $reflection->getProperty('jiraService');
@@ -657,6 +718,11 @@ class IntegrationController extends AbstractController
                 $result = $jiraService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -676,7 +742,21 @@ class IntegrationController extends AbstractController
 
             // For Confluence, use detailed testing
             if ($type === 'confluence') {
+                /** @var \App\Integration\UserIntegrations\ConfluenceIntegration $confluenceIntegration */
                 $confluenceIntegration = $integration;
+
+                // Enrich OAuth credentials (refresh token if needed) before testing
+                $enrichedCredentials = $confluenceIntegration->getOAuth2EnrichedCredentials($credentials);
+
+                // If token was refreshed, save the updated credentials
+                if ($enrichedCredentials !== $credentials) {
+                    $config->setEncryptedCredentials(
+                        $this->encryptionService->encrypt(json_encode($enrichedCredentials))
+                    );
+                    $this->entityManager->flush();
+                    $credentials = $enrichedCredentials;
+                }
+
                 // Access the service through reflection to get detailed results
                 $reflection = new \ReflectionClass($confluenceIntegration);
                 $property = $reflection->getProperty('confluenceService');
@@ -686,6 +766,11 @@ class IntegrationController extends AbstractController
                 $result = $confluenceService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -715,6 +800,45 @@ class IntegrationController extends AbstractController
                 $result = $gitLabService->testConnectionDetailed($credentials);
 
                 if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
+                    return $this->json([
+                        'success' => true,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                } else {
+                    return $this->json([
+                        'success' => false,
+                        'message' => $result['message'],
+                        'details' => $result['details'],
+                        'suggestion' => $result['suggestion'],
+                        'tested_endpoints' => $result['tested_endpoints']
+                    ]);
+                }
+            }
+
+            // For SAP C4C, use detailed testing
+            if ($type === 'sap_c4c') {
+                $sapC4cIntegration = $integration;
+                // Access the service through reflection to get detailed results
+                $reflection = new \ReflectionClass($sapC4cIntegration);
+                $property = $reflection->getProperty('sapC4cService');
+                $property->setAccessible(true);
+                $sapC4cService = $property->getValue($sapC4cIntegration);
+
+                $result = $sapC4cService->testConnectionDetailed($credentials);
+
+                if ($result['success']) {
+                    // Auto-reconnect if previously disconnected
+                    if (!$config->isConnected()) {
+                        $this->connectionStatusService->markReconnected($config);
+                    }
+
                     return $this->json([
                         'success' => true,
                         'message' => $result['message'],
@@ -734,6 +858,11 @@ class IntegrationController extends AbstractController
 
             // For other integrations, use standard validation
             if ($integration->validateCredentials($credentials)) {
+                // Auto-reconnect if previously disconnected
+                if (!$config->isConnected()) {
+                    $this->connectionStatusService->markReconnected($config);
+                }
+
                 return $this->json(['success' => true, 'message' => 'Connection successful']);
             } else {
                 return $this->json(['success' => false, 'message' => 'Invalid credentials']);
@@ -798,5 +927,77 @@ class IntegrationController extends AbstractController
             'platformSkills' => $platformSkills,
             'organisation' => $organisation
         ]);
+    }
+
+    #[Route('/request', name: 'app_skill_request', methods: ['POST'])]
+    public function requestSkill(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $sessionOrgId = $request->getSession()->get('current_organisation_id');
+        $organisation = $user->getCurrentOrganisation($sessionOrgId);
+
+        if (!$organisation) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.no_organisation')
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        // Get form data
+        $skillName = trim($request->request->get('skillName', ''));
+        $description = trim($request->request->get('description', ''));
+        $apiDocumentationUrl = trim($request->request->get('apiDocumentationUrl', ''));
+        $priority = $request->request->get('priority', 'medium');
+
+        // Validate skill name
+        if (empty($skillName)) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.skill_name_required')
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate priority
+        if (!in_array($priority, ['low', 'medium', 'high'], true)) {
+            $priority = 'medium';
+        }
+
+        try {
+            // Create skill request entity
+            $skillRequest = new \App\Entity\SkillRequest();
+            $skillRequest->setUser($user);
+            $skillRequest->setOrganisation($organisation);
+            $skillRequest->setSkillName($skillName);
+            $skillRequest->setDescription($description ?: null);
+            $skillRequest->setApiDocumentationUrl($apiDocumentationUrl ?: null);
+            $skillRequest->setPriority($priority);
+
+            // Persist to database
+            $this->entityManager->persist($skillRequest);
+            $this->entityManager->flush();
+
+            // Log the request
+            $this->auditLogService->log(
+                'skill_request_created',
+                $user,
+                [
+                    'skill_name' => $skillName,
+                    'priority' => $priority,
+                    'request_id' => $skillRequest->getId(),
+                    'organisation_id' => $organisation->getId()
+                ]
+            );
+
+            return $this->json([
+                'success' => true,
+                'message' => $this->translator->trans('integration.skill_request_submitted')
+            ]);
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => $this->translator->trans('integration.error.request_failed')
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 }

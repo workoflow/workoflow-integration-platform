@@ -18,7 +18,7 @@
                         <select class="form-control" id="type" name="type" required>
                             <option value="">{{ 'integration.select_type'|trans }}</option>
                             {% for type, details in integrations %}
-                                <option value="{{ type }}">{{ details.name }}</option>
+                                <option value="{{ type }}">{{ details.name }}{% if details.isExperimental %} ({{ 'status.experimental'|trans|default('Experimental') }}){% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -94,14 +94,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
             integration.credentialFields.forEach(field => {
                 if (field.type === 'oauth') {
-                    // Special handling for OAuth fields
+                    // Special handling for OAuth fields - determine the correct icon based on integration type
+                    let oauthIcon = 'fa-microsoft';
+                    let oauthLabel = 'Connect';
+                    if (selectedType === 'jira' || selectedType === 'confluence') {
+                        oauthIcon = 'fa-atlassian';
+                        oauthLabel = 'Connect with Atlassian';
+                    } else if (selectedType === 'hubspot') {
+                        oauthIcon = 'fa-hubspot';
+                        oauthLabel = 'Connect with HubSpot';
+                    } else if (selectedType === 'sharepoint' || selectedType === 'sap_c4c' || selectedType === 'sap_sac') {
+                        oauthIcon = 'fa-microsoft';
+                        oauthLabel = 'Connect with Microsoft';
+                    }
+
                     const fieldHtml = `
                         <div class="form-group">
                             <div class="oauth-notice">
                                 <i class="fas fa-shield-alt"></i>
                                 <span>${field.description || 'OAuth authentication will be configured after creation'}</span>
                                 <button type="button" class="oauth-button" disabled>
-                                    <i class="fab fa-microsoft"></i> Connect
+                                    <i class="fab ${oauthIcon}"></i> ${oauthLabel}
                                 </button>
                             </div>
                         </div>

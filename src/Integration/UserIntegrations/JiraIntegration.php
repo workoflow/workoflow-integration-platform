@@ -2,16 +2,80 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\JiraService;
+use App\Service\Integration\AtlassianOAuthService;
+use Psr\Log\LoggerInterface;
+use Twig\Environment;
 
-class JiraIntegration implements IntegrationInterface
+class JiraIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
-        private JiraService $jiraService
+        private JiraService $jiraService,
+        private Environment $twig,
+        private ?AtlassianOAuthService $atlassianOAuthService = null,
+        private ?LoggerInterface $logger = null
     ) {
+    }
+
+    /**
+     * Get credentials with OAuth2 token refresh if needed.
+     *
+     * @param array $credentials Original credentials from config
+     * @return array Credentials with valid access token for API calls
+     */
+    public function getOAuth2EnrichedCredentials(array $credentials): array
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        // For API token auth, return credentials as-is
+        if ($authMode === 'api_token') {
+            return $credentials;
+        }
+
+        // For OAuth mode, ensure token is valid
+        if ($authMode === 'oauth') {
+            if (!$this->atlassianOAuthService) {
+                throw new \RuntimeException(
+                    'Atlassian OAuth service not configured. Please ensure AtlassianOAuthService is available.'
+                );
+            }
+
+            // Check for required OAuth tokens
+            if (empty($credentials['access_token']) || empty($credentials['refresh_token'])) {
+                throw new \RuntimeException(
+                    'Atlassian authorization required. Please click "Connect with Atlassian" to authorize.'
+                );
+            }
+
+            // Check for cloud_id
+            if (empty($credentials['cloud_id'])) {
+                throw new \RuntimeException(
+                    'Atlassian Cloud ID not found. Please reconnect via "Connect with Atlassian".'
+                );
+            }
+
+            try {
+                $this->logger?->info('Jira OAuth: Ensuring valid access token');
+
+                // Ensure token is valid (auto-refresh if needed)
+                $refreshedCredentials = $this->atlassianOAuthService->ensureValidToken($credentials);
+
+                $this->logger?->info('Jira OAuth: Token validation successful');
+
+                return $refreshedCredentials;
+            } catch (\Exception $e) {
+                $this->logger?->error('Jira OAuth: Token validation failed', [
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+        }
+
+        return $credentials;
     }
 
     public function getType(): string
@@ -29,7 +93,7 @@ class JiraIntegration implements IntegrationInterface
         return [
             new ToolDefinition(
                 'jira_search',
-                'Search for Jira issues using JQL (Jira Query Language)',
+                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'jql',
@@ -47,7 +111,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_issue',
-                'Get detailed information about a specific Jira issue',
+                'Get detailed information about a specific Jira issue. Returns: Issue object with id, key, self, and fields containing summary, description, status.name, assignee (accountId, displayName, emailAddress), priority.name, project (key, name), reporter, created, updated, comment array, attachment array, issuelinks, subtasks, and watchers',
                 [
                     [
                         'name' => 'issueKey',
@@ -58,8 +122,8 @@ class JiraIntegration implements IntegrationInterface
                 ]
             ),
             new ToolDefinition(
-                'jira_get_sprints_from_board',
-                'Get all sprints from a Jira board',
+                'jira_get_board',
+                'Get board details including type (scrum/kanban), name, and project information. Use this to detect board type before using sprint-specific tools. Returns: Object with id, self, name, type (scrum/kanban), and location (containing projectId, projectKey, projectName, displayName, projectTypeKey)',
                 [
                     [
                         'name' => 'boardId',
@@ -70,8 +134,20 @@ class JiraIntegration implements IntegrationInterface
                 ]
             ),
             new ToolDefinition(
+                'jira_get_sprints_from_board',
+                'Get all sprints from a Scrum board (Scrum boards only - does NOT work with Kanban boards). Use jira_get_board first to verify board type. For Kanban boards, use jira_get_kanban_issues instead. Returns: Object with maxResults, startAt, total, isLast, and values array. Each sprint contains: id, self, state (future/active/closed), name, startDate, endDate, completeDate (for closed sprints), originBoardId',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Board ID (must be a Scrum board)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get all issues in a specific sprint',
+                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'sprintId',
@@ -83,13 +159,25 @@ class JiraIntegration implements IntegrationInterface
                         'name' => 'maxResults',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results (default: 50)'
+                        'description' => 'Maximum number of results (default: 100)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues in the sprint.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h" for recent completions.'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'jira_add_comment',
-                'Add a comment to a Jira issue',
+                'Add a comment to a Jira issue. Returns: Comment object with self, id, author (accountId, displayName, emailAddress, active), body (document format), created, updated, updateAuthor, and visibility settings',
                 [
                     [
                         'name' => 'issueKey',
@@ -107,7 +195,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_get_available_transitions',
-                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow.',
+                'Get available status transitions for a Jira issue. Use this to find out which status changes are possible for an issue based on the workflow. Returns: Object with expand and transitions array. Each transition contains: id, name, description, hasScreen, isAvailable, isConditional, isGlobal, isInitial, to (status object with id, name, description, iconUrl, statusCategory), and fields (required/optional fields for the transition)',
                 [
                     [
                         'name' => 'issueKey',
@@ -119,7 +207,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_transition_issue',
-                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs.',
+                'Change the status of a Jira issue by executing a workflow transition. Always call jira_get_available_transitions first to get valid transition IDs. Note: Some transitions require additional fields (e.g., Resolution when closing). If you get a "required field" error, check the transition screen configuration. Returns: HTTP 204 on success, or error details',
                 [
                     [
                         'name' => 'issueKey',
@@ -143,7 +231,7 @@ class JiraIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'jira_transition_issue_to_status',
-                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path.',
+                'Intelligently transition a Jira issue to a target status by automatically navigating through the workflow. Use this when the user asks to "set status to Done" or similar - the system will automatically find and execute the required workflow path. Returns: Success message with the new status name and transition details, or error message if the target status cannot be reached',
                 [
                     [
                         'name' => 'issueKey',
@@ -164,6 +252,336 @@ class JiraIntegration implements IntegrationInterface
                         'description' => 'Optional comment to add during the transition'
                     ]
                 ]
+            ),
+            new ToolDefinition(
+                'jira_get_board_issues',
+                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with startAt, maxResults, total, boardType, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Board ID (works with both Scrum and Kanban boards)'
+                    ],
+                    [
+                        'name' => 'maxResults',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Maximum number of results (default: 50)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_kanban_issues',
+                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
+                [
+                    [
+                        'name' => 'boardId',
+                        'type' => 'integer',
+                        'required' => true,
+                        'description' => 'Kanban Board ID'
+                    ],
+                    [
+                        'name' => 'maxResults',
+                        'type' => 'integer',
+                        'required' => false,
+                        'description' => 'Maximum number of results (default: 50)'
+                    ],
+                    [
+                        'name' => 'assignee',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Filter by assignee accountId (from jira_get_myself). Use this to get only your assigned issues.'
+                    ],
+                    [
+                        'name' => 'jql',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_edit_metadata',
+                'Get all editable fields for an existing issue. Use this before updating an issue to know what fields can be modified and their allowed values. Returns: Object with fields property containing field definitions, including field types, required status, allowed values, and schema information for each editable field',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_delete_issue',
+                'Delete a Jira issue permanently. WARNING: This action cannot be undone. The issue and all its data will be permanently removed. Use with caution. Returns: Success confirmation message',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key to delete (e.g., PROJ-123)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_issue_link_types',
+                'Get all available issue link types for the Jira instance. Link types define relationships between issues (e.g., "blocks"/"is blocked by", "relates to", "duplicates"/"is duplicated by"). Returns: Object with issueLinkTypes array containing id, name, inward (description from target issue perspective), outward (description from source issue perspective), and self URL for each link type',
+                [
+                ]
+            ),
+            new ToolDefinition(
+                'jira_link_issues',
+                'Link two Jira issues together with a specific relationship type. For "Blocks" link type: outwardIssue blocks inwardIssue (e.g., if PROJ-123 blocks PROJ-456, pass outwardIssue=PROJ-123, inwardIssue=PROJ-456). Returns: Success confirmation message',
+                [
+                    [
+                        'name' => 'inwardIssue',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Inward issue key - receives the action (e.g., "is blocked by", "is duplicated by")'
+                    ],
+                    [
+                        'name' => 'outwardIssue',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Outward issue key - performs the action (e.g., "blocks", "duplicates")'
+                    ],
+                    [
+                        'name' => 'linkTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Link type ID from jira_get_issue_link_types (e.g., "10000")'
+                    ],
+                    [
+                        'name' => 'comment',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Optional comment to add with the link'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_project_metadata',
+                'Get project information including available issue types, components, versions, and project configuration. Use this before creating issues to discover what issue types and components are available. Returns: Object with id, key, name, description, projectTypeKey, issueTypes array (with id, name, description, subtask flag), components array (with id, name, description), and versions array (with id, name, released status)',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_create_field_metadata',
+                'Get detailed field metadata for creating a specific issue type. Use this to discover required/optional fields including custom fields. Each field has: fieldId, name, required (true/false), schema (type info), allowedValues (for select fields). Check "required: true" to identify mandatory fields.',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ],
+                    [
+                        'name' => 'issueTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue type ID from jira_get_project_metadata'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_create_issue',
+                'Create a new Jira issue with standard and custom fields. Use jira_get_project_metadata first to get project info and issue types, then jira_get_create_field_metadata to discover required fields. Returns: Object with id, key (issue key like PROJ-123), and self (URL)',
+                [
+                    [
+                        'name' => 'projectKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Project key (e.g., PROJ, TEST)'
+                    ],
+                    [
+                        'name' => 'issueTypeId',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue type ID from jira_get_project_metadata'
+                    ],
+                    [
+                        'name' => 'summary',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue summary/title'
+                    ],
+                    [
+                        'name' => 'description',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Issue description (plain text, will be converted to Jira format)'
+                    ],
+                    [
+                        'name' => 'priorityId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Priority ID from jira_get_priorities'
+                    ],
+                    [
+                        'name' => 'assigneeId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Assignee account ID'
+                    ],
+                    [
+                        'name' => 'labels',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Array of label strings'
+                    ],
+                    [
+                        'name' => 'componentIds',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Array of component IDs from project metadata'
+                    ],
+                    [
+                        'name' => 'dueDate',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Due date in YYYY-MM-DD format (e.g., 2025-12-25). Must be exact format.'
+                    ],
+                    [
+                        'name' => 'reporterId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Reporter account ID (from jira_get_myself or jira_search_users). Get your own accountId using jira_get_myself first.'
+                    ],
+                    [
+                        'name' => 'customFields',
+                        'type' => 'object',
+                        'required' => false,
+                        'description' => 'Object with custom field IDs as keys (e.g., {"customfield_10000": "value"}). Plain string values are auto-converted to proper Jira format (ADF for textarea fields, {"id": value} for option fields).'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_priorities',
+                'Get all available priorities in Jira. Use this to find priority IDs for creating or updating issues. Returns: Array of priority objects, each with id, self, iconUrl, name, description, statusColor, and isDefault flag',
+                [
+                    // No parameters required
+                ]
+            ),
+            new ToolDefinition(
+                'jira_update_issue',
+                'Update fields on an existing Jira issue. Can update summary, description, priority, assignee, labels, components, and custom fields.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'summary',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New summary (optional)'
+                    ],
+                    [
+                        'name' => 'description',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New description in plain text (optional)'
+                    ],
+                    [
+                        'name' => 'priorityId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New priority ID (optional)'
+                    ],
+                    [
+                        'name' => 'assigneeId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'New assignee account ID (optional, null to unassign)'
+                    ],
+                    [
+                        'name' => 'labels',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'New labels array - replaces existing labels (optional)'
+                    ],
+                    [
+                        'name' => 'componentIds',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'New component IDs array - replaces existing components (optional)'
+                    ],
+                    [
+                        'name' => 'customFields',
+                        'type' => 'object',
+                        'required' => false,
+                        'description' => 'Custom field updates as key-value pairs (optional). Plain string values are auto-converted to proper Jira format.'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_bulk_create_issues',
+                'Create multiple Jira issues at once (up to 50). Each issue requires projectKey, issueTypeId, and summary. Returns both successful creations and any errors.',
+                [
+                    [
+                        'name' => 'issues',
+                        'type' => 'array',
+                        'required' => true,
+                        'description' => 'Array of issue data objects. Each object has same structure as jira_create_issue parameters.'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_assign_issue',
+                'Assign a Jira issue to a user or unassign it. Quick shortcut for changing assignee without full update.',
+                [
+                    [
+                        'name' => 'issueKey',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'accountId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'User account ID to assign to. Use null or omit to unassign.'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_search_users',
+                'Search for Jira users by name or email. Returns array of user objects with accountId (use for assignee/reporter), displayName, emailAddress, and active status. Always use accountId field for issue assignments.',
+                [
+                    [
+                        'name' => 'query',
+                        'type' => 'string',
+                        'required' => true,
+                        'description' => 'Search query (name or email)'
+                    ]
+                ]
+            ),
+            new ToolDefinition(
+                'jira_get_myself',
+                'Get the current authenticated user information. IMPORTANT: Call this first when creating issues to get your accountId for the reporter field. Returns: User object with accountId (unique identifier to use as reporter/assignee), displayName, emailAddress, active status, avatarUrls, and timeZone',
+                []
             )
         ];
     }
@@ -173,6 +591,9 @@ class JiraIntegration implements IntegrationInterface
         if (!$credentials) {
             throw new \InvalidArgumentException('Jira integration requires credentials');
         }
+
+        // For OAuth mode, perform token refresh if needed
+        $credentials = $this->getOAuth2EnrichedCredentials($credentials);
 
         return match ($toolName) {
             'jira_search' => $this->jiraService->search(
@@ -184,13 +605,20 @@ class JiraIntegration implements IntegrationInterface
                 $credentials,
                 $parameters['issueKey']
             ),
+            'jira_get_board' => $this->jiraService->getBoard(
+                $credentials,
+                $parameters['boardId']
+            ),
             'jira_get_sprints_from_board' => $this->jiraService->getSprintsFromBoard(
                 $credentials,
                 $parameters['boardId']
             ),
             'jira_get_sprint_issues' => $this->jiraService->getSprintIssues(
                 $credentials,
-                $parameters['sprintId']
+                $parameters['sprintId'],
+                $parameters['maxResults'] ?? 100,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
             ),
             'jira_add_comment' => $this->jiraService->addComment(
                 $credentials,
@@ -213,6 +641,73 @@ class JiraIntegration implements IntegrationInterface
                 $parameters['targetStatusName'],
                 $parameters['comment'] ?? null
             ),
+            'jira_get_board_issues' => $this->jiraService->getBoardIssues(
+                $credentials,
+                $parameters['boardId'],
+                $parameters['maxResults'] ?? 50,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
+            ),
+            'jira_get_kanban_issues' => $this->jiraService->getKanbanIssues(
+                $credentials,
+                $parameters['boardId'],
+                $parameters['maxResults'] ?? 50,
+                $parameters['assignee'] ?? null,
+                $parameters['jql'] ?? null
+            ),
+            'jira_get_edit_metadata' => $this->jiraService->getEditMetadata(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_delete_issue' => $this->jiraService->deleteIssue(
+                $credentials,
+                $parameters['issueKey']
+            ),
+            'jira_get_issue_link_types' => $this->jiraService->getIssueLinkTypes(
+                $credentials
+            ),
+            'jira_link_issues' => $this->jiraService->linkIssues(
+                $credentials,
+                $parameters['inwardIssue'],
+                $parameters['outwardIssue'],
+                $parameters['linkTypeId'],
+                $parameters['comment'] ?? null
+            ),
+            'jira_get_project_metadata' => $this->jiraService->getProjectMetadata(
+                $credentials,
+                $parameters['projectKey']
+            ),
+            'jira_get_create_field_metadata' => $this->jiraService->getCreateFieldMetadata(
+                $credentials,
+                $parameters['projectKey'],
+                $parameters['issueTypeId']
+            ),
+            'jira_create_issue' => $this->jiraService->createIssue(
+                $credentials,
+                $parameters
+            ),
+            'jira_get_priorities' => $this->jiraService->getPriorities(
+                $credentials
+            ),
+            'jira_update_issue' => $this->jiraService->updateIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters
+            ),
+            'jira_bulk_create_issues' => $this->jiraService->bulkCreateIssues(
+                $credentials,
+                $parameters['issues']
+            ),
+            'jira_assign_issue' => $this->jiraService->assignIssue(
+                $credentials,
+                $parameters['issueKey'],
+                $parameters['accountId'] ?? null
+            ),
+            'jira_search_users' => $this->jiraService->searchUsers(
+                $credentials,
+                $parameters['query']
+            ),
+            'jira_get_myself' => $this->jiraService->getMyself($credentials),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };
     }
@@ -224,46 +719,139 @@ class JiraIntegration implements IntegrationInterface
 
     public function validateCredentials(array $credentials): bool
     {
-        // First check if all required fields are present and not empty
-        if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
-            return false;
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'api_token') {
+            // API Token Auth: require url, username, and api_token
+            if (empty($credentials['url']) || empty($credentials['username']) || empty($credentials['api_token'])) {
+                return false;
+            }
+
+            // Use JiraService to validate credentials
+            try {
+                return $this->jiraService->testConnection($credentials);
+            } catch (\Exception $e) {
+                return false;
+            }
+        } elseif ($authMode === 'oauth') {
+            // OAuth: check for required OAuth tokens and cloud_id
+            if (!empty($credentials['access_token']) && !empty($credentials['cloud_id'])) {
+                return true;
+            }
+            // No tokens yet - still valid config, just needs OAuth flow
+            return true;
         }
 
-        // Use JiraService to validate credentials
-        try {
-            return $this->jiraService->testConnection($credentials);
-        } catch (\Exception $e) {
-            return false;
-        }
+        return false;
     }
 
     public function getCredentialFields(): array
     {
         return [
+            // Auth mode selector (default: oauth for better security)
+            new CredentialField(
+                'auth_mode',
+                'select',
+                'Authentication Mode',
+                'oauth',
+                true,
+                'Choose how to authenticate with Jira',
+                [
+                    'api_token' => 'API Token (Personal)',
+                    'oauth' => 'OAuth 2.0 (Recommended)',
+                ]
+            ),
+
+            // API Token fields (conditional on auth_mode=api_token)
             new CredentialField(
                 'url',
                 'url',
                 'Jira URL',
                 'https://your-domain.atlassian.net',
-                true,
-                'Your Jira instance URL'
+                false,
+                'Your Jira instance URL',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'username',
                 'email',
                 'Email',
                 'your-email@example.com',
-                true,
-                'Email address associated with your Jira account'
+                false,
+                'Email address associated with your Jira account',
+                null,
+                'auth_mode',
+                'api_token'
             ),
             new CredentialField(
                 'api_token',
                 'password',
                 'API Token',
                 null,
-                true,
-                'Your Jira API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>'
+                false,
+                'Your Jira API token (not your password). <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Create API token</a>',
+                null,
+                'auth_mode',
+                'api_token'
+            ),
+
+            // OAuth field (conditional on auth_mode=oauth)
+            new CredentialField(
+                'oauth_atlassian',
+                'oauth',
+                'Connect with Atlassian',
+                null,
+                false,
+                'Authorize via Atlassian to access Jira. This is the recommended authentication method.',
+                null,
+                'auth_mode',
+                'oauth'
             ),
         ];
+    }
+
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/jira_full.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return <<<'HTML'
+<div class="setup-instructions" data-auth-instructions="true">
+    <h4>Setup Instructions</h4>
+    <div class="auth-option" data-auth-mode="api_token">
+        <strong>API Token Setup (Personal Access)</strong>
+        <p>Simple setup using your personal API token. Actions are attributed to your account.</p>
+        <ol>
+            <li>Go to <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Atlassian API Tokens</a></li>
+            <li>Create a new API token</li>
+            <li>Enter your Jira URL, email, and the API token below</li>
+        </ol>
+        <p class="note"><strong>Best for:</strong> Quick personal setup, testing, or when OAuth is not available.</p>
+    </div>
+    <div class="auth-option" data-auth-mode="oauth">
+        <strong>OAuth 2.0 Setup (Recommended)</strong>
+        <p>More secure authentication using Atlassian OAuth. No API tokens to manage.</p>
+        <ol>
+            <li><strong>Save:</strong> Click "Save Configuration" to create the integration</li>
+            <li><strong>Connect:</strong> Click "Connect with Atlassian" to authorize</li>
+            <li><strong>Select Site:</strong> Choose your Jira site when prompted</li>
+        </ol>
+        <p class="note"><strong>Benefits:</strong> No API token management, automatic token refresh, more secure.</p>
+    </div>
+    <p class="docs-link"><a href="https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/" target="_blank" rel="noopener">Jira REST API Documentation</a></p>
+</div>
+HTML;
     }
 }

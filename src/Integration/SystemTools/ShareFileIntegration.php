@@ -2,12 +2,12 @@
 
 namespace App\Integration\SystemTools;
 
-use App\Integration\IntegrationInterface;
+use App\Integration\PlatformSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\ShareFileService;
 
-class ShareFileIntegration implements IntegrationInterface
+class ShareFileIntegration implements PlatformSkillInterface
 {
     public function __construct(
         private ShareFileService $shareFileService
@@ -89,5 +89,14 @@ class ShareFileIntegration implements IntegrationInterface
     public function getCredentialFields(): array
     {
         return []; // System tools don't need credential fields
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
     }
 }

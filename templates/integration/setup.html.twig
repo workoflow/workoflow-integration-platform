@@ -14,6 +14,22 @@
                 </p>
             </div>
 
+            {% if integration.isExperimental() %}
+                <div class="alert alert-experimental">
+                    <i class="fas fa-flask"></i>
+                    <div class="alert-experimental-content">
+                        <strong>{{ 'status.experimental'|trans }}</strong>
+                        <p>{{ 'integration.experimental_notice'|trans|default('This skill is still in development. Features may change and some functionality might not work as expected.') }}</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if integration.getSetupInstructions() %}
+                <div class="alert alert-info setup-instructions-container">
+                    {{ integration.getSetupInstructions()|raw }}
+                </div>
+            {% endif %}
+
             {% if existingInstances|length > 0 and not isEdit %}
                 <div class="existing-instances">
                     <p class="instances-info">
@@ -48,54 +64,159 @@
                 <h3>{{ 'integration.credentials'|trans|default('Credentials') }}</h3>
 
                 {% set hasOAuthField = false %}
+                {% set oauthFieldApplicable = false %}
                 {% for field in credentialFields %}
                     {% if field.getType() == 'oauth' %}
                         {% set hasOAuthField = true %}
+                        {% set isConditionalOAuth = field.isConditional() %}
+                        {% set showOAuthField = not isConditionalOAuth %}
+                        {% if isConditionalOAuth %}
+                            {# For conditional OAuth fields (like sap_c4c user_delegation), only show if auth_mode matches #}
+                            {% set currentAuthMode = form.vars.data[field.getConditionalOn()]|default('basic') %}
+                            {% set showOAuthField = currentAuthMode == field.getConditionalValue() %}
+                        {% endif %}
+                        {# Track if OAuth is actually applicable (for button logic) #}
+                        {% if showOAuthField %}
+                            {% set oauthFieldApplicable = true %}
+                        {% endif %}
+
+                        {% if showOAuthField %}
                         {% if config and config.id %}
                             {# Show OAuth connection button only after initial save #}
-                            <div class="oauth-section">
+                            <div class="oauth-section{% if isConditionalOAuth %} conditional-field{% endif %}"
+                                 {% if isConditionalOAuth %}
+                                     data-conditional-on="{{ field.getConditionalOn() }}"
+                                     data-conditional-value="{{ field.getConditionalValue() }}"
+                                 {% endif %}>
                                 <div class="alert alert-info">
                                     <h4>{{ field.getLabel() }}</h4>
                                     <p>{{ field.getHint() }}</p>
                                 </div>
-                                {% if config.encryptedCredentials %}
+                                {# Check for Azure tokens for SAP integrations #}
+                                {% set hasAzureTokens = false %}
+                                {% if integration.getType() in ['sap_c4c', 'sap_sac'] %}
+                                    {% set hasAzureTokens = form.vars.data['azure_refresh_token'] is defined and form.vars.data['azure_refresh_token'] %}
+                                {% endif %}
+                                {# Check for Atlassian OAuth tokens #}
+                                {% set hasAtlassianTokens = false %}
+                                {% if integration.getType() in ['jira', 'confluence'] %}
+                                    {% set hasAtlassianTokens = form.vars.data['access_token'] is defined and form.vars.data['access_token'] and form.vars.data['cloud_id'] is defined and form.vars.data['cloud_id'] %}
+                                {% endif %}
+                                {% if config.encryptedCredentials and (integration.getType() not in ['sap_c4c', 'sap_sac', 'jira', 'confluence'] or hasAzureTokens or hasAtlassianTokens) %}
                                     <div class="oauth-status connected">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
+                                        {% if integration.getType() == 'hubspot' %}
+                                            <span>{{ 'status.connected_hubspot'|trans|default('Connected to HubSpot') }}</span>
+                                        {% elseif integration.getType() == 'sap_c4c' %}
+                                            <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
+                                        {% elseif integration.getType() == 'sap_sac' %}
+                                            <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
+                                        {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                            <span>{{ 'status.connected_atlassian'|trans|default('Connected to Atlassian') }}{% if form.vars.data['site_name'] is defined and form.vars.data['site_name'] %} ({{ form.vars.data['site_name'] }}){% endif %}</span>
+                                        {% else %}
+                                            <span>{{ 'status.connected'|trans|default('Connected to Microsoft') }}</span>
+                                        {% endif %}
                                     </div>
-                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
-                                       class="btn btn-secondary"
-                                       onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
-                                        <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
-                                    </a>
+                                    {% if integration.getType() == 'hubspot' %}
+                                        <a href="{{ path('app_tool_oauth_hubspot_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-hubspot"></i> {{ 'integration.reconnect_hubspot'|trans|default('Reconnect with HubSpot') }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_c4c' %}
+                                        <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_azure'|trans|default('Reconnect with Azure AD') }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_sac' %}
+                                        <a href="{{ path('app_tool_oauth_sap_sac_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_azure'|trans|default('Reconnect with Azure AD') }}
+                                        </a>
+                                    {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                        <a href="{{ path('app_tool_oauth_atlassian_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-atlassian"></i> {{ 'integration.reconnect_atlassian'|trans|default('Reconnect with Atlassian') }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fab fa-microsoft"></i> {{ 'integration.reconnect_microsoft'|trans|default('Reconnect with Microsoft') }}
+                                        </a>
+                                    {% endif %}
                                 {% else %}
                                     <div class="oauth-status disconnected">
                                         <i class="fas fa-times-circle"></i>
                                         <span>{{ 'status.not_connected'|trans|default('Not connected') }}</span>
                                     </div>
-                                    <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
-                                       class="btn btn-primary">
-                                        <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
-                                    </a>
+                                    {% if integration.getType() == 'hubspot' %}
+                                        <a href="{{ path('app_tool_oauth_hubspot_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-hubspot"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_c4c' %}
+                                        <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% elseif integration.getType() == 'sap_sac' %}
+                                        <a href="{{ path('app_tool_oauth_sap_sac_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                        <a href="{{ path('app_tool_oauth_atlassian_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-atlassian"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ path('app_tool_oauth_microsoft_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fab fa-microsoft"></i> {{ field.getLabel() }}
+                                        </a>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         {% else %}
                             {# Show info message for new configs #}
-                            <div class="alert alert-info">
+                            <div class="alert alert-info{% if isConditionalOAuth %} conditional-field{% endif %}"
+                                 {% if isConditionalOAuth %}
+                                     data-conditional-on="{{ field.getConditionalOn() }}"
+                                     data-conditional-value="{{ field.getConditionalValue() }}"
+                                 {% endif %}>
                                 <h4>{{ field.getLabel() }}</h4>
                                 <p>{{ field.getHint() }}</p>
-                                <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
+                                {% if integration.getType() == 'hubspot' %}
+                                    <p><strong>{{ 'integration.oauth_required_hubspot'|trans|default('HubSpot authorization is required. Click "Connect with HubSpot" below to continue.') }}</strong></p>
+                                {% elseif integration.getType() in ['sap_c4c', 'sap_sac'] %}
+                                    <p><strong>{{ 'integration.oauth_required_azure'|trans|default('Save this configuration first, then click "Connect with Azure AD" to authorize.') }}</strong></p>
+                                {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                    <p><strong>{{ 'integration.oauth_required_atlassian'|trans|default('Save this configuration first, then click "Connect with Atlassian" to authorize.') }}</strong></p>
+                                {% else %}
+                                    <p><strong>{{ 'integration.oauth_required'|trans|default('Microsoft authorization is required. Click "Connect with Microsoft" below to continue.') }}</strong></p>
+                                {% endif %}
                             </div>
+                        {% endif %}
                         {% endif %}
                     {% else %}
                         {% set fieldName = field.getName() %}
-                        {% set isSensitiveField = fieldName in ['api_token', 'password', 'client_secret'] %}
+                        {% set isSensitiveField = fieldName in ['api_token', 'password', 'client_secret', 'c4c_oauth_client_secret'] %}
                         {% set fieldExists = form.vars.data[fieldName ~ '_exists']|default(false) %}
+                        {% set isSelectField = field.getType() == 'select' %}
+                        {% set isConditionalField = field.isConditional() %}
 
-                        <div class="form-group {% if form[fieldName].vars.errors|length > 0 %}has-error{% endif %}">
+                        <div class="form-group {% if form[fieldName].vars.errors|length > 0 %}has-error{% endif %}{% if isConditionalField %} conditional-field{% endif %}"
+                             {% if isConditionalField %}
+                                 data-conditional-on="{{ field.getConditionalOn() }}"
+                                 data-conditional-value="{{ field.getConditionalValue() }}"
+                             {% endif %}>
                             <label for="integration_config_{{ fieldName }}">
                                 {{ field.getLabel() }}
-                                {% if field.isRequired() and (not isEdit or not isSensitiveField) %}
+                                {% if field.isRequired() and (not isEdit or not isSensitiveField) and not isConditionalField %}
                                     <span class="required">*</span>
                                 {% endif %}
                             </label>
@@ -103,7 +224,15 @@
                                 <span class="field-hint">{{ field.getHint()|raw }}</span>
                             {% endif %}
 
-                            {% if isSensitiveField and fieldExists and isEdit %}
+                            {% if isSelectField and field.getOptions() %}
+                                <select name="integration_config[{{ fieldName }}]" id="integration_config_{{ fieldName }}" class="form-control auth-mode-select" data-field="{{ fieldName }}">
+                                    {% for value, label in field.getOptions() %}
+                                        <option value="{{ value }}"{% if form.vars.data[fieldName]|default(field.getPlaceholder()) == value %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {# Mark the Symfony form field as rendered so form_end doesn't render it again #}
+                                {% do form[fieldName].setRendered %}
+                            {% elseif isSensitiveField and fieldExists and isEdit %}
                                 {{ form_widget(form[fieldName], {'attr': {'class': 'form-control', 'placeholder': 'integration.keep_existing'|trans|default('Leave empty to keep existing value')}}) }}
                                 <small class="form-text text-muted">
                                     <i class="fas fa-lock"></i> {{ 'integration.credential_exists'|trans|default('Current value is stored securely. Leave empty to keep it.') }}
@@ -112,6 +241,13 @@
                                 {{ form_widget(form[fieldName], {'attr': {'class': 'form-control', 'placeholder': field.getPlaceholder()}}) }}
                             {% endif %}
                             {{ form_errors(form[fieldName]) }}
+
+                            {% if integration.getType() == 'projektron' and fieldName == 'csrf_token' %}
+                                <div class="alert alert-session-warning">
+                                    <i class="fas fa-clock"></i>
+                                    <p>{{ 'integration.projektron_session_notice'|trans|default('These values automatically expire after a day, or if you recreate your Projektron session. Ensure to recently update them before using the skill. Please excuse the inconvenience.') }}</p>
+                                </div>
+                            {% endif %}
                         </div>
                     {% endif %}
                 {% endfor %}
@@ -143,17 +279,39 @@
                     </div>
                 {% endif %}
 
+                {% if isEdit and config and integration.getSystemPrompt is defined %}
+                    <h3>{{ 'integration.system_prompt'|trans|default('System Prompt') }}</h3>
+                    <p class="field-hint">{{ 'integration.system_prompt_hint'|trans|default('AI agent system prompt for this integration. This defines how the AI will interact with this skill.') }}</p>
+
+                    <details class="system-prompt-details">
+                        <summary class="system-prompt-summary">
+                            <span>{{ 'integration.view_system_prompt'|trans|default('Click to view/hide system prompt XML') }}</span>
+                        </summary>
+                        <div class="system-prompt-content">
+                            <pre><code class="language-xml">{{ integration.getSystemPrompt(config)|e }}</code></pre>
+                        </div>
+                    </details>
+                {% endif %}
+
                 <div class="form-actions">
-                    {% if hasOAuthField and not config %}
-                        {# For new OAuth integrations, change the button to "Connect with Microsoft" #}
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
-                        </button>
-                    {% else %}
-                        <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="submit-button"
+                            data-integration-type="{{ integration.getType() }}"
+                            data-label-save="{{ 'integration.save_configuration'|trans|default('Save Configuration') }}"
+                            data-label-atlassian="{{ 'integration.connect_atlassian'|trans|default('Connect with Atlassian') }}"
+                            data-label-microsoft="{{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}"
+                            data-label-hubspot="{{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}">
+                        {% if oauthFieldApplicable and not config %}
+                            {% if integration.getType() == 'hubspot' %}
+                                <i class="fab fa-hubspot"></i> {{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}
+                            {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                <i class="fab fa-atlassian"></i> {{ 'integration.connect_atlassian'|trans|default('Connect with Atlassian') }}
+                            {% else %}
+                                <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
+                            {% endif %}
+                        {% else %}
                             {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
-                        </button>
-                    {% endif %}
+                        {% endif %}
+                    </button>
                     <a href="{{ path('app_skills') }}" class="btn btn-secondary">
                         {{ 'action.cancel'|trans }}
                     </a>
@@ -488,6 +646,16 @@ label.required {
     margin-bottom: 0;
 }
 
+.alert-info a {
+    color: var(--primary-color, #3b82f6);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.alert-info a:hover {
+    text-decoration: underline;
+}
+
 .alert-danger {
     background: var(--danger-background, rgba(239, 68, 68, 0.1));
     border: 1px solid var(--danger-color, #ef4444);
@@ -610,6 +778,106 @@ ul.form-errors li {
 
 .form-control.url-error {
     border-color: var(--danger-color, #ef4444);
+}
+
+/* System Prompt Section */
+.system-prompt-details {
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background, #1a1a1a);
+    overflow: hidden;
+}
+
+.system-prompt-summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    font-weight: 500;
+    list-style: none;
+    user-select: none;
+    color: var(--text-primary);
+    background: var(--card-background, #1a1a1a);
+    transition: background-color 0.2s;
+}
+
+.system-prompt-summary:hover {
+    background: var(--secondary-background, #2a2a2a);
+}
+
+.system-prompt-summary::-webkit-details-marker {
+    display: none;
+}
+
+.system-prompt-summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 0.75rem;
+    transition: transform 0.2s;
+    color: var(--primary-color);
+}
+
+details[open] .system-prompt-summary::before {
+    transform: rotate(90deg);
+}
+
+.system-prompt-content {
+    padding: 0 1.25rem 1.25rem 1.25rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.system-prompt-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.system-prompt-content::-webkit-scrollbar-track {
+    background: var(--background, #0a0a0a);
+    border-radius: 4px;
+}
+
+.system-prompt-content::-webkit-scrollbar-thumb {
+    background: var(--border-color, #2a2a2a);
+    border-radius: 4px;
+}
+
+.system-prompt-content::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover, #3a3a3a);
+}
+
+.system-prompt-content pre {
+    margin: 0;
+    padding: 1.25rem;
+    background: var(--background, #0a0a0a);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.system-prompt-content pre::-webkit-scrollbar {
+    height: 8px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-track {
+    background: var(--background, #0a0a0a);
+    border-radius: 4px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-thumb {
+    background: var(--border-color, #2a2a2a);
+    border-radius: 4px;
+}
+
+.system-prompt-content pre::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover, #3a3a3a);
+}
+
+.system-prompt-content code {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--text-primary, #e5e7eb);
+    white-space: pre;
+    word-wrap: normal;
 }
 </style>
 
@@ -755,5 +1023,92 @@ async function toggleTool(checkbox) {
         alert('{{ 'integration.toggle_error'|trans|default('Failed to update tool setting') }}');
     }
 }
+
+// Conditional field visibility based on select values (e.g., auth_mode)
+document.addEventListener('DOMContentLoaded', function() {
+    const authModeSelects = document.querySelectorAll('.auth-mode-select');
+    const conditionalFields = document.querySelectorAll('.conditional-field');
+    const authInstructions = document.querySelector('[data-auth-instructions="true"]');
+    const submitButton = document.getElementById('submit-button');
+
+    function updateSubmitButton(authMode) {
+        if (!submitButton) return;
+
+        const integrationType = submitButton.dataset.integrationType;
+        const labelSave = submitButton.dataset.labelSave;
+        const labelAtlassian = submitButton.dataset.labelAtlassian;
+        const labelMicrosoft = submitButton.dataset.labelMicrosoft;
+        const labelHubspot = submitButton.dataset.labelHubspot;
+
+        // Determine if OAuth mode is selected
+        const isOAuthMode = authMode === 'oauth' || authMode === 'user_delegation';
+
+        if (isOAuthMode) {
+            // Show OAuth-specific button based on integration type
+            if (integrationType === 'hubspot') {
+                submitButton.innerHTML = '<i class="fab fa-hubspot"></i> ' + labelHubspot;
+            } else if (integrationType === 'jira' || integrationType === 'confluence') {
+                submitButton.innerHTML = '<i class="fab fa-atlassian"></i> ' + labelAtlassian;
+            } else if (integrationType === 'sap_c4c' || integrationType === 'sap_sac') {
+                submitButton.innerHTML = '<i class="fab fa-microsoft"></i> ' + labelMicrosoft;
+            } else {
+                submitButton.innerHTML = '<i class="fab fa-microsoft"></i> ' + labelMicrosoft;
+            }
+        } else {
+            // Show standard save button
+            submitButton.innerHTML = labelSave;
+        }
+    }
+
+    function updateConditionalFields() {
+        // Get current auth mode value
+        const authModeSelect = document.querySelector('[data-field="auth_mode"]');
+        const currentAuthMode = authModeSelect ? authModeSelect.value : 'basic';
+
+        // Update conditional form fields
+        conditionalFields.forEach(field => {
+            const conditionalOn = field.dataset.conditionalOn;
+            const conditionalValue = field.dataset.conditionalValue;
+
+            if (!conditionalOn) return;
+
+            // Find the controlling select element
+            const controllingSelect = document.querySelector(`[data-field="${conditionalOn}"], #integration_config_${conditionalOn}`);
+            if (!controllingSelect) return;
+
+            const currentValue = controllingSelect.value;
+            const shouldShow = currentValue === conditionalValue;
+
+            // Show/hide the field
+            field.style.display = shouldShow ? 'block' : 'none';
+
+            // Enable/disable the input to prevent submitting hidden fields
+            const input = field.querySelector('input, select, textarea');
+            if (input) {
+                input.disabled = !shouldShow;
+            }
+        });
+
+        // Update setup instructions visibility based on auth mode
+        if (authInstructions) {
+            const authOptions = authInstructions.querySelectorAll('.auth-option[data-auth-mode]');
+            authOptions.forEach(option => {
+                const optionMode = option.dataset.authMode;
+                option.style.display = optionMode === currentAuthMode ? 'block' : 'none';
+            });
+        }
+
+        // Update submit button based on auth mode
+        updateSubmitButton(currentAuthMode);
+    }
+
+    // Attach change handlers to all auth mode selects
+    authModeSelects.forEach(select => {
+        select.addEventListener('change', updateConditionalFields);
+    });
+
+    // Initial update on page load
+    updateConditionalFields();
+});
 </script>
 {% endblock %}

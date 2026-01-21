@@ -2,19 +2,22 @@
 
 namespace App\Integration\UserIntegrations;
 
-use App\Integration\IntegrationInterface;
+use App\Entity\IntegrationConfig;
+use App\Integration\PersonalizedSkillInterface;
 use App\Integration\ToolDefinition;
 use App\Integration\CredentialField;
 use App\Service\Integration\SharePointService;
 use App\Service\EncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
+use Twig\Environment;
 
-class SharePointIntegration implements IntegrationInterface
+class SharePointIntegration implements PersonalizedSkillInterface
 {
     public function __construct(
         private SharePointService $sharePointService,
         private EncryptionService $encryptionService,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private Environment $twig
     ) {
     }
 
@@ -32,44 +35,33 @@ class SharePointIntegration implements IntegrationInterface
     {
         return [
             new ToolDefinition(
-                'sharepoint_search_documents',
-                'Search for documents in SharePoint with content summaries',
+                'sharepoint_search',
+                'Search ALL SharePoint content (Files, Sites, Pages, Lists, Drives) using KQL (Keyword Query Language). Returns results grouped by type.',
                 [
                     [
-                        'name' => 'query',
+                        'name' => 'kql',
                         'type' => 'string',
                         'required' => true,
-                        'description' => 'Search query to find relevant documents'
+                        'description' => 'KQL query for SharePoint search. Syntax examples:
+• OR search: vacation OR Urlaub OR leave OR Ferien
+• Exact phrase: "project status report"
+• Wildcard: budget* (matches budget, budgets, budgeting)
+• Field filters: author:John, filename:report, filetype:pdf, filetype:docx, title:Q4
+• Combined: (vacation OR Urlaub) AND filetype:docx
+• Date filter: LastModifiedTime>2024-01-01
+Tips: Use OR to include synonyms and translations (German+English) for bilingual workspaces.'
                     ],
                     [
                         'name' => 'limit',
                         'type' => 'integer',
                         'required' => false,
-                        'description' => 'Maximum number of results to return (default: 10, max: 25)'
-                    ]
-                ]
-            ),
-            new ToolDefinition(
-                'sharepoint_search_pages',
-                'Search for pages in SharePoint',
-                [
-                    [
-                        'name' => 'query',
-                        'type' => 'string',
-                        'required' => true,
-                        'description' => 'Search query'
-                    ],
-                    [
-                        'name' => 'limit',
-                        'type' => 'integer',
-                        'required' => false,
-                        'description' => 'Maximum number of results (default: 25)'
+                        'description' => 'Maximum results per type (default: 25, max: 50). Results are grouped by Files, Sites, Pages, Lists, Drives.'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'sharepoint_read_document',
-                'Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files)',
+                'Extract and read text content from SharePoint documents (Word, Excel, PowerPoint, PDF, text files). Returns: Object containing extracted text content, metadata including fileName, fileSize, mimeType, and documentInfo with title, author, pageCount, wordCount (when available).',
                 [
                     [
                         'name' => 'siteId',
@@ -84,6 +76,12 @@ class SharePointIntegration implements IntegrationInterface
                         'description' => 'Document item ID from search results (use the id field from search results)'
                     ],
                     [
+                        'name' => 'driveId',
+                        'type' => 'string',
+                        'required' => false,
+                        'description' => 'Drive ID from search results (driveId field). When provided, enables direct access to the file. Improves reliability for files in document libraries.'
+                    ],
+                    [
                         'name' => 'maxLength',
                         'type' => 'integer',
                         'required' => false,
@@ -93,7 +91,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_read_page',
-                'Read content from a SharePoint page',
+                'Read content from a SharePoint page. Returns: Object containing page data with properties: id, name, title, webUrl, createdDateTime, lastModifiedDateTime, lastModifiedBy, webParts array (containing page sections and content blocks).',
                 [
                     [
                         'name' => 'siteId',
@@ -111,7 +109,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_list_files',
-                'List files in a SharePoint directory',
+                'List files in a SharePoint directory. Returns: Array of driveItem objects with properties: id, name, size, webUrl, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, file (with mimeType and hashes), folder (if item is a folder), parentReference.',
                 [
                     [
                         'name' => 'siteId',
@@ -129,7 +127,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_download_file',
-                'Download a file from SharePoint',
+                'Download a file from SharePoint. Returns: Binary file content stream or redirect URL to pre-authenticated download location. Response includes Content-Type header with file MIME type and Content-Disposition header with filename.',
                 [
                     [
                         'name' => 'siteId',
@@ -147,7 +145,7 @@ class SharePointIntegration implements IntegrationInterface
             ),
             new ToolDefinition(
                 'sharepoint_get_list_items',
-                'Get items from a SharePoint list',
+                'Get items from a SharePoint list. Returns: Array of listItem objects with properties: id, createdDateTime, lastModifiedDateTime, createdBy, lastModifiedBy, fields (containing custom column values like Title, Employee, ID, etc.), contentType, eTag, webUrl.',
                 [
                     [
                         'name' => 'siteId',
@@ -184,21 +182,17 @@ class SharePointIntegration implements IntegrationInterface
         }
 
         return match ($toolName) {
-            'sharepoint_search_documents' => $this->sharePointService->searchDocuments(
+            'sharepoint_search' => $this->sharePointService->search(
                 $credentials,
-                $parameters['query'],
-                min($parameters['limit'] ?? 10, 25)
-            ),
-            'sharepoint_search_pages' => $this->sharePointService->searchPages(
-                $credentials,
-                $parameters['query'],
-                $parameters['limit'] ?? 25
+                $parameters['kql'],
+                min($parameters['limit'] ?? 25, 50)
             ),
             'sharepoint_read_document' => $this->sharePointService->readDocument(
                 $credentials,
                 $parameters['siteId'],
                 $parameters['itemId'],
-                min($parameters['maxLength'] ?? 5000, 50000)
+                min($parameters['maxLength'] ?? 5000, 50000),
+                $parameters['driveId'] ?? null
             ),
             'sharepoint_read_page' => $this->sharePointService->readPage(
                 $credentials,
@@ -251,6 +245,15 @@ class SharePointIntegration implements IntegrationInterface
         ];
     }
 
+    public function getSystemPrompt(?IntegrationConfig $config = null): string
+    {
+        return $this->twig->render('skills/prompts/sharepoint_full.xml.twig', [
+            'api_base_url' => $_ENV['APP_URL'] ?? 'https://subscribe-workflows.vcec.cloud',
+            'tool_count' => count($this->getTools()),
+            'integration_id' => $config?->getId() ?? 'XXX',
+        ]);
+    }
+
     private function refreshTokenIfNeeded(array $credentials): array
     {
         if (!isset($credentials['refresh_token'])) {
@@ -269,5 +272,14 @@ class SharePointIntegration implements IntegrationInterface
             'refresh_token' => $newTokens['refresh_token'],
             'expires_at' => $newTokens['expires_at']
         ]);
+    }
+    public function isExperimental(): bool
+    {
+        return false;
+    }
+
+    public function getSetupInstructions(): ?string
+    {
+        return null;
     }
 }
