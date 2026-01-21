@@ -322,6 +322,8 @@ class AtlassianOAuthService
     public static function getJiraScopes(): array
     {
         return [
+            'read:me',
+            'read:account',
             'read:jira-work',
             'write:jira-work',
             'read:jira-user',
@@ -337,6 +339,8 @@ class AtlassianOAuthService
     public static function getConfluenceScopes(): array
     {
         return [
+            'read:me',
+            'read:account',
             'read:confluence-content.all',
             'write:confluence-content',
             'read:confluence-space.summary',

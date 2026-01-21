@@ -745,30 +745,8 @@ class IntegrationController extends AbstractController
                 /** @var \App\Integration\UserIntegrations\ConfluenceIntegration $confluenceIntegration */
                 $confluenceIntegration = $integration;
 
-                // Debug: log credential structure
-                $debugInfo = [
-                    'auth_mode' => $credentials['auth_mode'] ?? 'not_set',
-                    'has_access_token' => !empty($credentials['access_token']),
-                    'has_refresh_token' => !empty($credentials['refresh_token']),
-                    'has_cloud_id' => !empty($credentials['cloud_id']),
-                    'expires_at' => $credentials['expires_at'] ?? 'not_set',
-                    'current_time' => time(),
-                ];
-
                 // Enrich OAuth credentials (refresh token if needed) before testing
-                try {
-                    $enrichedCredentials = $confluenceIntegration->getOAuth2EnrichedCredentials($credentials);
-                    $debugInfo['enrichment'] = 'success';
-                    $debugInfo['token_refreshed'] = ($enrichedCredentials !== $credentials);
-                } catch (\Exception $e) {
-                    return $this->json([
-                        'success' => false,
-                        'message' => 'OAuth token refresh failed',
-                        'details' => $e->getMessage(),
-                        'suggestion' => 'Please reconnect via "Connect with Atlassian".',
-                        'debug' => $debugInfo
-                    ]);
-                }
+                $enrichedCredentials = $confluenceIntegration->getOAuth2EnrichedCredentials($credentials);
 
                 // If token was refreshed, save the updated credentials
                 if ($enrichedCredentials !== $credentials) {
@@ -786,7 +764,6 @@ class IntegrationController extends AbstractController
                 $confluenceService = $property->getValue($confluenceIntegration);
 
                 $result = $confluenceService->testConnectionDetailed($credentials);
-                $result['debug'] = $debugInfo;
 
                 if ($result['success']) {
                     // Auto-reconnect if previously disconnected
@@ -798,8 +775,7 @@ class IntegrationController extends AbstractController
                         'success' => true,
                         'message' => $result['message'],
                         'details' => $result['details'],
-                        'tested_endpoints' => $result['tested_endpoints'],
-                        'debug' => $debugInfo
+                        'tested_endpoints' => $result['tested_endpoints']
                     ]);
                 } else {
                     return $this->json([
@@ -807,8 +783,7 @@ class IntegrationController extends AbstractController
                         'message' => $result['message'],
                         'details' => $result['details'],
                         'suggestion' => $result['suggestion'],
-                        'tested_endpoints' => $result['tested_endpoints'],
-                        'debug' => $debugInfo
+                        'tested_endpoints' => $result['tested_endpoints']
                     ]);
                 }
             }
