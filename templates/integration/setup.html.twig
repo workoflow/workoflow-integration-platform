@@ -294,22 +294,24 @@
                 {% endif %}
 
                 <div class="form-actions">
-                    {% if oauthFieldApplicable and not config %}
-                        {# For new OAuth integrations where OAuth is actually needed, show provider-specific button #}
-                        {% if integration.getType() == 'hubspot' %}
-                            <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="submit-button"
+                            data-integration-type="{{ integration.getType() }}"
+                            data-label-save="{{ 'integration.save_configuration'|trans|default('Save Configuration') }}"
+                            data-label-atlassian="{{ 'integration.connect_atlassian'|trans|default('Connect with Atlassian') }}"
+                            data-label-microsoft="{{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}"
+                            data-label-hubspot="{{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}">
+                        {% if oauthFieldApplicable and not config %}
+                            {% if integration.getType() == 'hubspot' %}
                                 <i class="fab fa-hubspot"></i> {{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}
-                            </button>
-                        {% else %}
-                            <button type="submit" class="btn btn-primary">
+                            {% elseif integration.getType() in ['jira', 'confluence'] %}
+                                <i class="fab fa-atlassian"></i> {{ 'integration.connect_atlassian'|trans|default('Connect with Atlassian') }}
+                            {% else %}
                                 <i class="fab fa-microsoft"></i> {{ 'integration.connect_microsoft'|trans|default('Connect with Microsoft') }}
-                            </button>
-                        {% endif %}
-                    {% else %}
-                        <button type="submit" class="btn btn-primary">
+                            {% endif %}
+                        {% else %}
                             {{ 'integration.save_configuration'|trans|default('Save Configuration') }}
-                        </button>
-                    {% endif %}
+                        {% endif %}
+                    </button>
                     <a href="{{ path('app_skills') }}" class="btn btn-secondary">
                         {{ 'action.cancel'|trans }}
                     </a>
@@ -1017,6 +1019,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const authModeSelects = document.querySelectorAll('.auth-mode-select');
     const conditionalFields = document.querySelectorAll('.conditional-field');
     const authInstructions = document.querySelector('[data-auth-instructions="true"]');
+    const submitButton = document.getElementById('submit-button');
+
+    function updateSubmitButton(authMode) {
+        if (!submitButton) return;
+
+        const integrationType = submitButton.dataset.integrationType;
+        const labelSave = submitButton.dataset.labelSave;
+        const labelAtlassian = submitButton.dataset.labelAtlassian;
+        const labelMicrosoft = submitButton.dataset.labelMicrosoft;
+        const labelHubspot = submitButton.dataset.labelHubspot;
+
+        // Determine if OAuth mode is selected
+        const isOAuthMode = authMode === 'oauth' || authMode === 'user_delegation';
+
+        if (isOAuthMode) {
+            // Show OAuth-specific button based on integration type
+            if (integrationType === 'hubspot') {
+                submitButton.innerHTML = '<i class="fab fa-hubspot"></i> ' + labelHubspot;
+            } else if (integrationType === 'jira' || integrationType === 'confluence') {
+                submitButton.innerHTML = '<i class="fab fa-atlassian"></i> ' + labelAtlassian;
+            } else if (integrationType === 'sap_c4c' || integrationType === 'sap_sac') {
+                submitButton.innerHTML = '<i class="fab fa-microsoft"></i> ' + labelMicrosoft;
+            } else {
+                submitButton.innerHTML = '<i class="fab fa-microsoft"></i> ' + labelMicrosoft;
+            }
+        } else {
+            // Show standard save button
+            submitButton.innerHTML = labelSave;
+        }
+    }
 
     function updateConditionalFields() {
         // Get current auth mode value
@@ -1055,6 +1087,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.style.display = optionMode === currentAuthMode ? 'block' : 'none';
             });
         }
+
+        // Update submit button based on auth mode
+        updateSubmitButton(currentAuthMode);
     }
 
     // Attach change handlers to all auth mode selects
