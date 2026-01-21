@@ -275,6 +275,20 @@ puppeteer.test2@example.com (Member)
 
 ## Deployment
 
+### Production Docker Compose
+**CRITICAL**: Always use `docker-compose-prod.yml` for production operations:
+```bash
+# Correct - uses external volumes with production data
+docker-compose -f docker-compose-prod.yml up -d
+docker-compose -f docker-compose-prod.yml restart frankenphp
+
+# WRONG - creates new prefixed volumes, loses production data!
+docker-compose up -d
+docker-compose restart frankenphp
+```
+
+The production compose file uses `external: true` volumes that reference existing data volumes (`mariadb_data`, `redis_data`, etc.). Using the default `docker-compose.yml` will create new prefixed volumes and disconnect from production data.
+
 ### Environment Variables
 All critical configurations via .env:
 - Database Credentials
