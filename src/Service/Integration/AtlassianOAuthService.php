@@ -23,10 +23,32 @@ class AtlassianOAuthService
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
-        private string $clientId,
-        private string $clientSecret,
-        private string $redirectUri,
+        private ?string $clientId = null,
+        private ?string $clientSecret = null,
+        private ?string $redirectUri = null,
     ) {
+    }
+
+    /**
+     * Check if Atlassian OAuth is configured.
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->clientId) && !empty($this->clientSecret) && !empty($this->redirectUri);
+    }
+
+    /**
+     * Ensure OAuth is properly configured before use.
+     *
+     * @throws \RuntimeException When OAuth is not configured
+     */
+    private function ensureConfigured(): void
+    {
+        if (!$this->isConfigured()) {
+            throw new \RuntimeException(
+                'Atlassian OAuth is not configured. Please set ATLASSIAN_CLIENT_ID and ATLASSIAN_CLIENT_SECRET environment variables.'
+            );
+        }
     }
 
     /**
@@ -39,6 +61,8 @@ class AtlassianOAuthService
      */
     public function getAuthorizationUrl(array $scopes, string $state): string
     {
+        $this->ensureConfigured();
+
         // Always include offline_access for refresh tokens
         if (!in_array('offline_access', $scopes, true)) {
             $scopes[] = 'offline_access';
@@ -68,6 +92,7 @@ class AtlassianOAuthService
      */
     public function exchangeCodeForTokens(string $code): array
     {
+        $this->ensureConfigured();
         $this->logger->info('Atlassian OAuth: Exchanging authorization code for tokens');
 
         try {
@@ -124,6 +149,7 @@ class AtlassianOAuthService
      */
     public function refreshAccessToken(string $refreshToken): array
     {
+        $this->ensureConfigured();
         $this->logger->info('Atlassian OAuth: Refreshing access token');
 
         try {
