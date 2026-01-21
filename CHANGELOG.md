@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-21
+
+### Added
+- **Workoflow MCP in footer and release notes** - Added MCP Server project link to the footer's Open Source section and added Workoflow MCP release notes to the Release Notes page with automatic changelog fetching from GitHub
+
+### Fixed
+- **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
+
+
 ## 2026-01-19
 
 ### Improved

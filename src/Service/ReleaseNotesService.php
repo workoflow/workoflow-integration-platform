@@ -23,6 +23,13 @@ class ReleaseNotesService
             'github' => 'https://github.com/workoflow/workoflow-bot',
             'icon' => 'fa-robot',
         ],
+        'mcp' => [
+            'name' => 'release_notes.projects.mcp.name',
+            'description' => 'release_notes.projects.mcp.description',
+            'url' => 'https://raw.githubusercontent.com/patrickjaja/workoflow-mcp/main/CHANGELOG.md',
+            'github' => 'https://github.com/patrickjaja/workoflow-mcp',
+            'icon' => 'fa-plug',
+        ],
         'platform' => [
             'name' => 'release_notes.projects.platform.name',
             'description' => 'release_notes.projects.platform.description',
