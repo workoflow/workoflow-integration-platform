@@ -486,6 +486,7 @@ footer:
     hosting: Hosting
     tests: Tests
     bot: Bot
+    mcp: MCP
     platform: Integration Platform
     pptx: PPTX
     rag: RAG
@@ -548,6 +549,9 @@ release_notes:
     bot:
       name: Workoflow Bot
       description: MS Teams bot connecting n8n automation workflows to Microsoft Teams, enabling AI-driven communication while maintaining data privacy through self-hosting.
+    mcp:
+      name: Workoflow MCP
+      description: MCP Server Bridge for Workoflow Platform. Connects AI assistants like Claude Desktop and Cursor to Workoflow tools using the Model Context Protocol (MCP).
     platform:
       name: Workoflow Platform
       description: Enterprise integration hub connecting AI agents with business tools like Jira, Confluence, and SharePoint. Features encrypted credential storage and comprehensive audit logging.
