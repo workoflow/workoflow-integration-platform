@@ -275,6 +275,9 @@ puppeteer.test2@example.com (Member)
 
 ## Deployment
 
+### official way to deploy (https://github.com/workoflow/workoflow-hosting project)
+example script call ../workoflow-ai-setup/scripts/deploy.sh prod
+
 ### Production Docker Compose
 **CRITICAL**: Always use `docker-compose-prod.yml` for production operations:
 ```bash
@@ -288,6 +291,12 @@ docker-compose restart frankenphp
 ```
 
 The production compose file uses `external: true` volumes that reference existing data volumes (`mariadb_data`, `redis_data`, etc.). Using the default `docker-compose.yml` will create new prefixed volumes and disconnect from production data.
+
+### how to connect to prod
+sh val-workoflow-prod
+sudo -iu docker
+cd docker-setups
+docker ps
 
 ### Environment Variables
 All critical configurations via .env:

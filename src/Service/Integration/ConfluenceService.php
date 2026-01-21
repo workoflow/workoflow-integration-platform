@@ -135,13 +135,125 @@ class ConfluenceService
     public function testConnectionDetailed(array $credentials): array
     {
         $testedEndpoints = [];
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
 
         try {
             // Get base URL based on auth mode (OAuth or API Token)
             $url = $this->getApiBaseUrl($credentials);
             $authOptions = $this->getAuthOptions($credentials);
 
-            // Test v1 API endpoint (used for search, get page, comments)
+            // For OAuth, test with v2 spaces endpoint (works with read:confluence-space.summary scope)
+            // For API Token, test with user endpoint (works with basic auth)
+            if ($authMode === 'oauth') {
+                // OAuth: Test v2 API endpoint first (used for creating/updating pages)
+                try {
+                    $v2Response = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', array_merge(
+                        $authOptions,
+                        [
+                            'query' => ['limit' => 1],
+                            'timeout' => 10,
+                        ]
+                    ));
+
+                    $v2StatusCode = $v2Response->getStatusCode();
+                    $testedEndpoints[] = [
+                        'endpoint' => '/wiki/api/v2/spaces',
+                        'status' => $v2StatusCode === 200 ? 'success' : 'failed',
+                        'http_code' => $v2StatusCode
+                    ];
+
+                    if ($v2StatusCode === 200) {
+                        // Also test v1 content search endpoint
+                        try {
+                            $v1Response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/search', array_merge(
+                                $authOptions,
+                                [
+                                    'query' => ['cql' => 'type=page', 'limit' => 1],
+                                    'timeout' => 10,
+                                ]
+                            ));
+
+                            $v1StatusCode = $v1Response->getStatusCode();
+                            $testedEndpoints[] = [
+                                'endpoint' => '/wiki/rest/api/content/search',
+                                'status' => $v1StatusCode === 200 ? 'success' : 'failed',
+                                'http_code' => $v1StatusCode
+                            ];
+
+                            if ($v1StatusCode === 200) {
+                                return [
+                                    'success' => true,
+                                    'message' => 'Connection successful',
+                                    'details' => 'Successfully connected to Confluence via OAuth. Both v1 and v2 APIs are accessible.',
+                                    'suggestion' => '',
+                                    'tested_endpoints' => $testedEndpoints
+                                ];
+                            }
+                        /** @phpstan-ignore-next-line catch.neverThrown */
+                        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+                            $v1StatusCode = $e->getResponse()->getStatusCode();
+                            $testedEndpoints[] = [
+                                'endpoint' => '/wiki/rest/api/content/search',
+                                'status' => 'failed',
+                                'http_code' => $v1StatusCode
+                            ];
+                        }
+
+                        // v2 works, v1 may have issues but still consider it success
+                        return [
+                            'success' => true,
+                            'message' => 'Connection successful',
+                            'details' => 'Successfully connected to Confluence via OAuth. v2 API is accessible.',
+                            'suggestion' => '',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    } else {
+                        return [
+                            'success' => false,
+                            'message' => 'v2 API not accessible',
+                            'details' => "v2 API returned HTTP {$v2StatusCode}.",
+                            'suggestion' => 'Contact your Confluence administrator to verify API access permissions.',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    }
+                /** @phpstan-ignore-next-line catch.neverThrown */
+                } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+                    $v2StatusCode = $e->getResponse()->getStatusCode();
+                    $testedEndpoints[] = [
+                        'endpoint' => '/wiki/api/v2/spaces',
+                        'status' => 'failed',
+                        'http_code' => $v2StatusCode
+                    ];
+
+                    if ($v2StatusCode === 401) {
+                        return [
+                            'success' => false,
+                            'message' => 'Authentication failed',
+                            'details' => 'OAuth access token is invalid or expired. Please reconnect via "Connect with Atlassian".',
+                            'suggestion' => 'Click "Connect with Atlassian" to re-authorize the connection.',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    } elseif ($v2StatusCode === 403) {
+                        return [
+                            'success' => false,
+                            'message' => 'Access forbidden',
+                            'details' => 'OAuth token does not have sufficient permissions.',
+                            'suggestion' => 'Reconnect via "Connect with Atlassian" and ensure you grant all requested permissions.',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    }
+
+                    return [
+                        'success' => false,
+                        'message' => 'Connection failed',
+                        'details' => "HTTP {$v2StatusCode}: " . $e->getMessage(),
+                        'suggestion' => 'Check the error details and verify your Confluence instance is accessible.',
+                        'tested_endpoints' => $testedEndpoints
+                    ];
+                }
+            }
+
+            // API Token mode: Test v1 API endpoint (used for search, get page, comments)
             try {
                 $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/user/current', array_merge(
                     $authOptions,
