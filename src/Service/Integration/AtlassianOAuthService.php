@@ -334,15 +334,27 @@ class AtlassianOAuthService
     /**
      * Get default scopes for Confluence integration.
      *
+     * Classic scopes are used for v1 REST API (/wiki/rest/api/*)
+     * Granular scopes are required for v2 REST API (/wiki/api/v2/*)
+     *
      * @return array Confluence OAuth scopes
      */
     public static function getConfluenceScopes(): array
     {
         return [
+            // Classic scopes for v1 API compatibility
             'read:confluence-content.all',
             'write:confluence-content',
             'read:confluence-space.summary',
             'read:confluence-user',
+            // Granular scopes required for v2 API
+            'read:space:confluence',
+            'write:space:confluence',
+            'read:page:confluence',
+            'write:page:confluence',
+            'read:content:confluence',
+            'write:content:confluence',
+            // Required for refresh tokens
             'offline_access',
         ];
     }

@@ -230,6 +230,18 @@ class ConfluenceService
                         ));
 
                         $v2StatusCode = $v2Response->getStatusCode();
+                        error_log("Confluence test connection - v2 API status: {$v2StatusCode}");
+
+                        // Log error response body for debugging
+                        if ($v2StatusCode !== 200) {
+                            try {
+                                $v2ErrorBody = $v2Response->getContent(false);
+                                error_log("Confluence test connection - v2 API error response: {$v2ErrorBody}");
+                            } catch (\Exception $logEx) {
+                                error_log("Confluence test connection - Could not read v2 error body: " . $logEx->getMessage());
+                            }
+                        }
+
                         $testedEndpoints[] = [
                             'endpoint' => $wikiPrefix . '/api/v2/spaces',
                             'status' => $v2StatusCode === 200 ? 'success' : 'failed',
