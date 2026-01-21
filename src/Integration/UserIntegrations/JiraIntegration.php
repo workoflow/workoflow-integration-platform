@@ -111,7 +111,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_issue',
-                'Get detailed information about a specific Jira issue. Returns: Issue object with id, key, self, and fields containing summary, description, status.name, assignee (accountId, displayName, emailAddress), priority.name, project (key, name), reporter, created, updated, comment array, attachment array, issuelinks, subtasks, and watchers',
+                'Get detailed information about a specific Jira issue. Returns AI-optimized flat object: key, id, summary, status, statusCategory, resolution, assignee/assigneeId/assigneeEmail, reporter/reporterId, priority, issueType, project/projectName, created, updated, dueDate, labels[], components[], fixVersions[], description (plain text), parent (key, summary), sprint (name, state), subtasks[] (key, summary, status), linkedIssues[] (key, type, summary), comments[] (last 10: author, created, body), attachments[] (filename, size, mimeType), webUrl',
                 [
                     [
                         'name' => 'issueKey',

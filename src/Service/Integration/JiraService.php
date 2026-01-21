@@ -30,6 +30,34 @@ class JiraService
         'customfield_10020', // Sprint field (common custom field ID)
     ];
 
+    /**
+     * AI-friendly fields for single issue detail view.
+     * More comprehensive than list fields - includes comments, attachments, links.
+     */
+    private const AI_FRIENDLY_DETAIL_FIELDS = [
+        'summary',
+        'status',
+        'assignee',
+        'reporter',
+        'priority',
+        'issuetype',
+        'project',
+        'created',
+        'updated',
+        'duedate',
+        'labels',
+        'description',
+        'comment',
+        'attachment',
+        'issuelinks',
+        'subtasks',
+        'parent',
+        'fixVersions',
+        'components',
+        'resolution',
+        'customfield_10020', // Sprint field
+    ];
+
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -99,6 +127,164 @@ class JiraService
         // Include description only when requested (for single issue views)
         if ($includeDescription && !empty($fields['description'])) {
             $mapped['description'] = $this->convertADFToPlainText($fields['description']);
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Map a raw Jira issue to a detailed AI-friendly format.
+     * Used for single issue views where more comprehensive data is needed.
+     * Produces a flat structure with all essential fields including comments, links, and attachments.
+     *
+     * @param array $issue Raw Jira issue data
+     * @param string|null $webUrl Optional web URL for the issue (derived from credentials)
+     * @return array AI-friendly detailed issue data
+     */
+    private function mapDetailedIssueToAIFormat(array $issue, ?string $webUrl = null): array
+    {
+        $fields = $issue['fields'] ?? [];
+
+        $mapped = [
+            'key' => $issue['key'] ?? '',
+            'id' => $issue['id'] ?? '',
+            'summary' => $fields['summary'] ?? '',
+            'status' => $fields['status']['name'] ?? '',
+            'statusCategory' => $fields['status']['statusCategory']['name'] ?? '',
+            'resolution' => $fields['resolution']['name'] ?? null,
+            'assignee' => $fields['assignee']['displayName'] ?? 'Unassigned',
+            'assigneeId' => $fields['assignee']['accountId'] ?? null,
+            'assigneeEmail' => $fields['assignee']['emailAddress'] ?? null,
+            'reporter' => $fields['reporter']['displayName'] ?? '',
+            'reporterId' => $fields['reporter']['accountId'] ?? null,
+            'priority' => $fields['priority']['name'] ?? '',
+            'issueType' => $fields['issuetype']['name'] ?? '',
+            'project' => $fields['project']['key'] ?? '',
+            'projectName' => $fields['project']['name'] ?? '',
+            'created' => $fields['created'] ?? '',
+            'updated' => $fields['updated'] ?? '',
+            'dueDate' => $fields['duedate'] ?? null,
+            'labels' => $fields['labels'] ?? [],
+        ];
+
+        // Components
+        if (!empty($fields['components']) && is_array($fields['components'])) {
+            $mapped['components'] = array_map(
+                fn($c) => $c['name'] ?? '',
+                $fields['components']
+            );
+        } else {
+            $mapped['components'] = [];
+        }
+
+        // Fix Versions
+        if (!empty($fields['fixVersions']) && is_array($fields['fixVersions'])) {
+            $mapped['fixVersions'] = array_map(
+                fn($v) => $v['name'] ?? '',
+                $fields['fixVersions']
+            );
+        } else {
+            $mapped['fixVersions'] = [];
+        }
+
+        // Description (convert ADF to plain text)
+        if (!empty($fields['description'])) {
+            $mapped['description'] = $this->convertADFToPlainText($fields['description'], 5000);
+        } else {
+            $mapped['description'] = null;
+        }
+
+        // Parent (for subtasks)
+        if (!empty($fields['parent'])) {
+            $mapped['parent'] = [
+                'key' => $fields['parent']['key'] ?? '',
+                'summary' => $fields['parent']['fields']['summary'] ?? '',
+            ];
+        } else {
+            $mapped['parent'] = null;
+        }
+
+        // Sprint info
+        if (!empty($fields['customfield_10020']) && is_array($fields['customfield_10020'])) {
+            $sprints = $fields['customfield_10020'];
+            $activeSprint = null;
+            foreach ($sprints as $sprint) {
+                if (($sprint['state'] ?? '') === 'active') {
+                    $activeSprint = $sprint;
+                    break;
+                }
+            }
+            $sprint = $activeSprint ?? end($sprints);
+            if ($sprint !== false) {
+                $mapped['sprint'] = [
+                    'name' => $sprint['name'] ?? '',
+                    'state' => $sprint['state'] ?? '',
+                ];
+            }
+        }
+
+        // Subtasks
+        if (!empty($fields['subtasks']) && is_array($fields['subtasks'])) {
+            $mapped['subtasks'] = array_map(fn($st) => [
+                'key' => $st['key'] ?? '',
+                'summary' => $st['fields']['summary'] ?? '',
+                'status' => $st['fields']['status']['name'] ?? '',
+            ], $fields['subtasks']);
+        } else {
+            $mapped['subtasks'] = [];
+        }
+
+        // Issue Links (flattened)
+        if (!empty($fields['issuelinks']) && is_array($fields['issuelinks'])) {
+            $mapped['linkedIssues'] = [];
+            foreach ($fields['issuelinks'] as $link) {
+                $linkType = $link['type'] ?? [];
+                if (!empty($link['outwardIssue'])) {
+                    $mapped['linkedIssues'][] = [
+                        'key' => $link['outwardIssue']['key'] ?? '',
+                        'type' => $linkType['outward'] ?? '',
+                        'summary' => $link['outwardIssue']['fields']['summary'] ?? '',
+                    ];
+                } elseif (!empty($link['inwardIssue'])) {
+                    $mapped['linkedIssues'][] = [
+                        'key' => $link['inwardIssue']['key'] ?? '',
+                        'type' => $linkType['inward'] ?? '',
+                        'summary' => $link['inwardIssue']['fields']['summary'] ?? '',
+                    ];
+                }
+            }
+        } else {
+            $mapped['linkedIssues'] = [];
+        }
+
+        // Comments (last 10, flattened)
+        if (!empty($fields['comment']['comments']) && is_array($fields['comment']['comments'])) {
+            $comments = $fields['comment']['comments'];
+            // Get last 10 comments (most recent)
+            $recentComments = array_slice($comments, -10);
+            $mapped['comments'] = array_map(fn($c) => [
+                'author' => $c['author']['displayName'] ?? '',
+                'created' => $c['created'] ?? '',
+                'body' => $this->convertADFToPlainText($c['body'] ?? '', 1000),
+            ], $recentComments);
+        } else {
+            $mapped['comments'] = [];
+        }
+
+        // Attachments (metadata only)
+        if (!empty($fields['attachment']) && is_array($fields['attachment'])) {
+            $mapped['attachments'] = array_map(fn($a) => [
+                'filename' => $a['filename'] ?? '',
+                'size' => $a['size'] ?? 0,
+                'mimeType' => $a['mimeType'] ?? '',
+            ], $fields['attachment']);
+        } else {
+            $mapped['attachments'] = [];
+        }
+
+        // Add web URL if available
+        if ($webUrl) {
+            $mapped['webUrl'] = $webUrl;
         }
 
         return $mapped;
@@ -474,9 +660,24 @@ class JiraService
         $authOptions = $this->getAuthOptions($credentials);
 
         try {
-            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, $authOptions);
+            // Request only the fields we need for AI-friendly response
+            $response = $this->httpClient->request(
+                'GET',
+                $url . '/rest/api/3/issue/' . $issueKey,
+                array_merge($authOptions, [
+                    'query' => [
+                        'fields' => implode(',', self::AI_FRIENDLY_DETAIL_FIELDS),
+                    ],
+                ])
+            );
 
-            return $response->toArray();
+            $rawIssue = $response->toArray();
+
+            // Build web URL for the issue
+            $webUrl = $this->buildWebUrl($credentials, $issueKey);
+
+            // Map to AI-friendly flat structure
+            return $this->mapDetailedIssueToAIFormat($rawIssue, $webUrl);
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -500,6 +701,35 @@ class JiraService
                 $e
             );
         }
+    }
+
+    /**
+     * Build the web URL for viewing an issue in Jira.
+     *
+     * @param array $credentials Credentials containing URL info
+     * @param string $issueKey Issue key (e.g., PROJ-123)
+     * @return string|null Web URL or null if not determinable
+     */
+    private function buildWebUrl(array $credentials, string $issueKey): ?string
+    {
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            // OAuth: use site_url if available
+            $siteUrl = $credentials['site_url'] ?? null;
+            if ($siteUrl) {
+                return rtrim($siteUrl, '/') . '/browse/' . $issueKey;
+            }
+            return null;
+        }
+
+        // API Token mode: use user-provided URL
+        $url = $credentials['url'] ?? null;
+        if ($url) {
+            return rtrim($url, '/') . '/browse/' . $issueKey;
+        }
+
+        return null;
     }
 
     public function getSprintsFromBoard(array $credentials, int $boardId): array

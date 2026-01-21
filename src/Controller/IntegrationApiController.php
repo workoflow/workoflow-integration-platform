@@ -244,8 +244,18 @@ class IntegrationApiController extends AbstractController
                 $executionId
             );
 
+            // Add instance metadata for user integrations
+            $instanceMetadata = null;
+            if ($targetIntegration->requiresCredentials() && $credentials) {
+                $instanceMetadata = $this->extractInstanceMetadata(
+                    $targetIntegration->getType(),
+                    $credentials
+                );
+            }
+
             return $this->json([
                 'success' => true,
+                '_instance' => $instanceMetadata,
                 'result' => $result
             ]);
         } catch (\Exception $e) {
@@ -393,5 +403,48 @@ class IntegrationApiController extends AbstractController
             'code' => $e->getCode() ?: 500,
             'hint' => $hint,
         ];
+    }
+
+    /**
+     * Extract instance metadata from credentials for API response.
+     * Helps AI agents identify which instance the data comes from.
+     *
+     * @param array<string, mixed> $credentials
+     * @return array{siteUrl: string|null, siteName: string|null, cloudId: string|null}|null
+     */
+    private function extractInstanceMetadata(string $integrationType, array $credentials): ?array
+    {
+        $metadata = [
+            'siteUrl' => null,
+            'siteName' => null,
+            'cloudId' => null,
+        ];
+
+        $authMode = $credentials['auth_mode'] ?? 'api_token';
+
+        if ($authMode === 'oauth') {
+            // OAuth mode: site_url and cloud_id available
+            $metadata['siteUrl'] = $credentials['site_url'] ?? null;
+            $metadata['siteName'] = $credentials['site_name'] ?? null;
+            $metadata['cloudId'] = $credentials['cloud_id'] ?? null;
+        } else {
+            // API Token mode: only URL available
+            switch ($integrationType) {
+                case 'jira':
+                case 'confluence':
+                    $metadata['siteUrl'] = $credentials['url'] ?? null;
+                    break;
+                case 'gitlab':
+                    $metadata['siteUrl'] = $credentials['gitlab_url'] ?? null;
+                    break;
+            }
+        }
+
+        // Only return metadata if we have at least siteUrl
+        if ($metadata['siteUrl']) {
+            return $metadata;
+        }
+
+        return null;
     }
 }
