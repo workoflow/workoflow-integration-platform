@@ -339,8 +339,6 @@ class AtlassianOAuthService
     public static function getConfluenceScopes(): array
     {
         return [
-            'read:me',
-            'read:account',
             'read:confluence-content.all',
             'write:confluence-content',
             'read:confluence-space.summary',
