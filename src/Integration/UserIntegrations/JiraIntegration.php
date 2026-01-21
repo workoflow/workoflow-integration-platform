@@ -748,12 +748,12 @@ class JiraIntegration implements PersonalizedSkillInterface
     public function getCredentialFields(): array
     {
         return [
-            // Auth mode selector (default: api_token for backward compatibility)
+            // Auth mode selector (default: oauth for better security)
             new CredentialField(
                 'auth_mode',
                 'select',
                 'Authentication Mode',
-                'api_token',
+                'oauth',
                 true,
                 'Choose how to authenticate with Jira',
                 [

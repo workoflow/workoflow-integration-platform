@@ -269,12 +269,12 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
     public function getCredentialFields(): array
     {
         return [
-            // Auth mode selector - defaults to api_token for backward compatibility
+            // Auth mode selector - defaults to oauth for better security
             new CredentialField(
                 'auth_mode',
                 'select',
                 'Authentication Mode',
-                'api_token',
+                'oauth',
                 true,
                 'Choose how to authenticate with Confluence. OAuth 2.0 is recommended for better security and automatic token refresh.',
                 [
@@ -349,33 +349,29 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
     public function getSetupInstructions(): ?string
     {
         return <<<'HTML'
-<div class="setup-instructions">
-    <h4>Authentication Options</h4>
-    <p>You can connect to Confluence using one of two methods:</p>
-
-    <div class="auth-option">
-        <h5>Option 1: OAuth 2.0 (Recommended)</h5>
-        <p>The most secure option with automatic token refresh:</p>
+<div class="setup-instructions" data-auth-instructions="true">
+    <h4>Setup Instructions</h4>
+    <div class="auth-option" data-auth-mode="api_token">
+        <strong>API Token Setup (Personal Access)</strong>
+        <p>Simple setup using your personal API token. Actions are attributed to your account.</p>
         <ol>
-            <li>Select "OAuth 2.0 (Recommended)" as the authentication mode</li>
-            <li>Click "Connect with Atlassian"</li>
-            <li>Sign in to your Atlassian account and authorize access</li>
-            <li>You'll be redirected back automatically</li>
+            <li>Go to <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Atlassian API Tokens</a></li>
+            <li>Create a new API token</li>
+            <li>Enter your Confluence URL, email, and the API token below</li>
         </ol>
-        <p class="text-muted small">OAuth tokens are automatically refreshed, so you won't need to re-authenticate frequently.</p>
+        <p class="note"><strong>Best for:</strong> Quick personal setup, testing, or when OAuth is not available.</p>
     </div>
-
-    <div class="auth-option mt-3">
-        <h5>Option 2: API Token (Personal)</h5>
-        <p>Use a personal API token for authentication:</p>
+    <div class="auth-option" data-auth-mode="oauth">
+        <strong>OAuth 2.0 Setup (Recommended)</strong>
+        <p>More secure authentication using Atlassian OAuth. No API tokens to manage.</p>
         <ol>
-            <li>Select "API Token (Personal)" as the authentication mode</li>
-            <li>Enter your Confluence URL (e.g., https://your-domain.atlassian.net)</li>
-            <li>Enter the email address associated with your Atlassian account</li>
-            <li>Create an API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">Atlassian Account Settings</a></li>
-            <li>Enter the API token (not your password)</li>
+            <li><strong>Save:</strong> Click "Save Configuration" to create the integration</li>
+            <li><strong>Connect:</strong> Click "Connect with Atlassian" to authorize</li>
+            <li><strong>Select Site:</strong> Choose your Confluence site when prompted</li>
         </ol>
+        <p class="note"><strong>Benefits:</strong> No API token management, automatic token refresh, more secure.</p>
     </div>
+    <p class="docs-link"><a href="https://developer.atlassian.com/cloud/confluence/rest/v2/intro/" target="_blank" rel="noopener">Confluence REST API Documentation</a></p>
 </div>
 HTML;
     }

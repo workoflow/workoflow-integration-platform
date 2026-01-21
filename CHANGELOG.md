@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - **Workoflow MCP in footer and release notes** - Added MCP Server project link to the footer's Open Source section and added Workoflow MCP release notes to the Release Notes page with automatic changelog fetching from GitHub
 - **Atlassian OAuth 2.0 authentication for Jira and Confluence** - Jira and Confluence integrations now support OAuth 2.0 authentication alongside the existing API token method. OAuth provides automatic token refresh and eliminates the need to manually manage API tokens. Users can choose their preferred authentication method during setup.
 
+### Changed
+- **OAuth 2.0 is now the default for Jira and Confluence** - When adding new Jira or Confluence skills, OAuth 2.0 is now pre-selected as the recommended authentication method. Setup instructions now update dynamically based on your selected authentication mode.
+
 ### Fixed
 - **Jira and Confluence OAuth setup now redirects to Atlassian** - Fixed issue where setting up Jira or Confluence with OAuth 2.0 incorrectly redirected to Microsoft login instead of Atlassian authorization
 - **SAP C4C connection test now shows detailed errors** - The "Test Connection" button for SAP C4C integrations now displays specific error messages (authentication failed, access forbidden, network errors) instead of a generic "Connection failed" message.
