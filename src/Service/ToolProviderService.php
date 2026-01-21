@@ -307,7 +307,9 @@ class ToolProviderService
             // Check API token URL first, then OAuth site_url
             'jira', 'confluence' => $credentials['url'] ?? $credentials['site_url'] ?? null,
             'gitlab' => $credentials['gitlab_url'] ?? null,
-            default => null  // SharePoint, Trello, or future integrations without URL
+            'projektron', 'sap_sac' => $credentials['url'] ?? null,
+            'sap_c4c' => $credentials['base_url'] ?? null,
+            default => null  // SharePoint, Trello, HubSpot use standard APIs without instance URLs
         };
     }
 }
