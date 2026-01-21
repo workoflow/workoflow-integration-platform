@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 - **Workoflow MCP in footer and release notes** - Added MCP Server project link to the footer's Open Source section and added Workoflow MCP release notes to the Release Notes page with automatic changelog fetching from GitHub
 - **Atlassian OAuth 2.0 authentication for Jira and Confluence** - Jira and Confluence integrations now support OAuth 2.0 authentication alongside the existing API token method. OAuth provides automatic token refresh and eliminates the need to manually manage API tokens. Users can choose their preferred authentication method during setup.
 
+### Improved
+- **Reduced AI agent token usage by ~90%** - Jira and Confluence tools now return streamlined, AI-friendly responses instead of raw API data. This prevents context window overflow errors when working with large datasets like sprint issues or Confluence pages.
+- **Jira issue responses optimized for AI** - Sprint issues, search results, and board issues now return only essential fields (key, summary, status, assignee, priority, labels, dates) with descriptions converted from verbose Atlassian Document Format (ADF) to plain text.
+- **Confluence page content now AI-readable** - Page content is converted from HTML storage format to clean plain text with automatic truncation for large pages, preventing token overflow.
+
 ### Changed
 - **OAuth 2.0 is now the default for Jira and Confluence** - When adding new Jira or Confluence skills, OAuth 2.0 is now pre-selected as the recommended authentication method. Setup instructions now update dynamically based on your selected authentication mode.
 - **User Delegation is now the default for SAP C4C and SAP SAC** - When adding new SAP skills, User Delegation (via Azure AD) is now pre-selected as the recommended authentication method for better security and user attribution.

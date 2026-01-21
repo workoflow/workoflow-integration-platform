@@ -93,7 +93,7 @@ class JiraIntegration implements PersonalizedSkillInterface
         return [
             new ToolDefinition(
                 'jira_search',
-                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue contains: id, self, key, fields (including summary, status.name, assignee.displayName, priority.name, project.key, description, created, updated)',
+                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'jql',
@@ -147,7 +147,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, sprint, closedSprints, flagged, epic, description, project, timetracking',
+                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'sprintId',
@@ -255,7 +255,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_board_issues',
-                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description',
+                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with startAt, maxResults, total, boardType, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'boardId',
@@ -285,7 +285,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_kanban_issues',
-                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description, created, updated',
+                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with startAt, maxResults, total, and issues array. Each issue is optimized for AI with: key, id, summary, status, statusCategory, assignee, assigneeId, reporter, reporterId, priority, issueType, project, projectName, created, updated, dueDate, labels, parent (for subtasks), sprint (name, state)',
                 [
                     [
                         'name' => 'boardId',

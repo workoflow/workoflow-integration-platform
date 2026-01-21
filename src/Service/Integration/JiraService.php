@@ -10,10 +10,160 @@ use Psr\Log\LoggerInterface;
 
 class JiraService
 {
+    /**
+     * AI-friendly fields for issue lists (search, sprint issues, kanban issues)
+     * These fields provide essential information without bloating the response.
+     */
+    private const AI_FRIENDLY_LIST_FIELDS = [
+        'summary',
+        'status',
+        'assignee',
+        'reporter',
+        'priority',
+        'issuetype',
+        'project',
+        'created',
+        'updated',
+        'duedate',
+        'labels',
+        'parent',           // For subtasks
+        'customfield_10020', // Sprint field (common custom field ID)
+    ];
+
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger
     ) {
+    }
+
+    /**
+     * Map a raw Jira issue to an AI-friendly format.
+     * Extracts key fields and converts ADF descriptions to plain text.
+     *
+     * @param array $issue Raw Jira issue data
+     * @param bool $includeDescription Whether to include description (truncated)
+     * @return array AI-friendly issue data
+     */
+    private function mapIssueToAIFormat(array $issue, bool $includeDescription = false): array
+    {
+        $fields = $issue['fields'] ?? [];
+
+        $mapped = [
+            'key' => $issue['key'] ?? '',
+            'id' => $issue['id'] ?? '',
+            'summary' => $fields['summary'] ?? '',
+            'status' => $fields['status']['name'] ?? '',
+            'statusCategory' => $fields['status']['statusCategory']['name'] ?? '',
+            'assignee' => $fields['assignee']['displayName'] ?? 'Unassigned',
+            'assigneeId' => $fields['assignee']['accountId'] ?? null,
+            'reporter' => $fields['reporter']['displayName'] ?? '',
+            'reporterId' => $fields['reporter']['accountId'] ?? null,
+            'priority' => $fields['priority']['name'] ?? '',
+            'issueType' => $fields['issuetype']['name'] ?? '',
+            'project' => $fields['project']['key'] ?? '',
+            'projectName' => $fields['project']['name'] ?? '',
+            'created' => $fields['created'] ?? '',
+            'updated' => $fields['updated'] ?? '',
+            'dueDate' => $fields['duedate'] ?? null,
+            'labels' => $fields['labels'] ?? [],
+        ];
+
+        // Add parent info for subtasks
+        if (!empty($fields['parent'])) {
+            $mapped['parent'] = [
+                'key' => $fields['parent']['key'] ?? '',
+                'summary' => $fields['parent']['fields']['summary'] ?? '',
+            ];
+        }
+
+        // Add sprint info if available (common custom field)
+        if (!empty($fields['customfield_10020']) && is_array($fields['customfield_10020'])) {
+            $sprints = $fields['customfield_10020'];
+            $activeSprint = null;
+            foreach ($sprints as $sprint) {
+                if (($sprint['state'] ?? '') === 'active') {
+                    $activeSprint = $sprint;
+                    break;
+                }
+            }
+            $sprint = $activeSprint ?? end($sprints);
+            if ($sprint !== false) {
+                $mapped['sprint'] = [
+                    'name' => $sprint['name'] ?? '',
+                    'state' => $sprint['state'] ?? '',
+                ];
+            }
+        }
+
+        // Include description only when requested (for single issue views)
+        if ($includeDescription && !empty($fields['description'])) {
+            $mapped['description'] = $this->convertADFToPlainText($fields['description']);
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Convert Atlassian Document Format (ADF) to plain text.
+     * ADF is extremely verbose JSON, this extracts just the text content.
+     *
+     * @param mixed $adf ADF document or string
+     * @param int $maxLength Maximum length of output (0 = no limit)
+     * @return string Plain text content
+     */
+    private function convertADFToPlainText(mixed $adf, int $maxLength = 2000): string
+    {
+        if (is_string($adf)) {
+            return $maxLength > 0 ? mb_substr($adf, 0, $maxLength) : $adf;
+        }
+
+        if (!is_array($adf)) {
+            return '';
+        }
+
+        $text = $this->extractTextFromADFNode($adf);
+        $text = trim($text);
+
+        if ($maxLength > 0 && mb_strlen($text) > $maxLength) {
+            $text = mb_substr($text, 0, $maxLength) . '...';
+        }
+
+        return $text;
+    }
+
+    /**
+     * Recursively extract text from ADF node.
+     *
+     * @param array $node ADF node
+     * @return string Extracted text
+     */
+    private function extractTextFromADFNode(array $node): string
+    {
+        $text = '';
+
+        // Direct text content
+        if (isset($node['text'])) {
+            $text .= $node['text'];
+        }
+
+        // Process content array
+        if (isset($node['content']) && is_array($node['content'])) {
+            foreach ($node['content'] as $child) {
+                if (is_array($child)) {
+                    $childText = $this->extractTextFromADFNode($child);
+                    $text .= $childText;
+                }
+            }
+        }
+
+        // Add spacing for block elements
+        $blockTypes = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'blockquote', 'codeBlock'];
+        if (isset($node['type']) && in_array($node['type'], $blockTypes, true)) {
+            $text .= "\n";
+        }
+
+        return $text;
     }
 
     /**
@@ -260,18 +410,27 @@ class JiraService
 
         try {
             // Use /search/jql endpoint (the /search endpoint was deprecated and removed)
+            // Use AI-friendly fields instead of '*all' to reduce token usage
             $response = $this->httpClient->request('GET', $url . '/rest/api/3/search/jql', array_merge(
                 $authOptions,
                 [
                     'query' => [
                         'jql' => $jql,
                         'maxResults' => $maxResults,
-                        'fields' => '*all',  // Include all fields (summary, status, assignee, etc.)
+                        'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
                     ],
                 ]
             ));
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Map issues to AI-friendly format
+            $data['issues'] = array_map(
+                fn($issue) => $this->mapIssueToAIFormat($issue, false),
+                $data['issues'] ?? []
+            );
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -426,9 +585,10 @@ class JiraService
         $authOptions = $this->getAuthOptions($credentials);
 
         // Build query with optional JQL filtering
+        // Use AI-friendly fields instead of '*all' to reduce token usage
         $query = [
             'maxResults' => $maxResults,
-            'fields' => '*all',
+            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
         ];
 
         $jqlParts = [];
@@ -448,7 +608,15 @@ class JiraService
                 ['query' => $query]
             ));
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Map issues to AI-friendly format
+            $data['issues'] = array_map(
+                fn($issue) => $this->mapIssueToAIFormat($issue, false),
+                $data['issues'] ?? []
+            );
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -936,9 +1104,10 @@ class JiraService
         $authOptions = $this->getAuthOptions($credentials);
 
         // Build query with optional JQL filtering
+        // Use AI-friendly fields instead of '*all' to reduce token usage
         $query = [
             'maxResults' => $maxResults,
-            'fields' => '*all',
+            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
         ];
 
         $jqlParts = [];
@@ -960,7 +1129,15 @@ class JiraService
                 ['query' => $query]
             ));
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Map issues to AI-friendly format
+            $data['issues'] = array_map(
+                fn($issue) => $this->mapIssueToAIFormat($issue, false),
+                $data['issues'] ?? []
+            );
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();

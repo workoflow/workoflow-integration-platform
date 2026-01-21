@@ -9,9 +9,58 @@ use GuzzleHttp\Psr7\UriNormalizer;
 
 class ConfluenceService
 {
+    /**
+     * Maximum length for page content in AI-friendly responses
+     */
+    private const MAX_CONTENT_LENGTH = 3000;
+
+    /**
+     * Maximum length for comment content
+     */
+    private const MAX_COMMENT_LENGTH = 1000;
+
     public function __construct(
         private HttpClientInterface $httpClient
     ) {
+    }
+
+    /**
+     * Convert Confluence storage format (HTML-like) to plain text.
+     *
+     * @param string $storage The storage format content
+     * @param int $maxLength Maximum length of output (0 = no limit)
+     * @return string Plain text content
+     */
+    private function convertStorageToPlainText(string $storage, int $maxLength = 3000): string
+    {
+        if (empty($storage)) {
+            return '';
+        }
+
+        // Remove Confluence macros first (they contain lots of extra markup)
+        $text = preg_replace('/<ac:structured-macro[^>]*>.*?<\/ac:structured-macro>/s', ' [macro] ', $storage) ?? $storage;
+
+        // Remove CDATA sections (common in code blocks)
+        $text = preg_replace('/<!\[CDATA\[(.*?)\]\]>/s', '$1', $text) ?? $text;
+
+        // Strip HTML tags but preserve some structure
+        $text = preg_replace('/<(br|\/p|\/div|\/h[1-6]|\/li)[^>]*>/i', "\n", $text) ?? $text;
+        $text = strip_tags($text);
+
+        // Decode HTML entities
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Clean up whitespace
+        $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
+        $text = preg_replace('/\n{3,}/', "\n\n", $text) ?? $text;
+        $text = trim($text);
+
+        // Truncate if needed
+        if ($maxLength > 0 && mb_strlen($text) > $maxLength) {
+            $text = mb_substr($text, 0, $maxLength) . '...';
+        }
+
+        return $text;
     }
 
     /**
@@ -349,12 +398,38 @@ class ConfluenceService
             $authOptions,
             [
                 'query' => [
-                    'expand' => 'body.storage,version',
+                    'expand' => 'body.storage,version,space',
                 ],
             ]
         ));
 
-        return $response->toArray();
+        $data = $response->toArray();
+
+        // Convert to AI-friendly format with plain text content
+        $storageContent = $data['body']['storage']['value'] ?? '';
+
+        return [
+            'id' => $data['id'] ?? '',
+            'type' => $data['type'] ?? '',
+            'status' => $data['status'] ?? '',
+            'title' => $data['title'] ?? '',
+            'space' => [
+                'key' => $data['space']['key'] ?? '',
+                'name' => $data['space']['name'] ?? '',
+            ],
+            'version' => [
+                'number' => $data['version']['number'] ?? 1,
+                'when' => $data['version']['when'] ?? '',
+                'by' => $data['version']['by']['displayName'] ?? '',
+            ],
+            // Convert storage format to plain text for AI readability
+            'content' => $this->convertStorageToPlainText($storageContent, self::MAX_CONTENT_LENGTH),
+            'contentLength' => mb_strlen($storageContent),
+            'isTruncated' => mb_strlen($storageContent) > self::MAX_CONTENT_LENGTH,
+            '_links' => [
+                'webui' => $data['_links']['webui'] ?? '',
+            ],
+        ];
     }
 
     public function getComments(array $credentials, string $pageId): array
@@ -366,12 +441,31 @@ class ConfluenceService
             $authOptions,
             [
                 'query' => [
-                    'expand' => 'body.storage',
+                    'expand' => 'body.storage,version',
                 ],
             ]
         ));
 
-        return $response->toArray();
+        $data = $response->toArray();
+
+        // Map comments to AI-friendly format with plain text content
+        $comments = array_map(function ($comment) {
+            $storageContent = $comment['body']['storage']['value'] ?? '';
+            return [
+                'id' => $comment['id'] ?? '',
+                'title' => $comment['title'] ?? '',
+                'author' => $comment['version']['by']['displayName'] ?? '',
+                'created' => $comment['version']['when'] ?? '',
+                // Convert storage format to plain text for AI readability
+                'content' => $this->convertStorageToPlainText($storageContent, self::MAX_COMMENT_LENGTH),
+            ];
+        }, $data['results'] ?? []);
+
+        return [
+            'pageId' => $pageId,
+            'total' => $data['size'] ?? count($comments),
+            'comments' => $comments,
+        ];
     }
 
     /**
