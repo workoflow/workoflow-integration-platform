@@ -141,13 +141,19 @@ class ConfluenceService
             $url = $this->getApiBaseUrl($credentials);
             $authOptions = $this->getAuthOptions($credentials);
 
+            // Wiki prefix is always /wiki for both OAuth and API Token modes
+            $authMode = $credentials['auth_mode'] ?? 'api_token';
+            $wikiPrefix = '/wiki';
+
+            error_log("Confluence test connection - Base URL: {$url}");
+            error_log("Confluence test connection - Auth mode: " . $authMode);
+            error_log("Confluence test connection - Has token: " . (!empty($credentials['access_token']) ? 'yes' : 'no'));
+            error_log("Confluence test connection - Cloud ID: " . ($credentials['cloud_id'] ?? 'not_set'));
+
             // Test v1 API endpoint (used for search, get page, comments)
             try {
-                $testUrl = $url . '/wiki/rest/api/user/current';
-                error_log("Confluence test connection - URL: {$testUrl}");
-                error_log("Confluence test connection - Auth mode: " . ($credentials['auth_mode'] ?? 'not_set'));
-                error_log("Confluence test connection - Has token: " . (!empty($credentials['access_token']) ? 'yes' : 'no'));
-                error_log("Confluence test connection - Cloud ID: " . ($credentials['cloud_id'] ?? 'not_set'));
+                $testUrl = $url . $wikiPrefix . '/rest/api/user/current';
+                error_log("Confluence test connection - Testing URL: {$testUrl}");
 
                 $response = $this->httpClient->request('GET', $testUrl, array_merge(
                     $authOptions,
@@ -164,7 +170,9 @@ class ConfluenceService
                 if ($statusCode === 200) {
                     // v1 API works, now test v2 API endpoint (used for creating/updating pages)
                     try {
-                        $v2Response = $this->httpClient->request('GET', $url . '/wiki/api/v2/spaces', array_merge(
+                        $v2Url = $url . $wikiPrefix . '/api/v2/spaces';
+                        error_log("Confluence test connection - Testing v2 URL: {$v2Url}");
+                        $v2Response = $this->httpClient->request('GET', $v2Url, array_merge(
                             $authOptions,
                             [
                                 'query' => ['limit' => 1],
@@ -174,7 +182,7 @@ class ConfluenceService
 
                         $v2StatusCode = $v2Response->getStatusCode();
                         $testedEndpoints[] = [
-                            'endpoint' => '/wiki/api/v2/spaces',
+                            'endpoint' => $wikiPrefix . '/api/v2/spaces',
                             'status' => $v2StatusCode === 200 ? 'success' : 'failed',
                             'http_code' => $v2StatusCode
                         ];
@@ -227,6 +235,15 @@ class ConfluenceService
             } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
                 $response = $e->getResponse();
                 $statusCode = $response->getStatusCode();
+
+                // Log detailed error response for debugging
+                try {
+                    $errorBody = $response->getContent(false);
+                    error_log("Confluence test connection - Error response: {$errorBody}");
+                } catch (\Exception $logEx) {
+                    error_log("Confluence test connection - Could not read error body: " . $logEx->getMessage());
+                }
+
                 $testedEndpoints[] = [
                     'endpoint' => '/wiki/rest/api/user/current',
                     'status' => 'failed',
@@ -234,6 +251,16 @@ class ConfluenceService
                 ];
 
                 if ($statusCode === 401) {
+                    $authMode = $credentials['auth_mode'] ?? 'api_token';
+                    if ($authMode === 'oauth') {
+                        return [
+                            'success' => false,
+                            'message' => 'OAuth authentication failed',
+                            'details' => 'OAuth access token is invalid, expired, or missing required scopes.',
+                            'suggestion' => 'Try reconnecting via "Connect with Atlassian". Make sure you grant all requested permissions.',
+                            'tested_endpoints' => $testedEndpoints
+                        ];
+                    }
                     return [
                         'success' => false,
                         'message' => 'Authentication failed',
