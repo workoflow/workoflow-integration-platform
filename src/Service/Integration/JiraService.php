@@ -84,9 +84,10 @@ class JiraService
      * Reduces ~18KB per issue to ~1-2KB
      *
      * @param array $issue Raw Jira issue data
+     * @param array|null $additionalFields Custom field IDs to include in _rawFields
      * @return array Flattened AI-friendly format
      */
-    private function mapIssueToAIFormat(array $issue): array
+    private function mapIssueToAIFormat(array $issue, ?array $additionalFields = null): array
     {
         $fields = $issue['fields'] ?? [];
 
@@ -150,6 +151,19 @@ class JiraService
             }
         }
 
+        // Add raw custom fields if requested
+        if (!empty($additionalFields)) {
+            $rawFields = [];
+            foreach ($additionalFields as $fieldId) {
+                if (array_key_exists($fieldId, $fields)) {
+                    $rawFields[$fieldId] = $fields[$fieldId];
+                }
+            }
+            if (!empty($rawFields)) {
+                $mapped['_rawFields'] = $rawFields;
+            }
+        }
+
         return $mapped;
     }
 
@@ -159,14 +173,15 @@ class JiraService
      *
      * @param array $issue Raw Jira issue data
      * @param string $baseUrl Jira base URL for constructing web links
+     * @param array|null $additionalFields Custom field IDs to include in _rawFields
      * @return array Detailed AI-friendly format
      */
-    private function mapDetailedIssueToAIFormat(array $issue, string $baseUrl): array
+    private function mapDetailedIssueToAIFormat(array $issue, string $baseUrl, ?array $additionalFields = null): array
     {
         $fields = $issue['fields'] ?? [];
 
-        // Start with the basic mapping
-        $mapped = $this->mapIssueToAIFormat($issue);
+        // Start with the basic mapping (pass additionalFields for _rawFields)
+        $mapped = $this->mapIssueToAIFormat($issue, $additionalFields);
 
         // Add web URL
         $mapped['webUrl'] = $baseUrl . '/browse/' . ($issue['key'] ?? '');
@@ -505,13 +520,19 @@ class JiraService
         }
     }
 
-    public function search(array $credentials, string $jql, int $maxResults = 50): array
+    public function search(array $credentials, string $jql, int $maxResults = 50, ?array $additionalFields = null): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
 
         // Default to ordering by created date if JQL is empty
         if (empty(trim($jql))) {
             $jql = 'ORDER BY created DESC';
+        }
+
+        // Build fields list including any additional custom fields
+        $fieldsToFetch = self::AI_FRIENDLY_LIST_FIELDS;
+        if (!empty($additionalFields)) {
+            $fieldsToFetch = array_unique(array_merge($fieldsToFetch, $additionalFields));
         }
 
         try {
@@ -521,16 +542,16 @@ class JiraService
                 'query' => [
                     'jql' => $jql,
                     'maxResults' => $maxResults,
-                    'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
+                    'fields' => implode(',', $fieldsToFetch),
                 ],
             ]);
 
             $data = $response->toArray();
 
-            // Transform issues to AI-friendly format
+            // Transform issues to AI-friendly format (pass additionalFields for _rawFields)
             if (!empty($data['issues'])) {
                 $data['issues'] = array_map(
-                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    fn($issue) => $this->mapIssueToAIFormat($issue, $additionalFields),
                     $data['issues']
                 );
             }
@@ -624,22 +645,28 @@ class JiraService
         }
     }
 
-    public function getIssue(array $credentials, string $issueKey): array
+    public function getIssue(array $credentials, string $issueKey, ?array $additionalFields = null): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build fields list including any additional custom fields
+        $fieldsToFetch = self::AI_FRIENDLY_DETAIL_FIELDS;
+        if (!empty($additionalFields)) {
+            $fieldsToFetch = array_unique(array_merge($fieldsToFetch, $additionalFields));
+        }
 
         try {
             $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
                 'query' => [
-                    'fields' => implode(',', self::AI_FRIENDLY_DETAIL_FIELDS),
+                    'fields' => implode(',', $fieldsToFetch),
                 ],
             ]);
 
             $issue = $response->toArray();
 
-            // Transform to AI-friendly detailed format
-            return $this->mapDetailedIssueToAIFormat($issue, $url);
+            // Transform to AI-friendly detailed format (pass additionalFields for _rawFields)
+            return $this->mapDetailedIssueToAIFormat($issue, $url, $additionalFields);
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -739,14 +766,21 @@ class JiraService
         int $sprintId,
         int $maxResults = 100,
         ?string $assignee = null,
-        ?string $jql = null
+        ?string $jql = null,
+        ?array $additionalFields = null
     ): array {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build fields list including any additional custom fields
+        $fieldsToFetch = self::AI_FRIENDLY_LIST_FIELDS;
+        if (!empty($additionalFields)) {
+            $fieldsToFetch = array_unique(array_merge($fieldsToFetch, $additionalFields));
+        }
 
         // Build query with optional JQL filtering
         $query = [
             'maxResults' => $maxResults,
-            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
+            'fields' => implode(',', $fieldsToFetch),
         ];
 
         $jqlParts = [];
@@ -768,10 +802,10 @@ class JiraService
 
             $data = $response->toArray();
 
-            // Transform issues to AI-friendly format
+            // Transform issues to AI-friendly format (pass additionalFields for _rawFields)
             if (!empty($data['issues'])) {
                 $data['issues'] = array_map(
-                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    fn($issue) => $this->mapIssueToAIFormat($issue, $additionalFields),
                     $data['issues']
                 );
             }
@@ -1172,6 +1206,7 @@ class JiraService
      * @param int $maxResults Maximum number of results
      * @param string|null $assignee Filter by assignee accountId
      * @param string|null $jql Additional JQL filter
+     * @param array|null $additionalFields Custom field IDs to include in _rawFields
      * @return array Issues from the board
      */
     public function getBoardIssues(
@@ -1179,7 +1214,8 @@ class JiraService
         int $boardId,
         int $maxResults = 50,
         ?string $assignee = null,
-        ?string $jql = null
+        ?string $jql = null,
+        ?array $additionalFields = null
     ): array {
         // First, get board details to determine type
         $board = $this->getBoard($credentials, $boardId);
@@ -1211,16 +1247,16 @@ class JiraService
                 ];
             }
 
-            // Get issues from active sprint with optional filters
-            $result = $this->getSprintIssues($credentials, $activeSprint['id'], $maxResults, $assignee, $jql);
+            // Get issues from active sprint with optional filters (pass additionalFields)
+            $result = $this->getSprintIssues($credentials, $activeSprint['id'], $maxResults, $assignee, $jql, $additionalFields);
             $result['boardType'] = 'scrum';
             $result['sprintId'] = $activeSprint['id'];
             $result['sprintName'] = $activeSprint['name'];
 
             return $result;
         } elseif ($boardType === 'kanban') {
-            // For Kanban boards, get all board issues with optional filters
-            $result = $this->getKanbanIssues($credentials, $boardId, $maxResults, $assignee, $jql);
+            // For Kanban boards, get all board issues with optional filters (pass additionalFields)
+            $result = $this->getKanbanIssues($credentials, $boardId, $maxResults, $assignee, $jql, $additionalFields);
             $result['boardType'] = 'kanban';
 
             return $result;
@@ -1239,6 +1275,7 @@ class JiraService
      * @param int $maxResults Maximum number of results
      * @param string|null $assignee Filter by assignee accountId
      * @param string|null $jql Additional JQL filter
+     * @param array|null $additionalFields Custom field IDs to include in _rawFields
      * @return array Issues from the Kanban board
      */
     public function getKanbanIssues(
@@ -1246,14 +1283,21 @@ class JiraService
         int $boardId,
         int $maxResults = 50,
         ?string $assignee = null,
-        ?string $jql = null
+        ?string $jql = null,
+        ?array $additionalFields = null
     ): array {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        // Build fields list including any additional custom fields
+        $fieldsToFetch = self::AI_FRIENDLY_LIST_FIELDS;
+        if (!empty($additionalFields)) {
+            $fieldsToFetch = array_unique(array_merge($fieldsToFetch, $additionalFields));
+        }
 
         // Build query with optional JQL filtering
         $query = [
             'maxResults' => $maxResults,
-            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
+            'fields' => implode(',', $fieldsToFetch),
         ];
 
         $jqlParts = [];
@@ -1277,10 +1321,10 @@ class JiraService
 
             $data = $response->toArray();
 
-            // Transform issues to AI-friendly format
+            // Transform issues to AI-friendly format (pass additionalFields for _rawFields)
             if (!empty($data['issues'])) {
                 $data['issues'] = array_map(
-                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    fn($issue) => $this->mapIssueToAIFormat($issue, $additionalFields),
                     $data['issues']
                 );
             }
@@ -2292,6 +2336,63 @@ class JiraService
 
             throw new \RuntimeException(
                 "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Get all available fields in the Jira instance
+     * Returns both system and custom fields with their metadata
+     *
+     * @param array $credentials Jira credentials
+     * @return array Array of fields with id, name, custom flag, and schema
+     */
+    public function getFields(array $credentials): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/field', [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+            ]);
+
+            $fields = $response->toArray();
+
+            // Transform to AI-friendly format with essential info
+            return array_map(function ($field) {
+                $result = [
+                    'id' => $field['id'] ?? '',
+                    'name' => $field['name'] ?? '',
+                    'custom' => $field['custom'] ?? false,
+                ];
+
+                // Include schema type for understanding field format
+                if (!empty($field['schema']['type'])) {
+                    $result['type'] = $field['schema']['type'];
+                }
+                if (!empty($field['schema']['items'])) {
+                    $result['itemType'] = $field['schema']['items'];
+                }
+                if (!empty($field['schema']['custom'])) {
+                    $result['customType'] = $field['schema']['custom'];
+                }
+
+                return $result;
+            }, $fields);
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}",
                 $statusCode,
                 $e
             );

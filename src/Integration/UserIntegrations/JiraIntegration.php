@@ -32,7 +32,7 @@ class JiraIntegration implements PersonalizedSkillInterface
         return [
             new ToolDefinition(
                 'jira_search',
-                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee (name), assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
+                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee (name), assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId. Use additionalFields to include custom fields in _rawFields.',
                 [
                     [
                         'name' => 'jql',
@@ -45,18 +45,30 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'integer',
                         'required' => false,
                         'description' => 'Maximum number of results (default: 50)'
+                    ],
+                    [
+                        'name' => 'additionalFields',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Custom field IDs to include in raw format (e.g., ["customfield_10030", "customfield_10031"]). These are returned unprocessed in _rawFields alongside the standard flat fields.'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'jira_get_issue',
-                'Get detailed information about a specific Jira issue. Returns: Flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, assigneeEmail, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, description (plain text, max 5000 chars), components, fixVersions, resolution, subtasks (array of {key, summary, status}), linkedIssues (array of {type, key, summary}), comments (last 10 as {author, created, body}), attachments (array of {filename, size, mimeType}), webUrl',
+                'Get detailed information about a specific Jira issue. Returns: Flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, assigneeEmail, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, description (plain text, max 5000 chars), components, fixVersions, resolution, subtasks (array of {key, summary, status}), linkedIssues (array of {type, key, summary}), comments (last 10 as {author, created, body}), attachments (array of {filename, size, mimeType}), webUrl. Use additionalFields to include custom fields in _rawFields.',
                 [
                     [
                         'name' => 'issueKey',
                         'type' => 'string',
                         'required' => true,
                         'description' => 'Issue key (e.g., PROJ-123)'
+                    ],
+                    [
+                        'name' => 'additionalFields',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Custom field IDs to include in raw format (e.g., ["customfield_10030", "customfield_10031"]). These are returned unprocessed in _rawFields alongside the standard flat fields.'
                     ]
                 ]
             ),
@@ -86,7 +98,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
+                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId. Use additionalFields to include custom fields in _rawFields.',
                 [
                     [
                         'name' => 'sprintId',
@@ -111,6 +123,12 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'string',
                         'required' => false,
                         'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h" for recent completions.'
+                    ],
+                    [
+                        'name' => 'additionalFields',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Custom field IDs to include in raw format (e.g., ["customfield_10030", "customfield_10031"]). These are returned unprocessed in _rawFields alongside the standard flat fields.'
                     ]
                 ]
             ),
@@ -194,7 +212,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_board_issues',
-                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
+                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId. Use additionalFields to include custom fields in _rawFields.',
                 [
                     [
                         'name' => 'boardId',
@@ -219,12 +237,18 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'string',
                         'required' => false,
                         'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
+                    ],
+                    [
+                        'name' => 'additionalFields',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Custom field IDs to include in raw format (e.g., ["customfield_10030", "customfield_10031"]). These are returned unprocessed in _rawFields alongside the standard flat fields.'
                     ]
                 ]
             ),
             new ToolDefinition(
                 'jira_get_kanban_issues',
-                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey',
+                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey. Use additionalFields to include custom fields in _rawFields.',
                 [
                     [
                         'name' => 'boardId',
@@ -249,6 +273,12 @@ class JiraIntegration implements PersonalizedSkillInterface
                         'type' => 'string',
                         'required' => false,
                         'description' => 'Additional JQL filter to apply. Combined with assignee filter using AND. Examples: "status = \'In Progress\'" or "status changed to Done AFTER -24h".'
+                    ],
+                    [
+                        'name' => 'additionalFields',
+                        'type' => 'array',
+                        'required' => false,
+                        'description' => 'Custom field IDs to include in raw format (e.g., ["customfield_10030", "customfield_10031"]). These are returned unprocessed in _rawFields alongside the standard flat fields.'
                     ]
                 ]
             ),
@@ -521,6 +551,11 @@ class JiraIntegration implements PersonalizedSkillInterface
                 'jira_get_myself',
                 'Get the current authenticated user information. IMPORTANT: Call this first when creating issues to get your accountId for the reporter field. Returns: User object with accountId (unique identifier to use as reporter/assignee), displayName, emailAddress, active status, avatarUrls, and timeZone',
                 []
+            ),
+            new ToolDefinition(
+                'jira_get_fields',
+                'Get all available fields in the Jira instance (system and custom). Use this to discover field IDs that can be passed to the additionalFields parameter of search/issue tools. Returns: Array of fields with id (use this in additionalFields), name, custom (true for custom fields), type (field data type), itemType (for array fields), customType (custom field type identifier)',
+                []
             )
         ];
     }
@@ -535,11 +570,13 @@ class JiraIntegration implements PersonalizedSkillInterface
             'jira_search' => $this->jiraService->search(
                 $credentials,
                 $parameters['jql'],
-                $parameters['maxResults'] ?? 50
+                $parameters['maxResults'] ?? 50,
+                $parameters['additionalFields'] ?? null
             ),
             'jira_get_issue' => $this->jiraService->getIssue(
                 $credentials,
-                $parameters['issueKey']
+                $parameters['issueKey'],
+                $parameters['additionalFields'] ?? null
             ),
             'jira_get_board' => $this->jiraService->getBoard(
                 $credentials,
@@ -554,7 +591,8 @@ class JiraIntegration implements PersonalizedSkillInterface
                 $parameters['sprintId'],
                 $parameters['maxResults'] ?? 100,
                 $parameters['assignee'] ?? null,
-                $parameters['jql'] ?? null
+                $parameters['jql'] ?? null,
+                $parameters['additionalFields'] ?? null
             ),
             'jira_add_comment' => $this->jiraService->addComment(
                 $credentials,
@@ -582,14 +620,16 @@ class JiraIntegration implements PersonalizedSkillInterface
                 $parameters['boardId'],
                 $parameters['maxResults'] ?? 50,
                 $parameters['assignee'] ?? null,
-                $parameters['jql'] ?? null
+                $parameters['jql'] ?? null,
+                $parameters['additionalFields'] ?? null
             ),
             'jira_get_kanban_issues' => $this->jiraService->getKanbanIssues(
                 $credentials,
                 $parameters['boardId'],
                 $parameters['maxResults'] ?? 50,
                 $parameters['assignee'] ?? null,
-                $parameters['jql'] ?? null
+                $parameters['jql'] ?? null,
+                $parameters['additionalFields'] ?? null
             ),
             'jira_get_edit_metadata' => $this->jiraService->getEditMetadata(
                 $credentials,
@@ -644,6 +684,7 @@ class JiraIntegration implements PersonalizedSkillInterface
                 $parameters['query']
             ),
             'jira_get_myself' => $this->jiraService->getMyself($credentials),
+            'jira_get_fields' => $this->jiraService->getFields($credentials),
             default => throw new \InvalidArgumentException("Unknown tool: $toolName")
         };
     }

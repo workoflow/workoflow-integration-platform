@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-01-22
 
+### Added
+- **Custom fields support for Jira tools** - AI agents can now request specific custom fields using the `additionalFields` parameter. Custom field values are returned in a `_rawFields` property alongside the standard flat fields.
+- **New jira_get_fields tool** - AI agents can discover all available fields (system and custom) in a Jira instance, making it easy to find the right field IDs for `additionalFields`.
+
 ### Improved
 - **Faster Jira and Confluence responses for AI agents** - API responses are now significantly smaller and more readable. Jira issues now return flat, easy-to-read objects instead of deeply nested structures. Confluence pages now return plain text content instead of raw storage markup.
 
