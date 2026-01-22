@@ -10,10 +10,324 @@ use Psr\Log\LoggerInterface;
 
 class JiraService
 {
+    /**
+     * Fields to fetch for list/search operations (minimal for AI agents)
+     * Reduces response size from ~18KB/issue to ~1-2KB/issue
+     */
+    private const AI_FRIENDLY_LIST_FIELDS = [
+        'summary',
+        'status',
+        'assignee',
+        'reporter',
+        'priority',
+        'issuetype',
+        'project',
+        'created',
+        'updated',
+        'duedate',
+        'labels',
+        'parent',
+        'customfield_10020', // Sprint field
+    ];
+
+    /**
+     * Fields to fetch for detailed single issue view
+     * Includes description, comments, attachments, links, subtasks
+     */
+    private const AI_FRIENDLY_DETAIL_FIELDS = [
+        'summary',
+        'status',
+        'assignee',
+        'reporter',
+        'priority',
+        'issuetype',
+        'project',
+        'created',
+        'updated',
+        'duedate',
+        'labels',
+        'description',
+        'comment',
+        'attachment',
+        'issuelinks',
+        'subtasks',
+        'parent',
+        'fixVersions',
+        'components',
+        'resolution',
+        'customfield_10020', // Sprint field
+    ];
+
+    /**
+     * Maximum length for description text in detailed view
+     */
+    private const MAX_DESCRIPTION_LENGTH = 5000;
+
+    /**
+     * Maximum number of comments to include in detailed view
+     */
+    private const MAX_COMMENTS = 10;
+
+    /**
+     * Maximum length for each comment body
+     */
+    private const MAX_COMMENT_LENGTH = 1000;
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger
     ) {
+    }
+
+    /**
+     * Map a Jira issue to AI-friendly flat format for list views
+     * Reduces ~18KB per issue to ~1-2KB
+     *
+     * @param array $issue Raw Jira issue data
+     * @return array Flattened AI-friendly format
+     */
+    private function mapIssueToAIFormat(array $issue): array
+    {
+        $fields = $issue['fields'] ?? [];
+
+        $mapped = [
+            'key' => $issue['key'] ?? '',
+            'summary' => $fields['summary'] ?? '',
+            'status' => $fields['status']['name'] ?? '',
+            'statusCategory' => $fields['status']['statusCategory']['name'] ?? '',
+            'priority' => $fields['priority']['name'] ?? '',
+            'issueType' => $fields['issuetype']['name'] ?? '',
+            'projectKey' => $fields['project']['key'] ?? '',
+        ];
+
+        // Add assignee info (flattened)
+        if (!empty($fields['assignee'])) {
+            $mapped['assignee'] = $fields['assignee']['displayName'] ?? '';
+            $mapped['assigneeId'] = $fields['assignee']['accountId'] ?? '';
+        } else {
+            $mapped['assignee'] = null;
+            $mapped['assigneeId'] = null;
+        }
+
+        // Add reporter info (flattened)
+        if (!empty($fields['reporter'])) {
+            $mapped['reporter'] = $fields['reporter']['displayName'] ?? '';
+        }
+
+        // Add dates (simplified format)
+        if (!empty($fields['created'])) {
+            $mapped['created'] = substr($fields['created'], 0, 10);
+        }
+        if (!empty($fields['updated'])) {
+            $mapped['updated'] = substr($fields['updated'], 0, 10);
+        }
+        if (!empty($fields['duedate'])) {
+            $mapped['dueDate'] = $fields['duedate'];
+        }
+
+        // Add labels (simple array)
+        if (!empty($fields['labels'])) {
+            $mapped['labels'] = $fields['labels'];
+        }
+
+        // Add parent key if exists
+        if (!empty($fields['parent']['key'])) {
+            $mapped['parentKey'] = $fields['parent']['key'];
+        }
+
+        // Add sprint info if available
+        if (!empty($fields['customfield_10020']) && is_array($fields['customfield_10020'])) {
+            $activeSprint = null;
+            foreach ($fields['customfield_10020'] as $sprint) {
+                if (($sprint['state'] ?? '') === 'active') {
+                    $activeSprint = $sprint;
+                    break;
+                }
+            }
+            if ($activeSprint) {
+                $mapped['sprint'] = $activeSprint['name'] ?? '';
+                $mapped['sprintId'] = $activeSprint['id'] ?? null;
+            }
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Map a Jira issue to AI-friendly format for detailed single issue view
+     * Includes description, comments, attachments, links, subtasks
+     *
+     * @param array $issue Raw Jira issue data
+     * @param string $baseUrl Jira base URL for constructing web links
+     * @return array Detailed AI-friendly format
+     */
+    private function mapDetailedIssueToAIFormat(array $issue, string $baseUrl): array
+    {
+        $fields = $issue['fields'] ?? [];
+
+        // Start with the basic mapping
+        $mapped = $this->mapIssueToAIFormat($issue);
+
+        // Add web URL
+        $mapped['webUrl'] = $baseUrl . '/browse/' . ($issue['key'] ?? '');
+
+        // Add description (converted to plain text, truncated)
+        if (!empty($fields['description'])) {
+            $descriptionText = $this->convertADFToPlainText($fields['description']);
+            if (strlen($descriptionText) > self::MAX_DESCRIPTION_LENGTH) {
+                $descriptionText = substr($descriptionText, 0, self::MAX_DESCRIPTION_LENGTH) . '...';
+                $mapped['descriptionTruncated'] = true;
+            }
+            $mapped['description'] = $descriptionText;
+        } else {
+            $mapped['description'] = '';
+        }
+
+        // Add assignee email
+        if (!empty($fields['assignee']['emailAddress'])) {
+            $mapped['assigneeEmail'] = $fields['assignee']['emailAddress'];
+        }
+
+        // Add components
+        if (!empty($fields['components'])) {
+            $mapped['components'] = array_map(
+                fn($c) => $c['name'] ?? '',
+                $fields['components']
+            );
+        }
+
+        // Add fix versions
+        if (!empty($fields['fixVersions'])) {
+            $mapped['fixVersions'] = array_map(
+                fn($v) => $v['name'] ?? '',
+                $fields['fixVersions']
+            );
+        }
+
+        // Add resolution
+        if (!empty($fields['resolution'])) {
+            $mapped['resolution'] = $fields['resolution']['name'] ?? '';
+        }
+
+        // Add subtasks (key, summary, status only)
+        if (!empty($fields['subtasks'])) {
+            $mapped['subtasks'] = array_map(
+                fn($st) => [
+                    'key' => $st['key'] ?? '',
+                    'summary' => $st['fields']['summary'] ?? '',
+                    'status' => $st['fields']['status']['name'] ?? '',
+                ],
+                $fields['subtasks']
+            );
+        }
+
+        // Add linked issues (simplified)
+        if (!empty($fields['issuelinks'])) {
+            $mapped['linkedIssues'] = [];
+            foreach ($fields['issuelinks'] as $link) {
+                $linkType = $link['type']['name'] ?? '';
+                if (!empty($link['inwardIssue'])) {
+                    $mapped['linkedIssues'][] = [
+                        'type' => $link['type']['inward'] ?? $linkType,
+                        'key' => $link['inwardIssue']['key'] ?? '',
+                        'summary' => $link['inwardIssue']['fields']['summary'] ?? '',
+                    ];
+                }
+                if (!empty($link['outwardIssue'])) {
+                    $mapped['linkedIssues'][] = [
+                        'type' => $link['type']['outward'] ?? $linkType,
+                        'key' => $link['outwardIssue']['key'] ?? '',
+                        'summary' => $link['outwardIssue']['fields']['summary'] ?? '',
+                    ];
+                }
+            }
+        }
+
+        // Add comments (last N, plain text, truncated)
+        if (!empty($fields['comment']['comments'])) {
+            $comments = $fields['comment']['comments'];
+            // Take last N comments
+            $comments = array_slice($comments, -self::MAX_COMMENTS);
+            $mapped['comments'] = array_map(function ($c) {
+                $body = '';
+                if (!empty($c['body'])) {
+                    $body = $this->convertADFToPlainText($c['body']);
+                    if (strlen($body) > self::MAX_COMMENT_LENGTH) {
+                        $body = substr($body, 0, self::MAX_COMMENT_LENGTH) . '...';
+                    }
+                }
+                return [
+                    'author' => $c['author']['displayName'] ?? '',
+                    'created' => isset($c['created']) ? substr($c['created'], 0, 10) : '',
+                    'body' => $body,
+                ];
+            }, $comments);
+            $mapped['totalComments'] = $fields['comment']['total'] ?? count($comments);
+        }
+
+        // Add attachments (metadata only)
+        if (!empty($fields['attachment'])) {
+            $mapped['attachments'] = array_map(
+                fn($a) => [
+                    'filename' => $a['filename'] ?? '',
+                    'size' => $a['size'] ?? 0,
+                    'mimeType' => $a['mimeType'] ?? '',
+                ],
+                $fields['attachment']
+            );
+        }
+
+        return $mapped;
+    }
+
+    /**
+     * Convert Atlassian Document Format (ADF) to plain text
+     *
+     * @param mixed $adf ADF document structure
+     * @return string Plain text content
+     */
+    private function convertADFToPlainText(mixed $adf): string
+    {
+        if (is_string($adf)) {
+            return $adf;
+        }
+
+        if (!is_array($adf)) {
+            return '';
+        }
+
+        return $this->extractTextFromADFNode($adf);
+    }
+
+    /**
+     * Recursively extract text from an ADF node
+     *
+     * @param array $node ADF node
+     * @return string Extracted text
+     */
+    private function extractTextFromADFNode(array $node): string
+    {
+        $text = '';
+
+        // If this node has a text property, use it
+        if (isset($node['text'])) {
+            return $node['text'];
+        }
+
+        // Process content array
+        if (!empty($node['content']) && is_array($node['content'])) {
+            foreach ($node['content'] as $child) {
+                $text .= $this->extractTextFromADFNode($child);
+            }
+        }
+
+        // Add line breaks for block-level elements
+        $type = $node['type'] ?? '';
+        if (in_array($type, ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'blockquote', 'codeBlock', 'rule'])) {
+            $text .= "\n";
+        }
+
+        return $text;
     }
 
     private function validateAndNormalizeUrl(string $url): string
@@ -207,11 +521,21 @@ class JiraService
                 'query' => [
                     'jql' => $jql,
                     'maxResults' => $maxResults,
-                    'fields' => '*all',  // Include all fields (summary, status, assignee, etc.)
+                    'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
                 ],
             ]);
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Transform issues to AI-friendly format
+            if (!empty($data['issues'])) {
+                $data['issues'] = array_map(
+                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    $data['issues']
+                );
+            }
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -249,6 +573,57 @@ class JiraService
         }
     }
 
+    /**
+     * Get raw Jira issue data for internal use
+     * This method returns the raw API response, used internally for operations
+     * that need access to field IDs and structured data.
+     *
+     * @param array $credentials Jira credentials
+     * @param string $issueKey Issue key
+     * @param array|null $fields Optional specific fields to request
+     * @return array Raw Jira issue data
+     */
+    private function getIssueRaw(array $credentials, string $issueKey, ?array $fields = null): array
+    {
+        $url = $this->validateAndNormalizeUrl($credentials['url']);
+
+        try {
+            $query = [];
+            if ($fields !== null) {
+                $query['fields'] = implode(',', $fields);
+            }
+
+            $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
+                'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => $query ?: null,
+            ]);
+
+            return $response->toArray();
+        /** @phpstan-ignore-next-line catch.neverThrown */
+        } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
+            $response = $e->getResponse();
+            $statusCode = $response->getStatusCode();
+            $errorData = $response->toArray(false);
+
+            $errorMessages = $errorData['errorMessages'] ?? [];
+            $message = $errorData['message'] ?? 'Unknown Jira error';
+            $errorText = !empty($errorMessages) ? implode(', ', $errorMessages) : $message;
+
+            $suggestion = '';
+            if ($statusCode === 404) {
+                $suggestion = " - Verify issue key '{$issueKey}' exists and you have permission to view it";
+            } elseif (stripos($errorText, 'permission') !== false) {
+                $suggestion = ' - Check that your API token has permission to access this issue';
+            }
+
+            throw new \RuntimeException(
+                "Jira API Error (HTTP {$statusCode}): {$errorText}{$suggestion}",
+                $statusCode,
+                $e
+            );
+        }
+    }
+
     public function getIssue(array $credentials, string $issueKey): array
     {
         $url = $this->validateAndNormalizeUrl($credentials['url']);
@@ -256,9 +631,15 @@ class JiraService
         try {
             $response = $this->httpClient->request('GET', $url . '/rest/api/3/issue/' . $issueKey, [
                 'auth_basic' => [$credentials['username'], $credentials['api_token']],
+                'query' => [
+                    'fields' => implode(',', self::AI_FRIENDLY_DETAIL_FIELDS),
+                ],
             ]);
 
-            return $response->toArray();
+            $issue = $response->toArray();
+
+            // Transform to AI-friendly detailed format
+            return $this->mapDetailedIssueToAIFormat($issue, $url);
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -365,7 +746,7 @@ class JiraService
         // Build query with optional JQL filtering
         $query = [
             'maxResults' => $maxResults,
-            'fields' => '*all',
+            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
         ];
 
         $jqlParts = [];
@@ -385,7 +766,17 @@ class JiraService
                 'query' => $query,
             ]);
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Transform issues to AI-friendly format
+            if (!empty($data['issues'])) {
+                $data['issues'] = array_map(
+                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    $data['issues']
+                );
+            }
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -616,16 +1007,15 @@ class JiraService
         ?string $comment = null,
         int $maxAttempts = 10
     ): array {
-        $url = $this->validateAndNormalizeUrl($credentials['url']);
         $path = [];
         $attempt = 0;
 
         while ($attempt < $maxAttempts) {
             $attempt++;
 
-            // Get current issue status
+            // Get current issue status (now returns AI-friendly format with 'status' directly)
             $issue = $this->getIssue($credentials, $issueKey);
-            $currentStatus = $issue['fields']['status']['name'];
+            $currentStatus = $issue['status'];
 
             // Check if we've reached the target
             if (strcasecmp($currentStatus, $targetStatusName) === 0) {
@@ -719,7 +1109,7 @@ class JiraService
 
         // Max attempts reached
         $issue = $this->getIssue($credentials, $issueKey);
-        $currentStatus = $issue['fields']['status']['name'];
+        $currentStatus = $issue['status'];
 
         return [
             'success' => false,
@@ -863,7 +1253,7 @@ class JiraService
         // Build query with optional JQL filtering
         $query = [
             'maxResults' => $maxResults,
-            'fields' => '*all',
+            'fields' => implode(',', self::AI_FRIENDLY_LIST_FIELDS),
         ];
 
         $jqlParts = [];
@@ -885,7 +1275,17 @@ class JiraService
                 'query' => $query,
             ]);
 
-            return $response->toArray();
+            $data = $response->toArray();
+
+            // Transform issues to AI-friendly format
+            if (!empty($data['issues'])) {
+                $data['issues'] = array_map(
+                    fn($issue) => $this->mapIssueToAIFormat($issue),
+                    $data['issues']
+                );
+            }
+
+            return $data;
         /** @phpstan-ignore-next-line catch.neverThrown */
         } catch (\Symfony\Component\HttpClient\Exception\ClientException $e) {
             $response = $e->getResponse();
@@ -1534,7 +1934,7 @@ class JiraService
         // Handle custom fields with auto-formatting
         if (isset($updates['customFields']) && is_array($updates['customFields'])) {
             // Get issue details to determine project and issue type for field metadata
-            $issue = $this->getIssue($credentials, $issueKey);
+            $issue = $this->getIssueRaw($credentials, $issueKey, ['project', 'issuetype']);
             $projectKey = $issue['fields']['project']['key'] ?? null;
             $issueTypeId = $issue['fields']['issuetype']['id'] ?? null;
 

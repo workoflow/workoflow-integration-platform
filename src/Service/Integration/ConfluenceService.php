@@ -9,9 +9,170 @@ use GuzzleHttp\Psr7\UriNormalizer;
 
 class ConfluenceService
 {
+    /**
+     * Maximum length for page content in AI-friendly response
+     */
+    private const MAX_CONTENT_LENGTH = 3000;
+
+    /**
+     * Maximum length for each comment in AI-friendly response
+     */
+    private const MAX_COMMENT_LENGTH = 1000;
+
     public function __construct(
         private HttpClientInterface $httpClient
     ) {
+    }
+
+    /**
+     * Convert Confluence storage format (XHTML-like) to plain text
+     * Removes macros, CDATA sections, HTML tags while preserving readability
+     *
+     * @param string $storageContent Content in Confluence storage format
+     * @param int $maxLength Maximum length to return
+     * @return array Array with 'text' (plain text content) and 'isTruncated' (bool)
+     */
+    private function convertStorageToPlainText(string $storageContent, int $maxLength): array
+    {
+        $text = $storageContent;
+
+        // Remove Confluence macros (e.g., <ac:structured-macro>...</ac:structured-macro>)
+        $text = preg_replace('/<ac:structured-macro[^>]*>.*?<\/ac:structured-macro>/s', '', $text);
+        $text = preg_replace('/<ac:[^>]*>.*?<\/ac:[^>]*>/s', '', $text);
+        $text = preg_replace('/<ac:[^>]*\/>/s', '', $text);
+
+        // Remove ri (resource identifier) tags
+        $text = preg_replace('/<ri:[^>]*>.*?<\/ri:[^>]*>/s', '', $text);
+        $text = preg_replace('/<ri:[^>]*\/>/s', '', $text);
+
+        // Remove CDATA sections but keep content
+        $text = preg_replace('/<!\[CDATA\[(.*?)\]\]>/s', '$1', $text);
+
+        // Add line breaks before block elements for readability
+        $text = preg_replace('/<(p|h[1-6]|li|tr|div|br)[^>]*>/i', "\n", $text);
+        $text = preg_replace('/<\/p>/i', "\n", $text);
+
+        // Strip remaining HTML tags
+        $text = strip_tags($text);
+
+        // Decode HTML entities
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Normalize whitespace
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = preg_replace('/\n\s+/', "\n", $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        $text = trim($text);
+
+        // Truncate if needed
+        $isTruncated = false;
+        if (strlen($text) > $maxLength) {
+            $text = substr($text, 0, $maxLength) . '...';
+            $isTruncated = true;
+        }
+
+        return [
+            'text' => $text,
+            'isTruncated' => $isTruncated,
+        ];
+    }
+
+    /**
+     * Transform a page result to AI-friendly format
+     *
+     * @param array $page Raw Confluence page data
+     * @param string $baseUrl Base URL for constructing links
+     * @return array AI-friendly page data
+     */
+    private function mapPageToAIFormat(array $page, string $baseUrl): array
+    {
+        $result = [
+            'id' => $page['id'] ?? '',
+            'type' => $page['type'] ?? 'page',
+            'status' => $page['status'] ?? 'current',
+            'title' => $page['title'] ?? '',
+        ];
+
+        // Add space info
+        if (!empty($page['space'])) {
+            $result['space'] = [
+                'key' => $page['space']['key'] ?? '',
+                'name' => $page['space']['name'] ?? '',
+            ];
+        }
+
+        // Add version info
+        if (!empty($page['version'])) {
+            $result['version'] = [
+                'number' => $page['version']['number'] ?? 1,
+                'when' => isset($page['version']['when'])
+                    ? substr($page['version']['when'], 0, 10)
+                    : '',
+                'by' => $page['version']['by']['displayName'] ?? '',
+            ];
+        }
+
+        // Convert body content to plain text
+        if (!empty($page['body']['storage']['value'])) {
+            $contentResult = $this->convertStorageToPlainText(
+                $page['body']['storage']['value'],
+                self::MAX_CONTENT_LENGTH
+            );
+            $result['content'] = $contentResult['text'];
+            $result['contentLength'] = strlen($page['body']['storage']['value']);
+            $result['isTruncated'] = $contentResult['isTruncated'];
+        } else {
+            $result['content'] = '';
+            $result['contentLength'] = 0;
+            $result['isTruncated'] = false;
+        }
+
+        // Add link
+        if (!empty($page['_links']['webui'])) {
+            $result['webUrl'] = $baseUrl . '/wiki' . $page['_links']['webui'];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Transform a comment to AI-friendly format
+     *
+     * @param array $comment Raw Confluence comment data
+     * @return array AI-friendly comment data
+     */
+    private function mapCommentToAIFormat(array $comment): array
+    {
+        $result = [
+            'id' => $comment['id'] ?? '',
+        ];
+
+        // Get author from version info
+        if (!empty($comment['version']['by'])) {
+            $result['author'] = $comment['version']['by']['displayName'] ?? '';
+        } elseif (!empty($comment['history']['createdBy'])) {
+            $result['author'] = $comment['history']['createdBy']['displayName'] ?? '';
+        }
+
+        // Get creation date
+        if (!empty($comment['version']['when'])) {
+            $result['created'] = $comment['version']['when'];
+        } elseif (!empty($comment['history']['createdDate'])) {
+            $result['created'] = $comment['history']['createdDate'];
+        }
+
+        // Convert body to plain text
+        if (!empty($comment['body']['storage']['value'])) {
+            $contentResult = $this->convertStorageToPlainText(
+                $comment['body']['storage']['value'],
+                self::MAX_COMMENT_LENGTH
+            );
+            $result['body'] = $contentResult['text'];
+        } else {
+            $result['body'] = '';
+        }
+
+        return $result;
     }
 
     private function validateAndNormalizeUrl(string $url): string
@@ -238,10 +399,33 @@ class ConfluenceService
             'query' => [
                 'cql' => $query,
                 'limit' => $limit,
+                'expand' => 'space,version',
             ],
         ]);
 
-        return $response->toArray();
+        $data = $response->toArray();
+
+        // Transform search results to AI-friendly format (simplified, no content)
+        if (!empty($data['results'])) {
+            $data['results'] = array_map(function ($page) use ($url) {
+                return [
+                    'id' => $page['id'] ?? '',
+                    'type' => $page['type'] ?? 'page',
+                    'status' => $page['status'] ?? 'current',
+                    'title' => $page['title'] ?? '',
+                    'space' => [
+                        'key' => $page['space']['key'] ?? '',
+                        'name' => $page['space']['name'] ?? '',
+                    ],
+                    'version' => $page['version']['number'] ?? 1,
+                    'webUrl' => !empty($page['_links']['webui'])
+                        ? $url . '/wiki' . $page['_links']['webui']
+                        : '',
+                ];
+            }, $data['results']);
+        }
+
+        return $data;
     }
 
     public function getPage(array $credentials, string $pageId): array
@@ -250,11 +434,14 @@ class ConfluenceService
         $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId, [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
-                'expand' => 'body.storage,version',
+                'expand' => 'body.storage,version,space',
             ],
         ]);
 
-        return $response->toArray();
+        $page = $response->toArray();
+
+        // Transform to AI-friendly format with plain text content
+        return $this->mapPageToAIFormat($page, $url);
     }
 
     public function getComments(array $credentials, string $pageId): array
@@ -263,11 +450,25 @@ class ConfluenceService
         $response = $this->httpClient->request('GET', $url . '/wiki/rest/api/content/' . $pageId . '/child/comment', [
             'auth_basic' => [$credentials['username'], $credentials['api_token']],
             'query' => [
-                'expand' => 'body.storage',
+                'expand' => 'body.storage,version',
             ],
         ]);
 
-        return $response->toArray();
+        $data = $response->toArray();
+
+        // Transform comments to AI-friendly format with plain text content
+        $comments = [];
+        if (!empty($data['results'])) {
+            $comments = array_map(
+                fn($comment) => $this->mapCommentToAIFormat($comment),
+                $data['results']
+            );
+        }
+
+        return [
+            'comments' => $comments,
+            'total' => $data['size'] ?? count($comments),
+        ];
     }
 
     /**

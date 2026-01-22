@@ -32,7 +32,7 @@ class JiraIntegration implements PersonalizedSkillInterface
         return [
             new ToolDefinition(
                 'jira_search',
-                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue contains: id, self, key, fields (including summary, status.name, assignee.displayName, priority.name, project.key, description, created, updated)',
+                'Search for Jira issues using JQL (Jira Query Language). Returns: Object with startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee (name), assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
                 [
                     [
                         'name' => 'jql',
@@ -50,7 +50,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_issue',
-                'Get detailed information about a specific Jira issue. Returns: Issue object with id, key, self, and fields containing summary, description, status.name, assignee (accountId, displayName, emailAddress), priority.name, project (key, name), reporter, created, updated, comment array, attachment array, issuelinks, subtasks, and watchers',
+                'Get detailed information about a specific Jira issue. Returns: Flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, assigneeEmail, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, description (plain text, max 5000 chars), components, fixVersions, resolution, subtasks (array of {key, summary, status}), linkedIssues (array of {type, key, summary}), comments (last 10 as {author, created, body}), attachments (array of {filename, size, mimeType}), webUrl',
                 [
                     [
                         'name' => 'issueKey',
@@ -86,7 +86,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_sprint_issues',
-                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, sprint, closedSprints, flagged, epic, description, project, timetracking',
+                'Get issues in a specific sprint with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Use jql for advanced filtering like status changes or date ranges. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
                 [
                     [
                         'name' => 'sprintId',
@@ -194,7 +194,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_board_issues',
-                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description',
+                'Universal tool to get issues from any board type with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues (e.g., for daily standup). Automatically detects board type: for Scrum boards, returns issues from the active sprint; for Kanban boards, returns all board issues. Returns: Object with expand, startAt, maxResults, total, boardType, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey, sprint, sprintId',
                 [
                     [
                         'name' => 'boardId',
@@ -224,7 +224,7 @@ class JiraIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'jira_get_kanban_issues',
-                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue contains: id, key, self, and fields including summary, status.name, assignee.displayName, priority.name, project, description, created, updated',
+                'Get issues from a Kanban board with optional filtering. Use assignee parameter with accountId from jira_get_myself to filter to your assigned issues. Specifically designed for Kanban boards which do not have sprints. Returns: Object with expand, startAt, maxResults, total, and issues array. Each issue is a flat object with: key, summary, status, statusCategory, priority, issueType, projectKey, assignee, assigneeId, reporter, created (YYYY-MM-DD), updated (YYYY-MM-DD), dueDate, labels, parentKey',
                 [
                     [
                         'name' => 'boardId',

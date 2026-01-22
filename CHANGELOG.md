@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-22
+
+### Improved
+- **Faster Jira and Confluence responses for AI agents** - API responses are now significantly smaller and more readable. Jira issues now return flat, easy-to-read objects instead of deeply nested structures. Confluence pages now return plain text content instead of raw storage markup.
+
 ## 2026-01-21
 
 ### Added

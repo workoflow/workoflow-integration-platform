@@ -32,7 +32,7 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
         return [
             new ToolDefinition(
                 'confluence_search',
-                'Search for Confluence pages using CQL (Confluence Query Language). Returns: Array of pages with results[].id, results[].title, results[].status, results[].spaceId, results[].parentId, results[].version.number, results[].body.storage, results[]._links.webui, results[]._links.editui, _links.next for pagination',
+                'Search for Confluence pages using CQL (Confluence Query Language). Returns: Object with results array. Each result is a flat object with: id, type, status, title, space (key, name), version (number), webUrl. Note: Search results do not include page content - use confluence_get_page to get full content.',
                 [
                     [
                         'name' => 'cql',
@@ -50,7 +50,7 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'confluence_get_page',
-                'Get detailed content of a specific Confluence page. Returns: Page object with id, status, title, spaceId, parentId, parentType, authorId, createdAt, version.number, version.message, body.storage.value, body.atlas_doc_format, _links.webui, _links.editui',
+                'Get detailed content of a specific Confluence page with plain text content. Returns: Flat object with id, type, status, title, space (key, name), version (number, when, by), content (plain text, max 3000 chars), contentLength (original length), isTruncated, webUrl. Content is converted from Confluence storage format to readable plain text.',
                 [
                     [
                         'name' => 'pageId',
@@ -62,7 +62,7 @@ class ConfluenceIntegration implements PersonalizedSkillInterface
             ),
             new ToolDefinition(
                 'confluence_get_comments',
-                'Get comments from a specific Confluence page. Returns: Array of comments with results[].id, results[].status, results[].title, results[].version.number, results[].version.authorId, results[].version.createdAt, results[].body.storage, results[].body.atlas_doc_format, results[]._links.webui, _links.next for pagination',
+                'Get comments from a specific Confluence page with plain text content. Returns: Object with comments array and total count. Each comment has: id, author, created, body (plain text, max 1000 chars). Comment bodies are converted from Confluence storage format to readable plain text.',
                 [
                     [
                         'name' => 'pageId',
