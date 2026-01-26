@@ -390,6 +390,7 @@ class IntegrationController extends AbstractController
                 // Redirect to the appropriate OAuth provider based on integration type
                 $oauthRoute = match ($type) {
                     'hubspot' => 'app_tool_oauth_hubspot_start',
+                    'wrike' => 'app_tool_oauth_wrike_start',
                     default => 'app_tool_oauth_microsoft_start',
                 };
 
