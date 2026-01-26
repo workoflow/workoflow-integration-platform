@@ -97,6 +97,8 @@
                                         <i class="fas fa-check-circle"></i>
                                         {% if integration.getType() == 'hubspot' %}
                                             <span>{{ 'status.connected_hubspot'|trans|default('Connected to HubSpot') }}</span>
+                                        {% elseif integration.getType() == 'wrike' %}
+                                            <span>{{ 'status.connected_wrike'|trans|default('Connected to Wrike') }}</span>
                                         {% elseif integration.getType() == 'sap_c4c' %}
                                             <span>{{ 'status.connected_azure'|trans|default('Connected via Azure AD') }}</span>
                                         {% elseif integration.getType() == 'sap_sac' %}
@@ -110,6 +112,12 @@
                                            class="btn btn-secondary"
                                            onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
                                             <i class="fab fa-hubspot"></i> {{ 'integration.reconnect_hubspot'|trans|default('Reconnect with HubSpot') }}
+                                        </a>
+                                    {% elseif integration.getType() == 'wrike' %}
+                                        <a href="{{ path('app_tool_oauth_wrike_start', {configId: config.id}) }}"
+                                           class="btn btn-secondary"
+                                           onclick="return confirm('{{ 'integration.oauth_reconnect_confirm'|trans|default('This will replace your existing connection. Continue?') }}');">
+                                            <i class="fas fa-tasks"></i> {{ 'integration.reconnect_wrike'|trans|default('Reconnect with Wrike') }}
                                         </a>
                                     {% elseif integration.getType() == 'sap_c4c' %}
                                         <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
@@ -140,6 +148,11 @@
                                            class="btn btn-primary">
                                             <i class="fab fa-hubspot"></i> {{ field.getLabel() }}
                                         </a>
+                                    {% elseif integration.getType() == 'wrike' %}
+                                        <a href="{{ path('app_tool_oauth_wrike_start', {configId: config.id}) }}"
+                                           class="btn btn-primary">
+                                            <i class="fas fa-tasks"></i> {{ field.getLabel() }}
+                                        </a>
                                     {% elseif integration.getType() == 'sap_c4c' %}
                                         <a href="{{ path('app_tool_oauth_sap_c4c_start', {configId: config.id}) }}"
                                            class="btn btn-primary">
@@ -169,6 +182,8 @@
                                 <p>{{ field.getHint() }}</p>
                                 {% if integration.getType() == 'hubspot' %}
                                     <p><strong>{{ 'integration.oauth_required_hubspot'|trans|default('HubSpot authorization is required. Click "Connect with HubSpot" below to continue.') }}</strong></p>
+                                {% elseif integration.getType() == 'wrike' %}
+                                    <p><strong>{{ 'integration.oauth_required_wrike'|trans|default('Wrike authorization is required. Click "Connect with Wrike" below to continue.') }}</strong></p>
                                 {% elseif integration.getType() in ['sap_c4c', 'sap_sac'] %}
                                     <p><strong>{{ 'integration.oauth_required_azure'|trans|default('Save this configuration first, then click "Connect with Azure AD" to authorize.') }}</strong></p>
                                 {% else %}
@@ -274,6 +289,10 @@
                         {% if integration.getType() == 'hubspot' %}
                             <button type="submit" class="btn btn-primary">
                                 <i class="fab fa-hubspot"></i> {{ 'integration.connect_hubspot'|trans|default('Connect with HubSpot') }}
+                            </button>
+                        {% elseif integration.getType() == 'wrike' %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-tasks"></i> {{ 'integration.connect_wrike'|trans|default('Connect with Wrike') }}
                             </button>
                         {% else %}
                             <button type="submit" class="btn btn-primary">
