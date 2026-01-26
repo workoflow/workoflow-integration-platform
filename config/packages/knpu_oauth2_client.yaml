@@ -16,6 +16,22 @@ knpu_oauth2_client:
             api_version: 'v2.0'
             url_api: 'https://graph.microsoft.com/'
             default_end_point_version: '1.0'
+        azure_sap_c4c:
+            type: azure
+            client_id: '%env(AZURE_CLIENT_ID)%'
+            client_secret: '%env(AZURE_CLIENT_SECRET)%'
+            redirect_route: app_tool_oauth_sap_c4c_callback
+            redirect_params: {}
+            tenant: '%env(AZURE_TENANT_ID)%'
+            api_version: 'v2.0'
+        azure_sap_sac:
+            type: azure
+            client_id: '%env(AZURE_CLIENT_ID)%'
+            client_secret: '%env(AZURE_CLIENT_SECRET)%'
+            redirect_route: app_tool_oauth_sap_sac_callback
+            redirect_params: {}
+            tenant: '%env(AZURE_TENANT_ID)%'
+            api_version: 'v2.0'
         hubspot:
             type: generic
             provider_class: '\HelpScout\OAuth2\Client\Provider\HubSpot'

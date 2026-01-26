@@ -338,7 +338,7 @@ class IntegrationOAuthController extends AbstractController
         ];
 
         return $clientRegistry
-            ->getClient('azure')
+            ->getClient('azure_sap_c4c')
             ->redirect($scopes, []);
     }
 
@@ -388,7 +388,7 @@ class IntegrationOAuthController extends AbstractController
 
         try {
             // Get the OAuth2 client
-            $client = $clientRegistry->getClient('azure');
+            $client = $clientRegistry->getClient('azure_sap_c4c');
 
             // Get the access token (includes refresh token due to offline_access scope)
             $accessToken = $client->getAccessToken();
@@ -490,7 +490,7 @@ class IntegrationOAuthController extends AbstractController
         ];
 
         return $clientRegistry
-            ->getClient('azure')
+            ->getClient('azure_sap_sac')
             ->redirect($scopes, []);
     }
 
@@ -540,7 +540,7 @@ class IntegrationOAuthController extends AbstractController
 
         try {
             // Get the OAuth2 client
-            $client = $clientRegistry->getClient('azure');
+            $client = $clientRegistry->getClient('azure_sap_sac');
 
             // Get the access token (includes refresh token due to offline_access scope)
             $accessToken = $client->getAccessToken();
