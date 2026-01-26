@@ -603,4 +603,130 @@ class IntegrationOAuthController extends AbstractController
             return $this->redirectToRoute('app_skills');
         }
     }
+
+    // ========================================
+    // Wrike OAuth2 Flow
+    // ========================================
+
+    #[Route('/wrike/start/{configId}', name: 'app_tool_oauth_wrike_start')]
+    public function wrikeStart(int $configId, Request $request, ClientRegistry $clientRegistry): RedirectResponse
+    {
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Store the config ID in session for callback
+        $request->getSession()->set('wrike_oauth_config_id', $configId);
+
+        // Redirect to Wrike OAuth with full access scope
+        return $clientRegistry
+            ->getClient('wrike')
+            ->redirect(['wsReadWrite'], []);
+    }
+
+    #[Route('/callback/wrike', name: 'app_tool_oauth_wrike_callback')]
+    public function wrikeCallback(Request $request, ClientRegistry $clientRegistry): Response
+    {
+        $error = $request->query->get('error');
+        $configId = $request->getSession()->get('wrike_oauth_config_id');
+
+        // Handle OAuth errors or user cancellation
+        if ($error) {
+            if ($configId) {
+                $tempConfig = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+                $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+
+                // If this was initial setup and user cancelled, remove the temporary config
+                if ($tempConfig && $oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                    $request->getSession()->remove('oauth_flow_integration');
+                    $request->getSession()->remove('wrike_oauth_config_id');
+                    $this->entityManager->remove($tempConfig);
+                    $this->entityManager->flush();
+
+                    if ($error === 'access_denied') {
+                        $this->addFlash('warning', 'Wrike setup cancelled. Wrike authorization is required to use this integration.');
+                    } else {
+                        $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                    }
+                } else {
+                    $this->addFlash('error', 'Authorization failed: ' . $request->query->get('error_description', $error));
+                }
+            }
+
+            $request->getSession()->remove('wrike_oauth_config_id');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        // Continue with normal flow
+        $configId = $request->getSession()->get('wrike_oauth_config_id');
+
+        if (!$configId) {
+            $this->addFlash('error', 'OAuth session expired. Please try again.');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        $config = $this->entityManager->getRepository(IntegrationConfig::class)->find($configId);
+
+        if (!$config || $config->getUser() !== $this->getUser()) {
+            $this->addFlash('error', 'Integration configuration not found');
+            return $this->redirectToRoute('app_skills');
+        }
+
+        try {
+            // Get the OAuth2 client
+            $client = $clientRegistry->getClient('wrike');
+
+            // Get the access token
+            $accessToken = $client->getAccessToken();
+
+            // Get the provider to access the host (datacenter-specific URL)
+            /** @var \App\OAuth2\WrikeProvider $provider */
+            $provider = $client->getOAuth2Provider();
+            $host = $provider->getHost() ?? 'www.wrike.com';
+
+            // Store the credentials including the host for API calls
+            $credentials = [
+                'access_token' => $accessToken->getToken(),
+                'refresh_token' => $accessToken->getRefreshToken(),
+                'expires_at' => $accessToken->getExpires(),
+                'host' => $host, // Critical: datacenter-specific API URL
+            ];
+
+            // Encrypt and save credentials
+            $config->setEncryptedCredentials(
+                $this->encryptionService->encrypt(json_encode($credentials))
+            );
+            $config->setActive(true);
+
+            $this->entityManager->flush();
+
+            // Clean up session
+            $request->getSession()->remove('wrike_oauth_config_id');
+
+            // Check if this was part of initial setup flow
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->addFlash('success', 'Wrike integration created and connected successfully!');
+            } else {
+                $this->addFlash('success', 'Wrike integration connected successfully!');
+            }
+
+            return $this->redirectToRoute('app_skills');
+        } catch (\Exception $e) {
+            // If this was initial setup and failed, remove the temporary config
+            $oauthFlowIntegration = $request->getSession()->get('oauth_flow_integration');
+            if ($oauthFlowIntegration && $oauthFlowIntegration == $configId) {
+                $request->getSession()->remove('oauth_flow_integration');
+                $this->entityManager->remove($config);
+                $this->entityManager->flush();
+            }
+
+            $this->addFlash('error', 'Failed to connect to Wrike: ' . $e->getMessage());
+            return $this->redirectToRoute('app_skills');
+        }
+    }
 }

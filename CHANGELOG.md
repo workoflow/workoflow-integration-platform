@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-26
+
+### Added
+- **Wrike Project Management integration (experimental)** - New integration for managing tasks, folders, and projects in Wrike with OAuth2 authentication. AI agents can search, create, and update tasks, navigate folder hierarchies, add comments, and track time through 13 specialized tools.
+
 ## 2026-01-22
 
 ### Added

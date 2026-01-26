@@ -39,3 +39,10 @@ knpu_oauth2_client:
             client_secret: '%env(HUBSPOT_CLIENT_SECRET)%'
             redirect_route: app_tool_oauth_hubspot_callback
             redirect_params: {}
+        wrike:
+            type: generic
+            provider_class: 'App\OAuth2\WrikeProvider'
+            client_id: '%env(WRIKE_CLIENT_ID)%'
+            client_secret: '%env(WRIKE_CLIENT_SECRET)%'
+            redirect_route: app_tool_oauth_wrike_callback
+            redirect_params: {}
